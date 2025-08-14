@@ -1,0 +1,76 @@
+# Regras de bandeiras/redes
+bandeiras:
+  rede_credenciada:
+    nome: "Rede Credenciada"
+    aceita_estabelecimentos: "rede_credenciada"
+    taxa_comissao: 0.0
+
+  visa:
+    nome: "Visa"
+    aceita_estabelecimentos: "todos"
+    taxa_comissao: 0.025
+
+  mastercard:
+    nome: "Mastercard"
+    aceita_estabelecimentos: "todos"
+    taxa_comissao: 0.023
+
+  elo:
+    nome: "Elo"
+    aceita_estabelecimentos: "todos"
+    taxa_comissao: 0.020
+
+# Regras por tipo de produto + CNAE
+tipos_produto:
+  alimentacao:
+    nome: "Vale Alimentação"
+    codigo: "VA"
+    categoria: "Produto"
+    cnaes_permitidos: ["4711-3", "4712-1"]  # Supermercados, mercearias
+
+  refeicao:
+    nome: "Vale Refeição"
+    codigo: "VR"
+    cnaes_permitidos: ["5611-2", "5612-1"]  # Restaurantes, lanchonetes
+
+  combustivel:
+    nome: "Vale Combustível"
+    codigo: "VC"
+    cnaes_permitidos: ["4731-8"]  # Postos de combustível
+
+  frota:
+    nome: "Gestão de Frota"
+    codigo: "FR"  # Remova a aspas extra
+    cnaes_permitidos: ["4731-8"]
+
+  gift:
+    nome: "Vale Presente"
+    codigo: "GIFT"
+    cnaes_permitidos: "todos"  # Aceita qualquer CNAE
+
+# Motivos de negação mais comuns
+motivos_negacao:
+  - codigo: "51"
+    descricao: "Saldo insuficiente"
+    categoria: "saldo"
+    probabilidade: 0.60
+
+  - codigo: "14"
+    descricao: "Cartão inválido"
+    categoria: "cartao"
+    probabilidade: 0.15
+
+  - codigo: "55"
+    descricao: "Senha incorreta"
+    categoria: "senha"
+    probabilidade: 0.12
+
+  - codigo: "58"
+    descricao: "Transação não permitida"
+    categoria: "estabelecimento"
+    probabilidade: 0.08
+
+  - codigo: "96"
+    descricao: "Falha no sistema"
+    categoria: "rede"
+    probabilidade: 0.05

@@ -1,0 +1,236 @@
+// Use DBML to define your database structure
+// Docs: https://dbml.dbdiagram.io/docs
+
+// DIMENSÕES
+Table dim_municipios {
+  municipio_id varchar [primary key]
+  municipio_nome varchar
+  rgi_id varchar
+  rgi_nome varchar
+  rgint_id varchar
+  rgint_nome varchar
+  uf_id varchar
+  uf_nome varchar
+  uf_sigla varchar
+  regiao_id varchar
+  regiao_nome varchar
+  regiao_sigla varchar
+  concu_id varchar
+  concu_nome varchar
+  area_km2 double
+  geometry varchar [note: 'Represents GEOMETRY type, often stored as WKT or GeoJSON']
+  created_at timestamp
+}
+
+Table dim_cnae {
+  cnae_id varchar [primary key]
+  codigo_cnae varchar
+  descricao_cnae varchar
+  secao varchar
+  divisao varchar
+  grupo varchar
+  classe varchar
+  subclasse varchar
+  created_at timestamp
+}
+
+Table dim_segmentos {
+  segmento_id varchar [primary key]
+  segmento_nome varchar
+  categoria_segmento varchar
+  created_at timestamp
+}
+
+Table dim_data {
+  data_id varchar [primary key]
+  data_completa date
+  ano integer
+  mes integer
+  dia integer
+  dia_semana integer
+  nome_dia_semana varchar
+  is_feriado boolean
+  is_fim_semana boolean
+  trimestre integer
+  semestre integer
+  created_at timestamp
+}
+
+Table dim_adquirentes {
+  adquirente_id varchar [primary key]
+  codigo_adquirente varchar
+  nome_adquirente varchar [note: 'Cielo, Rede, Stone, GetNet, etc']
+  created_at timestamp
+}
+
+Table dim_bandeiras {
+  bandeira_id varchar [primary key]
+  codigo_bandeira varchar
+  nome_bandeira varchar [note: 'Elo, Mastercard, Visa']
+  created_at timestamp
+}
+
+Table dim_tecnologias_captura {
+  tecnologia_id varchar [primary key]
+  codigo_tecnologia varchar
+  categoria_tecnologia varchar [note: 'fisico, digital']
+  nome_tecnologia varchar [note: 'chip, tarja, contactless, nfc_celular, apple_pay, google_pay']
+  requires_plastico boolean [note: 'true para chip/tarja, false para NFC celular']
+  created_at timestamp
+}
+
+Table dim_produtos {
+  produto_id varchar [primary key]
+  codigo_produto varchar [note: 'VA, VR, PREMIUM, GIFT, FARMACIA']
+  nome_produto varchar [note: 'Vale Alimentação, Vale Refeição, etc']
+  categoria varchar [note: 'alimentacao, refeicao, multiuso, saude']
+  descricao varchar
+  created_at timestamp
+}
+
+Table dim_terminais {
+  terminal_id varchar [primary key]
+  codigo_afiliacao varchar
+  numero_filiacao varchar
+  establishment_id varchar [not null]
+  adquirente_id varchar [not null]
+  modelo_terminal varchar [note: 'POS Cielo, TEF Rede, etc']
+  tipo_terminal varchar [note: 'POS, PDV, TEF']
+  status varchar [note: 'ativo, inativo, manutencao']
+  data_instalacao date
+  created_at timestamp
+}
+
+Table dim_motivos_negacao {
+  motivo_negacao_id varchar [primary key]
+  codigo_retorno varchar [note: 'Código técnico do autorizador (ex: 51, 14, 55)']
+  descricao_motivo varchar [note: 'Saldo insuficiente, senha incorreta, cartão vencido']
+  categoria_motivo varchar [note: 'saldo, senha, cartao, rede, estabelecimento, emissor']
+  eh_fraude_potencial boolean [note: 'true se pode indicar tentativa de fraude']
+  created_at timestamp
+}
+
+// TABELAS PRINCIPAIS
+Table establishments {
+  establishment_id varchar [primary key]
+  cnpj varchar
+  nome_empresarial varchar
+  nome_fantasia varchar
+  cnae_principal_id varchar [not null]
+  natureza_juridica varchar
+  porte_empresa varchar [note: 'EPP, ME, etc']
+  municipio_id varchar [not null]
+  cep varchar
+  logradouro varchar
+  numero varchar
+  complemento varchar
+  bairro varchar
+  email varchar
+  telefone varchar
+  situacao_cadastral varchar [note: 'ATIVA, INAPTA, etc']
+  data_situacao_cadastral date
+  motivo_situacao varchar
+  data_abertura date
+  created_at timestamp
+}
+
+Table companies {
+  company_id varchar [primary key]
+  parent_company_id varchar [note: 'ID da empresa matriz/holding']
+  codigo_cliente varchar
+  razao_social varchar
+  cnpj varchar
+  tipo_empresa varchar
+  segmento_id varchar [not null]
+  municipio_id varchar [not null]
+  data_cadastro_contrato date
+  forma_recebimento varchar
+  created_at timestamp
+}
+
+Table cardholders {
+  cardholder_id varchar [primary key]
+  company_id varchar [not null]
+  cpf_hash varchar
+  municipio_id varchar [not null]
+  data_admissao date
+  status varchar [note: 'ativo, inativo, demitido']
+  created_at timestamp
+}
+
+Table cardholder_products {
+  cardholder_product_id varchar [primary key]
+  cardholder_id varchar [not null]
+  produto_id varchar [not null]
+  data_inicio date [note: 'Quando ganhou o direito ao produto']
+  data_fim date [note: 'NULL = ainda ativo']
+  status varchar [note: 'ativo, suspenso, cancelado, pendente_cartao']
+  created_at timestamp
+}
+
+Table cards {
+  card_id varchar [primary key]
+  cardholder_id varchar [not null, note: 'Vincula diretamente ao portador']
+  numero_cartao_hash varchar
+  data_vencimento date
+  cvv_hash varchar
+  bandeira_id varchar [note: 'NULL = rede propria, preenchido = bandeirado']
+  tipo_cartao varchar [note: 'fisico, virtual']
+  status varchar [note: 'ativo, bloqueado, cancelado']
+  created_at timestamp
+}
+
+// TABELA FATO
+Table fact_transactions {
+  transaction_id varchar [primary key]
+  related_transaction_id varchar [note: 'ID da transacao original em caso de estorno']
+  card_id varchar [not null]
+  produto_id varchar [not null, note: 'Qual produto foi utilizado nesta transacao']
+  establishment_id varchar [not null]
+  terminal_id varchar [not null]
+  tecnologia_captura_id varchar [not null]
+  motivo_negacao_id varchar [note: 'NULL se aprovada, preenchido se negada']
+  data_transacao varchar [not null, note: 'FK para dim_data - data do comprovante']
+  hora_transacao time
+  data_efetiva_transacao date [note: 'Data contabil da transacao']
+  data_captura timestamp [note: 'Momento exato que o sistema registrou']
+  nsu_transacao varchar
+  nsu_autorizacao varchar
+  codigo_tipo_transacao varchar
+  valor_transacao decimal(18, 2) [note: 'Valor da compra']
+  valor_comissao decimal(18, 2) [note: 'Comissao paga a bandeira - NULL para rede propria']
+  codigo_moeda varchar
+  descricao_transacao varchar
+  origem_transacao varchar
+  codigo_rede_captura varchar
+  codigo_processamento varchar
+  status_transacao varchar [note: 'aprovada, negada, pendente, estornada']
+  tipo_transacao varchar [note: 'rede_propria, rede_bandeirada']
+  requer_liquidacao_bandeira boolean [note: 'true para bandeirada, false para rede propria']
+  data_liquidacao date [note: 'quando foi liquidada pela bandeira']
+  status_liquidacao varchar [note: 'pendente, liquidada, rejeitada']
+  created_at timestamp
+}
+
+// RELACIONAMENTOS (A definição dos relacionamentos permanece a mesma)
+Ref: companies.parent_company_id > companies.company_id
+Ref: establishments.cnae_principal_id > dim_cnae.cnae_id
+Ref: establishments.municipio_id > dim_municipios.municipio_id
+Ref: companies.segmento_id > dim_segmentos.segmento_id
+Ref: companies.municipio_id > dim_municipios.municipio_id
+Ref: cardholders.company_id > companies.company_id
+Ref: cardholders.municipio_id > dim_municipios.municipio_id
+Ref: cardholder_products.cardholder_id > cardholders.cardholder_id
+Ref: cardholder_products.produto_id > dim_produtos.produto_id
+Ref: cards.cardholder_id > cardholders.cardholder_id
+Ref: cards.bandeira_id > dim_bandeiras.bandeira_id
+Ref: dim_terminais.establishment_id > establishments.establishment_id
+Ref: dim_terminais.adquirente_id > dim_adquirentes.adquirente_id
+Ref: fact_transactions.related_transaction_id > fact_transactions.transaction_id
+Ref: fact_transactions.card_id > cards.card_id
+Ref: fact_transactions.produto_id > dim_produtos.produto_id
+Ref: fact_transactions.establishment_id > establishments.establishment_id
+Ref: fact_transactions.terminal_id > dim_terminais.terminal_id
+Ref: fact_transactions.tecnologia_captura_id > dim_tecnologias_captura.tecnologia_id
+Ref: fact_transactions.motivo_negacao_id > dim_motivos_negacao.motivo_negacao_id
+Ref: fact_transactions.data_transacao > dim_data.data_id
