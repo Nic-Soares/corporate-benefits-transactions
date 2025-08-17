@@ -1,4 +1,11 @@
-from scripts.utils import database
+from src.common import database
+
+
+def create_oltp():
+  pass
+
+def create_olap():
+  pass
 
 if __name__ == "__main__":
   print("Criando schema do banco")

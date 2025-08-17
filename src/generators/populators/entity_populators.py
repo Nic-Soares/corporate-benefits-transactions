@@ -1,7 +1,7 @@
 import pandas as pd
 import random
 from faker import Faker
-from scripts.queries.data_queries import get_municipio_ids, get_cnae_ids
+from src.common.queries.data_queries import get_municipio_ids, get_cnae_ids
 from .common import inserir_dados
 
 fake = Faker('pt_BR')

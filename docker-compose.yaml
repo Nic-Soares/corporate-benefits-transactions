@@ -1,0 +1,17 @@
+services:
+  db:
+    image: postgres:latest
+    container_name: corporate_benefits_db   # nome amigável do container
+    restart: always
+    environment:
+      POSTGRES_USER: ${DB_USER}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: transactions_benefits_db
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+
+volumes:
+  postgres_data:
+    name: corporate_benefits_postgres_data  # nome amigável do volume
