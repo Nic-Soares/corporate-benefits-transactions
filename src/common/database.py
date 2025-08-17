@@ -7,11 +7,11 @@ def carregar_config():
     db_config = yaml.safe_load(arquivo)
   return db_config
 
-def conectar_banco(db_config):
-  db_path = db_config["database"]["file_path"]
+def conectar_banco(db_config, modelo):
+  db_path = db_config[modelo]["file_path"]
   conn = duckdb.connect(db_path, read_only=False)
-  conn.execute("INSTALL spatial;")
-  conn.execute("LOAD spatial;")
+  # conn.execute("INSTALL spatial;")
+  # conn.execute("LOAD spatial;")
   return conn
 
 def executar_sql_file(conn, file_path):

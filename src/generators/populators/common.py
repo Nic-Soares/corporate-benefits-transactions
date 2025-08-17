@@ -1,4 +1,4 @@
-from scripts.queries.data_queries import contar_registros
+from src.common.queries.data_queries import contar_registros
 
 
 def inserir_dados(conn, df, nome_tabela):

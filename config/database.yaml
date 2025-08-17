@@ -1,14 +1,20 @@
-database:
-  engine: "duckdb"
-  file_path: "./database/corporate_products-trs.duckdb"
+oltp:
+  engine: duckdb
+  file_path: ./database/oltp/oltp_corporate_benefits.duckdb
   read_only: false
+  schema:
+    tables: ./database/oltp/tables.sql
+
+olap:
+  engine: duckdb
+  file_path: ./database/olap/olap_corporate_benefits.duckdb
+  read_only: false
+  schema:
+    dimensions: ./database/olap/01_dimensions.sql
+    entities: ./database/olap/02_entities.sql
+    facts: ./database/olap/03_facts.sql
+    views: ./database/olap/04_views.sql
 
 performance:
-  memory_limit: "8GB"
+  memory_limit: 8GB
   threads: 8
-
-schema:
-  dimensions_file: "./database/schema/01_dimensions.sql"
-  entities_file: "./database/schema/02_entities.sql"
-  facts_file: "./database/schema/03_facts.sql"
-  view_file: "./database/schema/04_views.sql"

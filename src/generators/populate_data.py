@@ -1,14 +1,14 @@
 import yaml
-from scripts.utils.database import conectar_banco, carregar_config
-from scripts.importers.municipios_importer import importar_municipios
-from scripts.populators.dim_populators import (
+from src.common.database import conectar_banco, carregar_config
+from src.extractors.municipios_importer import importar_municipios
+from src.generators.populators.dim_populators import (
     popular_dim_produtos,
     popular_dim_bandeiras,
     popular_dim_segmentos,
     popular_dim_cnae
 )
-from scripts.populators.entity_populators import popular_companies, popular_establishments
-from scripts.populators.common import popular_se_vazio
+from src.generators.populators.entity_populators import popular_companies, popular_establishments
+from src.generators.populators.common import popular_se_vazio
 
 
 def carregar_config_volumes():
