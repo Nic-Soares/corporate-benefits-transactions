@@ -1,0 +1,162 @@
+# =====================================
+# raw_data_config.yaml
+# Configurações para geração de dados RAW
+# =====================================
+
+# VOLUMES DE DADOS A GERAR
+data_volumes:
+  companies: 15
+  cardholders: 1200
+  cards: 2400
+  establishments: 150
+  terminals: 300
+  card_products: 3000
+
+# PRODUTOS DISPONÍVEIS
+products:
+  alimentacao:
+    code: "VA"
+    name: "Vale Alimentação"
+    category: "Beneficio"
+    description: "Benefício para compras em supermercados e estabelecimentos alimentícios"
+
+  refeicao:
+    code: "VR"
+    name: "Vale Refeição"
+    category: "Beneficio"
+    description: "Benefício para refeições em restaurantes e lanchonetes"
+
+  combustivel:
+    code: "VC"
+    name: "Vale Combustível"
+    category: "Beneficio"
+    description: "Benefício para abastecimento de veículos"
+
+  farmacia:
+    code: "VF"
+    name: "Vale Farmácia"
+    category: "Beneficio"
+    description: "Benefício para compras em farmácias e drogarias"
+
+  premium:
+    code: "PR"
+    name: "Cartão Premium"
+    category: "Incentivo"
+    description: "Cartão com benefícios diferenciados e múltiplas funcionalidades"
+
+# MODALIDADES DE TRANSAÇÃO
+transaction_modalities:
+  - name: "Rede Própria"
+    type: "proprietary_network"
+    commission_rate: 0.0
+
+  - name: "Visa"
+    type: "brand"
+    commission_rate: 0.025
+
+  - name: "Mastercard"
+    type: "brand"
+    commission_rate: 0.023
+
+  - name: "Elo"
+    type: "brand"
+    commission_rate: 0.020
+
+# ADQUIRENTES DISPONÍVEIS
+acquirers:
+  - "Cielo"
+  - "Rede"
+  - "Stone"
+  - "GetNet"
+  - "PagSeguro"
+  - "SafraPay"
+
+# SEGMENTOS DE EMPRESAS
+company_segments:
+  - segment_id: "SEG_TECH"
+    name: "Tecnologia"
+    category: "Tecnologia e Inovação"
+
+  - segment_id: "SEG_RETAIL"
+    name: "Varejo"
+    category: "Comércio"
+
+  - segment_id: "SEG_INDUSTRY"
+    name: "Indústria"
+    category: "Manufatura"
+
+  - segment_id: "SEG_FINANCE"
+    name: "Serviços Financeiros"
+    category: "Serviços"
+
+  - segment_id: "SEG_HEALTH"
+    name: "Saúde"
+    category: "Saúde e Bem-estar"
+
+  - segment_id: "SEG_EDUCATION"
+    name: "Educação"
+    category: "Educação"
+
+  - segment_id: "SEG_FOOD"
+    name: "Alimentação"
+    category: "Alimentação e Bebidas"
+
+  - segment_id: "SEG_CONSTRUCTION"
+    name: "Construção"
+    category: "Construção e Engenharia"
+
+  - segment_id: "SEG_AGRO"
+    name: "Agronegócio"
+    category: "Agropecuária"
+
+  - segment_id: "SEG_ENERGY"
+    name: "Energia"
+    category: "Energia e Utilities"
+
+  - segment_id: "SEG_LOGISTICS"
+    name: "Logística"
+    category: "Transporte e Logística"
+
+  - segment_id: "SEG_CONSULTING"
+    name: "Consultoria"
+    category: "Serviços Profissionais"
+
+# CONFIGURAÇÕES DE GERAÇÃO
+generation_settings:
+  # Distribuição de status
+  cardholder_status_distribution:
+    active: 0.85
+    inactive: 0.10
+    terminated: 0.05
+
+  card_status_distribution:
+    active: 0.80
+    blocked: 0.15
+    cancelled: 0.05
+
+  establishment_status_distribution:
+    ATIVA: 0.90
+    INATIVA: 0.07
+    SUSPENSA: 0.02
+    BAIXADA: 0.01
+
+  # Produtos por cartão
+  products_per_card:
+    min: 1
+    max: 3
+    avg: 1.8
+
+  # Datas
+  date_ranges:
+    card_issuance:
+      start: "-2y"
+      end: "today"
+    cardholder_admission:
+      start: "-5y"
+      end: "today"
+    company_registration:
+      start: "-10y"
+      end: "today"
+    establishment_opening:
+      start: "-8y"
+      end: "today"

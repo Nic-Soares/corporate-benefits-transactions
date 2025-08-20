@@ -94,11 +94,10 @@ Table dim_products {
 
 Table dim_terminals {
   terminal_id varchar [primary key]
-  terminal_code varchar
+  code varchar
   establishment_id varchar [not null]
   acquirer_id varchar [not null]
-  terminal_model varchar [note: 'POS Cielo, TEF Rede, etc']
-  terminal_type varchar [note: 'POS, PDV, TEF']
+  type varchar [note: 'POS, PDV, TEF']
   status varchar [note: 'active, inactive, maintenance']
   installation_date date
   created_at timestamp
