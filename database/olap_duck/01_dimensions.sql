@@ -78,8 +78,8 @@ CREATE TABLE "dim_tecnologias_captura" (
 
 CREATE TABLE "dim_produtos" (
   "produto_id" VARCHAR PRIMARY KEY,
-  "codigo_produto" VARCHAR,
-  "nome_produto" VARCHAR,
+  "codigo" VARCHAR,
+  "nome" VARCHAR,
   "categoria" VARCHAR,
   "descricao" VARCHAR,
   "created_at" TIMESTAMP

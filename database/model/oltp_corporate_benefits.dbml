@@ -1,208 +1,217 @@
 // Use DBML to define your database structure
 // Docs: https://dbml.dbdiagram.io/docs
 
-// OLTP Model - Sistema Operacional de Benefícios Corporativos
-// Foco: Transações rápidas, operações CRUD, normalização
-// MODELO OLTP SIMPLIFICADO - Benefícios Corporativos
-// Foco em autorizações transacionais
+// OLTP Model - Corporate Benefits Operational System
+// Focus: Fast transactions, CRUD operations, normalization
 
-// TABELAS DE APOIO
-Table produtos {
-  produto_id varchar [primary key]
-  codigo varchar [unique, not null] // VA, VR, PREMIUM
-  nome varchar [not null]
-  categoria varchar [not null] // beneficio, gestao, bem-estar
-  ativo boolean [default: true]
+// SUPPORT TABLES
+Table products {
+  product_id varchar [primary key]
+  code varchar [unique, not null] // VA, VR, PREMIUM
+  name varchar [not null]
+  category varchar [not null] // benefit, management, wellness
+  active boolean [default: true]
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
 
-Table modalidades_transacionais {
-  modalidade_id varchar [primary key]
-  codigo varchar [unique, not null] // ELO, MASTER, VISA, REDE_FECHADA
-  nome varchar [not null]
-  tipo varchar [not null] // 'bandeira', 'rede_fechada'
-  ativo boolean [default: true]
+Table transaction_modalities {
+  modality_id varchar [primary key]
+  code varchar [unique, not null] // ELO, MASTER, VISA, PROPRIETARY_NETWORK
+  name varchar [not null]
+  type varchar [not null] // 'brand', 'proprietary_network'
+  active boolean [default: true]
   created_at timestamp [default: `now()`]
 }
 
-Table adquirentes {
-  adquirente_id varchar [primary key]
-  codigo varchar [unique, not null]
-  nome varchar [not null] // Cielo, Rede, Stone
-  ativo boolean [default: true]
+Table acquirers {
+  acquirer_id varchar [primary key]
+  name varchar [not null] // Cielo, Rede, Stone
+  active boolean [default: true]
   created_at timestamp [default: `now()`]
 }
 
-// TABELA DE MAPEAMENTO MCC x MODALIDADES (para bandeiras)
-Table mcc_modalidades {
+// MCC x MODALITIES MAPPING TABLE (for brands)
+Table mcc_modalities {
   mcc_code varchar [not null]
-  modalidade_id varchar [not null]
-  descricao_mcc varchar [not null] // "RESTAURANTS", "GROCERY STORES"
-  observacao varchar // "(Germany Only)", "Visa specific rules"
-  ativo boolean [default: true]
+  modality_id varchar [not null]
+  mcc_description varchar [not null] // "RESTAURANTS", "GROCERY STORES"
+  observation varchar // "(Germany Only)", "Visa specific rules"
+  active boolean [default: true]
   created_at timestamp [default: `now()`]
 
-  Primary Key (mcc_code, modalidade_id)
+  Primary Key (mcc_code, modality_id)
 }
 
-// TABELA DE MAPEAMENTO CNAE x PRODUTOS (para rede fechada)
-Table cnae_produtos {
+// CNAE x PRODUCTS MAPPING TABLE (for proprietary network)
+Table cnae_products {
   cnae_code varchar [not null]
-  produto_id varchar [not null]
-  descricao_cnae varchar [not null] // "Restaurantes", "Supermercados"
-  observacao varchar // "Apenas horário comercial", "Exceto bebidas alcóolicas"
-  ativo boolean [default: true]
+  product_id varchar [not null]
+  cnae_description varchar [not null] // "Restaurants", "Supermarkets"
+  observation varchar // "Business hours only", "Except alcoholic beverages"
+  active boolean [default: true]
   created_at timestamp [default: `now()`]
 
-  Primary Key (cnae_code, produto_id)
+  Primary Key (cnae_code, product_id)
 }
 
-// TABELAS PRINCIPAIS
-Table empresas {
-  empresa_id varchar [primary key]
+// MAIN TABLES
+Table companies {
+  company_id varchar [primary key]
   cnpj varchar [unique, not null]
-  razao_social varchar [not null]
-  nome_fantasia varchar
-  segmento varchar [not null]
-  municipio varchar [not null]
-  uf varchar [not null]
-  status varchar [not null, default: 'ativo']
-  data_cadastro date [not null]
+  legal_name varchar [not null]
+  trade_name varchar
+  segment varchar [not null]
+  municipality varchar [not null]
+  state varchar [not null]
+  status varchar [not null, default: 'active']
+  registration_date date [not null]
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
 
-Table portadores {
-  portador_id varchar [primary key]
-  empresa_id varchar [not null]
+Table cardholders {
+  cardholder_id varchar [primary key]
+  company_id varchar [not null]
   cpf_hash varchar [unique, not null]
-  nome varchar [not null]
-  municipio varchar [not null]
-  uf varchar [not null]
-  data_admissao date [not null]
-  cargo varchar
-  departamento varchar
-  status varchar [not null, default: 'ativo']
+  name varchar [not null]
+  municipality varchar [not null]
+  state varchar [not null]
+  admission_date date [not null]
+  position varchar
+  department varchar
+  status varchar [not null, default: 'active']
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
 
-Table cartoes {
-  cartao_id varchar [primary key]
-  portador_id varchar [not null]
-  numero_cartao_hash varchar [unique, not null]
-  bandeira_id varchar [note: 'NULL = rede própria']
-  data_vencimento date [not null]
-  tipo_cartao varchar [not null] // fisico, virtual
-  status varchar [not null, default: 'ativo']
-  data_emissao date [not null]
+Table cards {
+  card_id varchar [primary key]
+  cardholder_id varchar [not null]
+  card_number_hash varchar [unique, not null]
+  modality_id varchar [note: 'NULL = proprietary network']
+  expiration_date date [not null]
+  card_type varchar [not null] // physical, virtual
+  status varchar [not null, default: 'active']
+  issuance_date date [not null]
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
 
-Table cartao_produtos {
-  cartao_produto_id varchar [primary key]
-  cartao_id varchar [not null]
-  produto_id varchar [not null]
-  saldo_atual decimal(15,2) [not null, default: 0]
-  limite_diario decimal(15,2) [default: 0]
-  limite_mensal decimal(15,2) [default: 0]
-  data_ativacao date [not null]
-  status varchar [not null, default: 'ativo']
+Table card_products {
+  card_product_id varchar [primary key]
+  card_id varchar [not null]
+  product_id varchar [not null]
+  current_balance decimal(15,2) [not null, default: 0]
+  daily_limit decimal(15,2) [default: 0]
+  monthly_limit decimal(15,2) [default: 0]
+  activation_date date [not null]
+  status varchar [not null, default: 'active']
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
 
-Table estabelecimentos {
-  estabelecimento_id varchar [primary key]
+Table states {
+  state_id varchar [primary key]
+  state_code varchar [unique] // SP, RJ, MG
+  state_name varchar
+}
+
+Table municipalities {
+  municipality_id varchar [primary key]
+  municipality_name varchar
+  state_id varchar [not null]
+}
+
+Table establishments {
+  establishment_id varchar [primary key]
   cnpj varchar [unique, not null]
-  razao_social varchar [not null]
-  nome_fantasia varchar
-  cnae_principal varchar [not null]
-  mcc_code varchar [not null] // Merchant Category Code padrão da indústria
-  categoria varchar [not null] // restaurante, supermercado, farmacia
-  municipio varchar [not null]
-  uf varchar [not null]
-  status varchar [not null, default: 'ativo']
-  data_credenciamento date [not null]
+  legal_name varchar [not null]
+  trade_name varchar
+  main_cnae varchar [not null]
+  mcc_code varchar [not null] // Industry standard Merchant Category Code
+  category varchar [not null] // restaurant, supermarket, pharmacy
+  municipality_id varchar [not null]
+  state_id varchar [not null]
+  status varchar [not null, default: 'active']
+  accreditation_date date [not null]
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
 
-Table terminais {
+Table terminals {
   terminal_id varchar [primary key]
-  estabelecimento_id varchar [not null]
-  adquirente_id varchar [not null]
-  codigo_terminal varchar [not null]
-  modelo varchar
-  tipo varchar [not null] // POS, PDV, TEF
-  status varchar [not null, default: 'ativo']
-  data_instalacao date [not null]
+  establishment_id varchar [not null]
+  acquirer_id varchar [not null]
+  terminal_code varchar [not null]
+  model varchar
+  type varchar [not null] // POS, PDV, TEF
+  status varchar [not null, default: 'active']
+  installation_date date [not null]
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
 
-// TRANSAÇÕES (dados básicos da tentativa)
-Table transacoes {
-  transacao_id varchar [primary key]
-  cartao_id varchar [not null]
-  produto_id varchar [not null]
-  estabelecimento_id varchar [not null]
+// TRANSACTIONS (basic attempt data)
+Table transactions {
+  transaction_id varchar [primary key]
+  card_id varchar [not null]
+  product_id varchar [not null]
+  establishment_id varchar [not null]
   terminal_id varchar [not null]
-  valor_transacao decimal(15,2) [not null]
-  data_transacao timestamp [not null]
-  tipo_captura varchar [not null] // chip, tarja, contactless, nfc
+  transaction_amount decimal(15,2) [not null]
+  transaction_date timestamp [not null]
+  capture_type varchar [not null] // chip, magnetic_stripe, contactless, nfc
 
-  // CÓDIGOS PADRÃO DA TRANSAÇÃO FINANCEIRA
-  codigo_resposta varchar [not null] // '00', '51', '14', '30', '96', etc
-  mensagem_resposta varchar // detalhes para qualquer status
+  // FINANCIAL TRANSACTION STANDARD CODES
+  response_code varchar [not null] // '00', '51', '14', '30', '96', etc
+  response_message varchar // details for any status
 
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
 
-// AUTORIZAÇÕES (resposta do autorizador)
-Table autorizacoes {
-  autorizacao_id varchar [primary key]
-  transacao_id varchar [not null]
+// AUTHORIZATIONS (authorizer response)
+Table authorizations {
+  authorization_id varchar [primary key]
+  transaction_id varchar [not null]
 
-  // RESPOSTA ESPECÍFICA DO AUTORIZADOR
-  codigo_autorizacao varchar
+  // SPECIFIC AUTHORIZER RESPONSE
+  authorization_code varchar
   nsu varchar [not null]
-  data_hora_autorizacao timestamp [not null]
-  status varchar [not null] // 'aprovada', 'negada', 'timeout', 'erro_sistema'
+  authorization_datetime timestamp [not null]
+  status varchar [not null] // 'approved', 'denied', 'timeout', 'system_error'
 
   created_at timestamp [default: `now()`]
 }
 
-// HISTÓRICO DE SALDOS (auditoria)
-Table historico_saldos {
-  historico_id varchar [primary key]
-  cartao_produto_id varchar [not null]
-  transacao_id varchar
-  tipo_operacao varchar [not null] // credito, debito, estorno
-  valor_operacao decimal(15,2) [not null]
-  saldo_anterior decimal(15,2) [not null]
-  saldo_posterior decimal(15,2) [not null]
-  data_operacao timestamp [not null]
+// BALANCE HISTORY (audit)
+Table balance_history {
+  history_id varchar [primary key]
+  card_product_id varchar [not null]
+  transaction_id varchar
+  operation_type varchar [not null] // credit, debit, reversal
+  operation_amount decimal(15,2) [not null]
+  previous_balance decimal(15,2) [not null]
+  new_balance decimal(15,2) [not null]
+  operation_date timestamp [not null]
   created_at timestamp [default: `now()`]
 }
 
-// RELACIONAMENTOS
-Ref: portadores.empresa_id > empresas.empresa_id
-Ref: cartoes.portador_id > portadores.portador_id
-Ref: cartoes.modalidade_id > modalidades_transacionais.modalidade_id
-Ref: cartao_produtos.cartao_id > cartoes.cartao_id
-Ref: cartao_produtos.produto_id > produtos.produto_id
-Ref: terminais.estabelecimento_id > estabelecimentos.estabelecimento_id
-Ref: terminais.adquirente_id > adquirentes.adquirente_id
-Ref: mcc_modalidades.modalidade_id > modalidades_transacionais.modalidade_id
-Ref: cnae_produtos.produto_id > produtos.produto_id
-Ref: transacoes.cartao_id > cartoes.cartao_id
-Ref: transacoes.produto_id > produtos.produto_id
-Ref: transacoes.estabelecimento_id > estabelecimentos.estabelecimento_id
-Ref: transacoes.terminal_id > terminais.terminal_id
-Ref: autorizacoes.transacao_id > transacoes.transacao_id
-Ref: historico_saldos.cartao_produto_id > cartao_produtos.cartao_produto_id
-Ref: historico_saldos.transacao_id > transacoes.transacao_id
+// RELATIONSHIPS
+Ref: cardholders.company_id > companies.company_id
+Ref: cards.cardholder_id > cardholders.cardholder_id
+Ref: cards.modality_id > transaction_modalities.modality_id
+Ref: card_products.card_id > cards.card_id
+Ref: card_products.product_id > products.product_id
+Ref: terminals.establishment_id > establishments.establishment_id
+Ref: terminals.acquirer_id > acquirers.acquirer_id
+Ref: mcc_modalities.modality_id > transaction_modalities.modality_id
+Ref: cnae_products.product_id > products.product_id
+Ref: transactions.card_id > cards.card_id
+Ref: transactions.product_id > products.product_id
+Ref: transactions.establishment_id > establishments.establishment_id
+Ref: transactions.terminal_id > terminals.terminal_id
+Ref: authorizations.transaction_id > transactions.transaction_id
+Ref: balance_history.card_product_id > card_products.card_product_id
+Ref: balance_history.transaction_id > transactions.transaction_id

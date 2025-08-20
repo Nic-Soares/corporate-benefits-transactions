@@ -1,7 +1,6 @@
 volumes:
   # Dimensões (dados reais/semi-reais)
   dim_municipios: 5573          # Todos os municípios brasileiros
-  dim_tipos_produto: 5        # Alimentação, Refeição, Combustivel, Premium, Frota, Gift
   dim_categorias_estabelecimento: 20
   dim_adquirentes: 5            # Cielo, Rede, Stone, etc
   dim_bandeiras: 4              # Visa, Master, Elo, Própria
@@ -12,7 +11,6 @@ volumes:
   funcionarios: 800             # Funcionários total
   estabelecimentos: 100         # Estabelecimentos credenciados
   cartoes: 1600                 # Cartões emitidos (2 por funcionário média)
-  segmentos: 15
 
   # Fato principal
   transacoes: 768000            # Transações (~800 por funcionário/ano)

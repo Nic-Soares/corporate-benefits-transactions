@@ -1,7 +1,7 @@
 services:
   db:
     image: postgres:latest
-    container_name: corporate_benefits_db   # nome amigável do container
+    container_name: corporate_benefits_db
     restart: always
     environment:
       POSTGRES_USER: ${DB_USER}
@@ -14,4 +14,4 @@ services:
 
 volumes:
   postgres_data:
-    name: corporate_benefits_postgres_data  # nome amigável do volume
+    name: corporate_benefits_postgres_data

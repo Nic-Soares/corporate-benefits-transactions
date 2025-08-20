@@ -1,76 +1,133 @@
 # Regras de bandeiras/redes
-bandeiras:
+modalidades:
   rede_credenciada:
-    nome: "Rede Credenciada"
-    aceita_estabelecimentos: "rede_credenciada"
-    taxa_comissao: 0.0
-
+    name: "Rede Credenciada"
+    type: "proprietary_network"
+    commission: 0.0
   visa:
-    nome: "Visa"
-    aceita_estabelecimentos: "todos"
-    taxa_comissao: 0.025
-
+    name: "Visa"
+    type: "brand"
+    commission: 0.025
   mastercard:
-    nome: "Mastercard"
-    aceita_estabelecimentos: "todos"
-    taxa_comissao: 0.023
-
+    name: "Mastercard"
+    type: "brand"
+    commission: 0.023
   elo:
-    nome: "Elo"
-    aceita_estabelecimentos: "todos"
-    taxa_comissao: 0.020
+    name: "Elo"
+    type: "brand"
+    commission: 0.020
+
+adquirentes:
+  - "Cielo"
+  - "Rede"
+  - "Stone"
+  - "GetNet"
+  - "PagSeguro"
+  - "SafraPay"
+  - "Adiq"
 
 # Regras por tipo de produto + CNAE
 tipos_produto:
   alimentacao:
-    nome: "Vale Alimentação"
-    codigo: "VA"
-    categoria: "Produto"
-    cnaes_permitidos: ["4711-3", "4712-1"]  # Supermercados, mercearias
+    name: "Vale Alimentação"
+    code: "VA"
+    category: "Beneficio"
+    cnaes_permitidos: ["4711-3", "4712-1"]
 
   refeicao:
-    nome: "Vale Refeição"
-    codigo: "VR"
-    cnaes_permitidos: ["5611-2", "5612-1"]  # Restaurantes, lanchonetes
+    name: "Vale Refeição"
+    code: "VR"
+    category: "Beneficio"
+    cnaes_permitidos: ["5611-2", "5612-1"]
 
   combustivel:
-    nome: "Vale Combustível"
-    codigo: "VC"
-    cnaes_permitidos: ["4731-8"]  # Postos de combustível
+    name: "Vale Combustível"
+    code: "VC"
+    category: "Beneficio"
+    cnaes_permitidos: ["4731-8"]
 
   frota:
-    nome: "Gestão de Frota"
-    codigo: "FR"  # Remova a aspas extra
+    name: "Gestão de Frota"
+    code: "FR"
+    category: "Gestão"
     cnaes_permitidos: ["4731-8"]
 
   gift:
-    nome: "Vale Presente"
-    codigo: "GIFT"
+    name: "Vale Presente"
+    code: "GF"
+    category: "Beneficio"
     cnaes_permitidos: "todos"  # Aceita qualquer CNAE
 
 # Motivos de negação mais comuns
 motivos_negacao:
   - codigo: "51"
     descricao: "Saldo insuficiente"
-    categoria: "saldo"
+    category: "saldo"
     probabilidade: 0.60
 
   - codigo: "14"
     descricao: "Cartão inválido"
-    categoria: "cartao"
+    category: "cartao"
     probabilidade: 0.15
 
   - codigo: "55"
     descricao: "Senha incorreta"
-    categoria: "senha"
+    category: "senha"
     probabilidade: 0.12
 
   - codigo: "58"
     descricao: "Transação não permitida"
-    categoria: "estabelecimento"
+    category: "estabelecimento"
     probabilidade: 0.08
 
   - codigo: "96"
     descricao: "Falha no sistema"
-    categoria: "rede"
+    category: "rede"
     probabilidade: 0.05
+
+segments:
+  - segment_id: "SEG_01"
+    name: "Tecnologia"
+    category: "Tecnologia e Comunicação"
+  - segment_id: "SEG_02"
+    name: "Varejo"
+    category: "Comércio"
+  - segment_id: "SEG_03"
+    name: "Indústria"
+    category: "Manufatura e Indústria"
+  - segment_id: "SEG_04"
+    name: "Serviços Financeiros"
+    category: "Serviços"
+  - segment_id: "SEG_05"
+    name: "Saúde"
+    category: "Saúde e Bem-estar"
+  - segment_id: "SEG_06"
+    name: "Educação"
+    category: "Serviços"
+  - segment_id: "SEG_07"
+    name: "Alimentação"
+    category: "Comércio"
+  - segment_id: "SEG_08"
+    name: "Construção"
+    category: "Indústria e Construção"
+  - segment_id: "SEG_09"
+    name: "Agronegócio"
+    category: "Setor Primário"
+  - segment_id: "SEG_10"
+    name: "Energia"
+    category: "Infraestrutura"
+  - segment_id: "SEG_11"
+    name: "Transporte e Logística"
+    category: "Serviços"
+  - segment_id: "SEG_12"
+    name: "Consultoria"
+    category: "Serviços"
+  - segment_id: "SEG_13"
+    name: "Turismo e Hotelaria"
+    category: "Serviços"
+  - segment_id: "SEG_14"
+    name: "Mídia e Entretenimento"
+    category: "Tecnologia e Comunicação"
+  - segment_id: "SEG_15"
+    name: "Setor Público"
+    category: "Governo"

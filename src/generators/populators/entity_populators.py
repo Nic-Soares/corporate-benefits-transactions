@@ -1,20 +1,12 @@
 import pandas as pd
 import random
 from faker import Faker
-from src.common.queries.data_queries import get_municipio_ids, get_cnae_ids
-from .common import inserir_dados
 
 fake = Faker('pt_BR')
 
 
-
-
-def popular_companies(conn, volumes):
-    """Popula a tabela companies com dados sintéticos"""
-    print("Populando companies")
-
-    municipio_ids = get_municipio_ids(conn)
-
+def generate_companies_data(volumes, municipio_ids):
+    """Generates companies DataFrame with synthetic data"""
     empresas = []
 
     for i in range(volumes['empresas']):
@@ -33,18 +25,11 @@ def popular_companies(conn, volumes):
         }
         empresas.append(empresa)
 
-    df = pd.DataFrame(empresas)
-    inserir_dados(conn, df, 'companies')
-    print(f"{len(empresas)} empresas inseridos")
+    return pd.DataFrame(empresas)
 
 
-def popular_establishments(conn, volumes):
-    """Popula a tabela establishments com dados sintéticos"""
-    print("🏪 Populando establishments...")
-
-    municipio_ids = get_municipio_ids(conn)
-    cnae_ids = get_cnae_ids(conn)
-
+def generate_establishments_data(volumes, municipio_ids, cnae_ids):
+    """Generates establishments DataFrame with synthetic data"""
     estabelecimentos = []
     for i in range(volumes['estabelecimentos']):
         estabelecimento = {
@@ -71,6 +56,4 @@ def popular_establishments(conn, volumes):
         }
         estabelecimentos.append(estabelecimento)
 
-    df = pd.DataFrame(estabelecimentos)
-    inserir_dados(conn, df, 'establishments')
-    print(f"{len(estabelecimentos)} estabelecimentos inseridos")
+    return pd.DataFrame(estabelecimentos)
