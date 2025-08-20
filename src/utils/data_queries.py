@@ -40,13 +40,13 @@ def get_establishment_ids(conn):
     return [row[0] for row in result]
 
 
-def verificar_tabela_possui_dados(conn, nome_tabela):
+def check_table_has_data(conn, nome_tabela):
     """Verifica se uma tabela possui dados"""
     result = conn.execute(f"SELECT COUNT(*) FROM {nome_tabela}").fetchone()
     return result and result[0] > 0
 
 
-def contar_registros(conn, nome_tabela):
+def count_records(conn, nome_tabela):
     """Conta número de registros em uma tabela"""
     result = conn.execute(f"SELECT COUNT(*) FROM {nome_tabela}").fetchone()
     return result[0] if result else 0

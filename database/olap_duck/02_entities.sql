@@ -24,8 +24,8 @@ CREATE TABLE "establishments" (
 CREATE TABLE "companies" (
   "company_id" VARCHAR PRIMARY KEY,
   "parent_company_id" VARCHAR REFERENCES companies(company_id),
-  "codigo_cliente" VARCHAR,
   "razao_social" VARCHAR,
+  "nome_fantasia" varchar,
   "cnpj" VARCHAR,
   "tipo_empresa" VARCHAR,
   "segmento_id" VARCHAR NOT NULL REFERENCES dim_segmentos(segmento_id),
