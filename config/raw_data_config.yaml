@@ -1,0 +1,141 @@
+# =====================================
+# transaction_simulation.yaml
+# Configurações para simulação transacional
+# =====================================
+
+# VOLUMES TRANSACIONAIS
+transaction_volumes:
+  daily_transactions: 2500       # Total de transações por dia
+  peak_hours: [12, 13, 18, 19]  # Horários de pico
+  monthly_growth_rate: 0.02      # Crescimento mensal de 2%
+
+# DISTRIBUIÇÕES DE APROVAÇÃO
+approval_rates:
+  overall: 0.92                  # 92% de aprovação geral
+  by_network:
+    proprietary_network: 0.95    # 95% rede própria
+    branded_network: 0.88        # 88% rede bandeirada
+  by_product:
+    VA: 0.94                     # Vale alimentação
+    VR: 0.93                     # Vale refeição
+    VC: 0.89                     # Vale combustível
+    VF: 0.96                     # Vale farmácia
+    VM: 0.90                     # Vale múltiplo
+    PR: 0.91                     # Premium
+
+# CÓDIGOS DE RESPOSTA E DISTRIBUIÇÃO
+response_codes:
+  approved:
+    "00":
+      description: "Transação aprovada"
+      probability: 0.92
+
+  denied:
+    "51":
+      description: "Saldo insuficiente"
+      probability: 0.045
+      category: "saldo"
+
+    "14":
+      description: "Cartão inválido"
+      probability: 0.015
+      category: "cartao"
+
+    "55":
+      description: "Senha incorreta"
+      probability: 0.012
+      category: "autenticacao"
+
+    "58":
+      description: "Transação não permitida para o estabelecimento"
+      probability: 0.006
+      category: "estabelecimento"
+
+    "96":
+      description: "Falha no sistema"
+      probability: 0.002
+      category: "sistema"
+
+# REGRAS DE NEGÓCIO POR PRODUTO
+business_rules:
+  # Validações por CNAE (rede própria)
+  cnae_validations:
+    VA:  # Vale alimentação
+      allowed_cnaes: ["4711-3", "4712-1", "4713-0", "4721-1", "4722-9", "4723-7"]
+      description: "Supermercados, hipermercados, mercearias"
+
+    VR:  # Vale refeição
+      allowed_cnaes: ["5611-2", "5612-1", "5620-1"]
+      description: "Restaurantes, lanchonetes, bares"
+
+    VC:  # Vale combustível
+      allowed_cnaes: ["4731-8", "4732-6"]
+      description: "Postos de combustível"
+
+    VF:  # Vale farmácia
+      allowed_cnaes: ["4771-7", "4772-5"]
+      description: "Farmácias e drogarias"
+
+    VM:  # Vale múltiplo - aceita várias categorias
+      allowed_cnaes: "multiple"
+
+    PR:  # Premium - sem restrições
+      allowed_cnaes: "all"
+
+  # Validações por MCC (rede bandeirada)
+  mcc_validations:
+    food_related: ["5411", "5499", "5812", "5814"]
+    gas_stations: ["5541", "5542"]
+    pharmacies: ["5912", "5122"]
+    general_retail: ["5200", "5300", "5400", "5500", "5600", "5700", "5800", "5900"]
+
+# PADRÕES DE USO
+usage_patterns:
+  # Horários mais comuns por tipo de estabelecimento
+  peak_hours_by_category:
+    restaurant: [12, 13, 18, 19, 20]
+    supermarket: [10, 11, 17, 18, 19]
+    gas_station: [7, 8, 17, 18, 19]
+    pharmacy: [9, 10, 11, 15, 16, 17]
+
+  # Valores médios por produto
+  average_amounts:
+    VA:
+      min: 15.00
+      max: 250.00
+      avg: 65.00
+
+    VR:
+      min: 8.00
+      max: 120.00
+      avg: 28.50
+
+    VC:
+      min: 30.00
+      max: 500.00
+      avg: 180.00
+
+    VF:
+      min: 5.00
+      max: 200.00
+      avg: 42.00
+
+    VM:
+      min: 10.00
+      max: 300.00
+      avg: 75.00
+
+    PR:
+      min: 20.00
+      max: 800.00
+      avg: 150.00
+
+# CONFIGURAÇÕES DE FRAUDE
+fraud_settings:
+  fraud_probability: 0.001       # 0.1% das transações são potencialmente fraudulentas
+  fraud_indicators:
+    multiple_attempts: 0.3       # Múltiplas tentativas em sequência
+    unusual_amount: 0.25         # Valor muito acima da média
+    unusual_time: 0.2            # Horário incomum
+    unusual_location: 0.15       # Localização incomum
+    blocked_establishment: 0.1   # Estabelecimento com problemas
