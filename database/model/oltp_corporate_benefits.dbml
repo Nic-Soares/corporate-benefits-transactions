@@ -159,8 +159,8 @@ Table transactions {
   product_id varchar [not null]
   establishment_id varchar [not null]
   terminal_id varchar [not null]
-  transaction_amount decimal(15,2) [not null]
-  transaction_date timestamp [not null]
+  amount decimal(15,2) [not null]
+  date timestamp [not null]
   capture_type varchar [not null] // chip, magnetic_stripe, contactless, nfc
 
   // FINANCIAL TRANSACTION STANDARD CODES

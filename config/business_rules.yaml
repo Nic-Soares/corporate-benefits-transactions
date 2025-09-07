@@ -1,16 +1,8 @@
 # =====================================
-# raw_data_config.yaml
-# Configurações para geração de dados RAW
+# business_rules.yaml
+# DADOS PARA ALIMENTAR DATAFRAMES DIMENSIONAIS
+# Este arquivo contém os dados estáticos usados para popular as tabelas de dimensão
 # =====================================
-
-# VOLUMES DE DADOS A GERAR
-data_volumes:
-  companies: 15
-  cardholders: 1200
-  cards: 2400
-  establishments: 150
-  terminals: 300
-  card_products: 3000
 
 # PRODUTOS DISPONÍVEIS
 products:
@@ -38,6 +30,12 @@ products:
     category: "Beneficio"
     description: "Benefício para compras em farmácias e drogarias"
 
+  multiplo:
+    code: "VM"
+    name: "Vale Múltiplo"
+    category: "Beneficio"
+    description: "Benefício com múltiplas funcionalidades"
+
   premium:
     code: "PR"
     name: "Cartão Premium"
@@ -46,19 +44,23 @@ products:
 
 # MODALIDADES DE TRANSAÇÃO
 transaction_modalities:
-  - name: "Rede Própria"
+  rede_credenciada:
+    name: "Rede Própria"
     type: "proprietary_network"
     commission_rate: 0.0
 
-  - name: "Visa"
+  visa:
+    name: "Visa"
     type: "brand"
     commission_rate: 0.025
 
-  - name: "Mastercard"
+  mastercard:
+    name: "Mastercard"
     type: "brand"
     commission_rate: 0.023
 
-  - name: "Elo"
+  elo:
+    name: "Elo"
     type: "brand"
     commission_rate: 0.020
 
@@ -71,8 +73,22 @@ acquirers:
   - "PagSeguro"
   - "SafraPay"
 
+terminal_models_by_acquirer:
+  Cielo:
+    - "POS Cielo LIO"
+  Rede:
+    - "TEF Rede"
+  Stone:
+    - "Stone Ton"
+  GetNet:
+    - "GetNet POS"
+  PagSeguro:
+    - "Moderninha Pro"
+  SafraPay:
+    - "SafraPay POS"
+
 # SEGMENTOS DE EMPRESAS
-company_segments:
+segments:
   - segment_id: "SEG_TECH"
     name: "Tecnologia"
     category: "Tecnologia e Inovação"
@@ -121,42 +137,35 @@ company_segments:
     name: "Consultoria"
     category: "Serviços Profissionais"
 
-# CONFIGURAÇÕES DE GERAÇÃO
-generation_settings:
-  # Distribuição de status
-  cardholder_status_distribution:
-    active: 0.85
-    inactive: 0.10
-    terminated: 0.05
+# TECNOLOGIAS DE CAPTURA
+capture_technologies:
+  - name: "Chip"
+    description: "Transação com chip EMV"
 
-  card_status_distribution:
-    active: 0.80
-    blocked: 0.15
-    cancelled: 0.05
+  - name: "Contactless"
+    description: "Transação por aproximação"
 
-  establishment_status_distribution:
-    ATIVA: 0.90
-    INATIVA: 0.07
-    SUSPENSA: 0.02
-    BAIXADA: 0.01
+  - name: "Tarja Magnética"
+    description: "Transação com tarja magnética"
 
-  # Produtos por cartão
-  products_per_card:
-    min: 1
-    max: 3
-    avg: 1.8
+  - name: "QR Code"
+    description: "Transação via QR Code"
 
-  # Datas
-  date_ranges:
-    card_issuance:
-      start: "-2y"
-      end: "today"
-    cardholder_admission:
-      start: "-5y"
-      end: "today"
-    company_registration:
-      start: "-10y"
-      end: "today"
-    establishment_opening:
-      start: "-8y"
-      end: "today"
+
+# STATUS DISPONÍVEIS
+status_options:
+  cardholder:
+    - "active"
+    - "inactive"
+    - "terminated"
+
+  card:
+    - "active"
+    - "blocked"
+    - "cancelled"
+
+  establishment:
+    - "ATIVA"
+    - "INATIVA"
+    - "SUSPENSA"
+    - "BAIXADA"
