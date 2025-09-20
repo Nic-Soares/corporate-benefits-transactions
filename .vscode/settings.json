@@ -1,4 +1,4 @@
 {
-  "editor.fontFamily": "'Adwaita Mono', 'monospace', monospace",
+  "editor.fontFamily": "'Adwaita Mono', 'JetBrains Mono', 'monospace'",
   "editor.fontVariations": false
 }

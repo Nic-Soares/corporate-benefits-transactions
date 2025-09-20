@@ -30,6 +30,9 @@ approval_rates:
 
 # CONFIGURAÇÕES DE GERAÇÃO
 generation_settings:
+  # Distribuição de CNAEs com produtos válidos
+  cnae_with_products_ratio: 0.85  # 85% dos estabelecimentos devem ter CNAE que aceita produtos
+  
   # Distribuição de status
   cardholder_status_distribution:
     active: 0.85
