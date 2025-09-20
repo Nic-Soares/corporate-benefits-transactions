@@ -216,3 +216,4 @@ __marimo__/
 *.shp
 *.shx
 *.patch
+.vscode

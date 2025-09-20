@@ -1,0 +1,311 @@
+# =====================================
+# validation_rules.yaml
+# REGRAS DE VALIDAÇÃO E AUTORIZAÇÃO DE TRANSAÇÕES
+# Define todas as verificações necessárias para aprovar/declinar transações
+# =====================================
+
+# ORDEM DE EXECUÇÃO DAS VALIDAÇÕES
+# (executadas em ordem de performance - mais rápidas primeiro)
+validation_order:
+  - "status_validations"
+  - "temporal_validations" 
+  - "business_rules_validations"
+  - "balance_and_limits_validations"
+  - "infrastructure_validations"
+
+# =====================================
+# VALIDAÇÕES DE STATUS E ATIVAÇÃO
+# =====================================
+status_validations:
+  card_status:
+    description: "Cartão deve estar ativo"
+    table: "cards"
+    field: "status"
+    required_value: "active"
+    error_codes:
+      blocked: "14"     # Cartão bloqueado
+      cancelled: "15"   # Cartão cancelado
+      canceled: "15"    # Cartão cancelado (variação)
+      inactive: "13"    # Cartão inativo
+
+  cardholder_status:
+    description: "Portador deve estar ativo"
+    table: "cardholders"
+    field: "status"
+    required_value: "active"
+    error_codes:
+      inactive: "16"    # Portador inativo
+      terminated: "17"  # Portador desligado
+
+  establishment_status:
+    description: "Estabelecimento deve estar ativo"
+    table: "establishments"
+    field: "status"
+    required_value: "ATIVA"
+    error_codes:
+      INATIVA: "18"     # Estabelecimento inativo
+      SUSPENSA: "19"    # Estabelecimento suspenso
+      BAIXADA: "20"     # Estabelecimento baixado
+
+  terminal_status:
+    description: "Terminal deve estar ativo"
+    table: "terminals"
+    field: "status"
+    required_value: "active"
+    error_codes:
+      inactive: "22"    # Terminal inativo
+
+  card_product_status:
+    description: "Produto no cartão deve estar ativo"
+    table: "card_products"
+    field: "status"
+    required_value: "active"
+    error_codes:
+      inactive: "23"    # Produto do cartão inativo
+
+  product_active:
+    description: "Produto deve estar ativo"
+    table: "products"
+    field: "active"
+    required_value: true
+    error_codes:
+      false: "24"       # Produto desativado
+
+  modality_active:
+    description: "Modalidade deve estar ativa"
+    table: "transaction_modalities"
+    field: "active"
+    required_value: true
+    error_codes:
+      false: "25"       # Modalidade desativada
+
+  acquirer_active:
+    description: "Adquirente deve estar ativo"
+    table: "acquirers"
+    field: "active"
+    required_value: true
+    error_codes:
+      false: "26"       # Adquirente desativado
+
+# =====================================
+# VALIDAÇÕES TEMPORAIS
+# =====================================
+temporal_validations:
+  card_expiration:
+    description: "Cartão não pode estar vencido"
+    table: "cards"
+    field: "expiration_date"
+    rule: "transaction_date <= expiration_date"
+    error_code: "54"    # Cartão vencido
+
+  cardholder_admission:
+    description: "Portador deve estar admitido"
+    table: "cardholders"
+    field: "admission_date"
+    rule: "transaction_date >= admission_date"
+    error_code: "56"    # Transação antes da admissão
+
+  establishment_accreditation:
+    description: "Estabelecimento deve estar credenciado"
+    table: "establishments"
+    field: "accreditation_date"
+    rule: "transaction_date >= accreditation_date"
+    error_code: "57"    # Estabelecimento ainda não credenciado
+
+  terminal_installation:
+    description: "Terminal deve estar instalado"
+    table: "terminals"
+    field: "installation_date"
+    rule: "transaction_date >= installation_date"
+    error_code: "58"    # Terminal ainda não instalado
+
+# =====================================
+# VALIDAÇÕES DE REGRAS DE NEGÓCIO
+# =====================================
+business_rules_validations:
+  mcc_modality_mapping:
+    description: "MCC deve ser aceito pela modalidade (cartões bandeirados)"
+    applies_to: "branded_cards"  # cards.modality_id IS NOT NULL
+    validation:
+      - "MCC existe em mcc_modalities para a modalidade"
+      - "mcc_modalities.active = true"
+    error_code: "27"    # MCC não aceito pela modalidade
+
+  cnae_product_mapping:
+    description: "CNAE deve aceitar o produto (rede proprietária)"
+    applies_to: "proprietary_network_cards"  # cards.modality_id IS NULL
+    validation:
+      - "CNAE existe em cnae_products para o produto"
+      - "cnae_products.active = true"
+    error_code: "28"    # CNAE não aceita o produto
+
+  mcc_modality_rules_active:
+    description: "Regra MCC x Modalidade deve estar ativa"
+    table: "mcc_modalities"
+    field: "active"
+    required_value: true
+    error_code: "29"    # Regra MCC desativada
+
+  cnae_product_rules_active:
+    description: "Regra CNAE x Produto deve estar ativa"
+    table: "cnae_products"
+    field: "active"
+    required_value: true
+    error_code: "30"    # Regra CNAE desativada
+
+# =====================================
+# VALIDAÇÕES DE SALDO E LIMITES
+# =====================================
+balance_and_limits_validations:
+  current_balance:
+    description: "Saldo suficiente no produto"
+    table: "card_products"
+    field: "current_balance"
+    rule: "current_balance >= transaction_amount"
+    error_code: "51"    # Saldo insuficiente
+
+  daily_limit:
+    description: "Limite diário não ultrapassado"
+    table: "card_products"
+    field: "daily_limit"
+    rule: "daily_usage + transaction_amount <= daily_limit"
+    condition: "daily_limit > 0"  # Se limite = 0, não há restrição
+    error_code: "61"    # Limite diário excedido
+
+  monthly_limit:
+    description: "Limite mensal não ultrapassado"
+    table: "card_products"
+    field: "monthly_limit"
+    rule: "monthly_usage + transaction_amount <= monthly_limit"
+    condition: "monthly_limit > 0"  # Se limite = 0, não há restrição
+    error_code: "62"    # Limite mensal excedido
+
+# =====================================
+# VALIDAÇÕES DE INFRAESTRUTURA
+# =====================================
+infrastructure_validations:
+  terminal_acquirer_match:
+    description: "Terminal deve pertencer ao adquirente"
+    validation: "terminals.acquirer_id matches transaction acquirer"
+    error_code: "31"    # Terminal/adquirente incompatível
+
+  capture_type_support:
+    description: "Tipo de captura deve ser suportado"
+    validation: "capture_type is supported by terminal/modality"
+    error_code: "32"    # Tipo de captura não suportado
+
+# =====================================
+# CÓDIGOS DE RESPOSTA PADRÃO
+# =====================================
+response_codes:
+  # APROVAÇÕES
+  "00": "Transação aprovada"
+  
+  # PROBLEMAS DE CARTÃO/PORTADOR
+  "14": "Cartão bloqueado"
+  "15": "Cartão cancelado"
+  "16": "Portador inativo"
+  "17": "Portador desligado"
+  "54": "Cartão vencido"
+  "55": "Produto ainda não ativado"
+  "56": "Transação antes da admissão do portador"
+  
+  # PROBLEMAS DE ESTABELECIMENTO
+  "18": "Empresa inativa"
+  "19": "Estabelecimento inativo"
+  "20": "Estabelecimento suspenso"
+  "21": "Estabelecimento baixado"
+  "57": "Estabelecimento ainda não credenciado"
+  
+  # PROBLEMAS DE TERMINAL/INFRAESTRUTURA
+  "22": "Terminal inativo"
+  "31": "Terminal/adquirente incompatível"
+  "32": "Tipo de captura não suportado"
+  "58": "Terminal ainda não instalado"
+  
+  # PROBLEMAS DE PRODUTO/CONFIGURAÇÃO
+  "23": "Produto do cartão inativo"
+  "24": "Produto desativado"
+  "25": "Modalidade desativada"
+  "26": "Adquirente desativado"
+  "27": "MCC não aceito pela modalidade"
+  "28": "CNAE não aceita o produto"
+  "29": "Regra MCC desativada"
+  "30": "Regra CNAE desativada"
+  
+  # PROBLEMAS DE SALDO/LIMITES
+  "51": "Saldo insuficiente"
+  "61": "Limite diário excedido"
+  "62": "Limite mensal excedido"
+  
+  # ERROS DE SISTEMA
+  "96": "Erro no sistema"
+  "91": "Sistema indisponível"
+
+# =====================================
+# CONFIGURAÇÕES DE VALIDAÇÃO
+# =====================================
+validation_config:
+  # Timeout para validações
+  timeout_ms: 3000
+  
+  # Validações assíncronas (podem ser executadas em paralelo)
+  async_validations:
+    - "status_validations"
+    - "temporal_validations"
+  
+  # Validações que precisam de cache
+  cached_validations:
+    - "mcc_modality_mapping"
+    - "cnae_product_mapping"
+  
+  # Validações que exigem cálculos em tempo real
+  realtime_validations:
+    - "current_balance"
+    - "daily_limit"
+    - "monthly_limit"
+
+# =====================================
+# REGRAS ESPECIAIS POR PRODUTO
+# =====================================
+product_specific_rules:
+  VA:  # Vale Alimentação
+    additional_validations:
+      - "cnae_food_only"
+    restricted_hours: null
+    weekend_allowed: true
+    
+  VR:  # Vale Refeição
+    additional_validations:
+      - "cnae_restaurant_only"
+    restricted_hours: null
+    weekend_allowed: true
+    
+  VC:  # Vale Combustível
+    additional_validations:
+      - "cnae_gas_station_only"
+    restricted_hours: null
+    weekend_allowed: true
+    
+  GF:  # Cartão Gift
+    additional_validations: []
+    restricted_hours: null
+    weekend_allowed: true
+
+# =====================================
+# ALERTAS E MONITORAMENTO
+# =====================================
+monitoring_rules:
+  # Alertas por alta taxa de declinação
+  decline_rate_alerts:
+    threshold: 0.15  # 15%
+    timeframe: "1h"
+    
+  # Alertas por códigos específicos
+  response_code_alerts:
+    "51":  # Saldo insuficiente - pode indicar problema de carga
+      threshold: 100
+      timeframe: "10m"
+    "27":  # MCC não aceito - pode indicar erro de configuração
+      threshold: 10
+      timeframe: "5m"

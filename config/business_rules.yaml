@@ -6,62 +6,50 @@
 
 # PRODUTOS DISPONÍVEIS
 products:
-  alimentacao:
+  VA:
     code: "VA"
     name: "Vale Alimentação"
     category: "Beneficio"
     description: "Benefício para compras em supermercados e estabelecimentos alimentícios"
 
-  refeicao:
+  RF:
     code: "VR"
     name: "Vale Refeição"
     category: "Beneficio"
     description: "Benefício para refeições em restaurantes e lanchonetes"
 
-  combustivel:
+  VC:
     code: "VC"
     name: "Vale Combustível"
     category: "Beneficio"
     description: "Benefício para abastecimento de veículos"
 
-  farmacia:
-    code: "VF"
-    name: "Vale Farmácia"
-    category: "Beneficio"
-    description: "Benefício para compras em farmácias e drogarias"
-
-  multiplo:
-    code: "VM"
-    name: "Vale Múltiplo"
-    category: "Beneficio"
-    description: "Benefício com múltiplas funcionalidades"
-
-  premium:
-    code: "PR"
-    name: "Cartão Premium"
+  GF:
+    code: "GF"
+    name: "Cartão GF"
     category: "Incentivo"
-    description: "Cartão com benefícios diferenciados e múltiplas funcionalidades"
+    description: "Cartão com objetivo de presentear ou bonificação extra"
 
 # MODALIDADES DE TRANSAÇÃO
 transaction_modalities:
   rede_credenciada:
-    name: "Rede Própria"
-    type: "proprietary_network"
+    name:           "Rede Própria"
+    type:           "proprietary_network"
     commission_rate: 0.0
 
   visa:
-    name: "Visa"
-    type: "brand"
+    name:           "Visa"
+    type:           "brand"
     commission_rate: 0.025
 
   mastercard:
-    name: "Mastercard"
-    type: "brand"
+    name:           "Mastercard"
+    type:           "brand"
     commission_rate: 0.023
 
   elo:
-    name: "Elo"
-    type: "brand"
+    name:           "Elo"
+    type:           "brand"
     commission_rate: 0.020
 
 # ADQUIRENTES DISPONÍVEIS
@@ -73,6 +61,7 @@ acquirers:
   - "PagSeguro"
   - "SafraPay"
 
+# MODELOS DE TERMINAL POR ADQUIRENTE
 terminal_models_by_acquirer:
   Cielo:
     - "POS Cielo LIO"
@@ -90,67 +79,66 @@ terminal_models_by_acquirer:
 # SEGMENTOS DE EMPRESAS
 segments:
   - segment_id: "SEG_TECH"
-    name: "Tecnologia"
-    category: "Tecnologia e Inovação"
+    name:       "Tecnologia"
+    category:   "Tecnologia e Inovação"
 
   - segment_id: "SEG_RETAIL"
-    name: "Varejo"
-    category: "Comércio"
+    name:       "Varejo"
+    category:   "Comércio"
 
   - segment_id: "SEG_INDUSTRY"
-    name: "Indústria"
-    category: "Manufatura"
+    name:       "Indústria"
+    category:   "Manufatura"
 
   - segment_id: "SEG_FINANCE"
-    name: "Serviços Financeiros"
-    category: "Serviços"
+    name:       "Serviços Financeiros"
+    category:   "Serviços"
 
   - segment_id: "SEG_HEALTH"
-    name: "Saúde"
-    category: "Saúde e Bem-estar"
+    name:       "Saúde"
+    category:   "Saúde e Bem-estar"
 
   - segment_id: "SEG_EDUCATION"
-    name: "Educação"
-    category: "Educação"
+    name:       "Educação"
+    category:   "Educação"
 
   - segment_id: "SEG_FOOD"
-    name: "Alimentação"
-    category: "Alimentação e Bebidas"
+    name:       "Alimentação"
+    category:   "Alimentação e Bebidas"
 
   - segment_id: "SEG_CONSTRUCTION"
-    name: "Construção"
-    category: "Construção e Engenharia"
+    name:       "Construção"
+    category:   "Construção e Engenharia"
 
   - segment_id: "SEG_AGRO"
-    name: "Agronegócio"
-    category: "Agropecuária"
+    name:       "Agronegócio"
+    category:   "Agropecuária"
 
   - segment_id: "SEG_ENERGY"
-    name: "Energia"
-    category: "Energia e Utilities"
+    name:       "Energia"
+    category:   "Energia e Utilities"
 
   - segment_id: "SEG_LOGISTICS"
-    name: "Logística"
-    category: "Transporte e Logística"
+    name:       "Logística"
+    category:   "Transporte e Logística"
 
   - segment_id: "SEG_CONSULTING"
-    name: "Consultoria"
-    category: "Serviços Profissionais"
+    name:       "Consultoria"
+    category:   "Serviços Profissionais"
 
 # TECNOLOGIAS DE CAPTURA
 capture_technologies:
-  - name: "Chip"
+  - name:        "Chip"
     description: "Transação com chip EMV"
 
-  - name: "Contactless"
+  - name:        "Contactless"
     description: "Transação por aproximação"
 
-  - name: "Tarja Magnética"
+  - name:        "Tarja Magnética"
     description: "Transação com tarja magnética"
 
-  - name: "QR Code"
+  - name:        "QR Code"
     description: "Transação via QR Code"
-
 
 # STATUS DISPONÍVEIS
 status_options:
@@ -169,3 +157,108 @@ status_options:
     - "INATIVA"
     - "SUSPENSA"
     - "BAIXADA"
+
+# =====================================
+# MAPEAMENTO CNAE-PRODUTOS
+# Define quais produtos de benefício são aceitos em cada categoria CNAE
+# =====================================
+cnae_products_mapping:
+  # ==========================================
+  # SUPERMERCADOS E HIPERMERCADOS
+  # Aceitam: Vale Alimentação e Cartão GF
+  # ==========================================
+  '4711':     ['VA', 'GF']         # Supermercados e hipermercados
+  '47113':    ['VA', 'GF']         # Hipermercados e supermercados  
+  '4711301':  ['VA', 'GF']         # Hipermercados
+  '4711302':  ['VA', 'GF']         # Supermercados
+  
+  # ==========================================
+  # COMÉRCIO DE PRODUTOS ALIMENTÍCIOS
+  # Aceitam: Vale Alimentação
+  # ==========================================
+  '4721':     ['VA']                 # Padarias, laticínios, doces
+  '4722':     ['VA']                 # Açougues e peixarias
+  '4723':     ['VA']                 # Comércio de bebidas
+  '4729':     ['VA']                 # Outros produtos alimentícios
+  '4729602':  ['VA', 'GF']         # Lojas de conveniência
+  '4729699':  ['VA']                 # Produtos alimentícios gerais
+  
+  # MERCADOS E FEIRAS
+  '4781':     ['VA']                 # Comércio ambulante de alimentos
+  '4784':     ['VA']                 # Comércio varejista de alimentos em via pública
+  
+  # ==========================================
+  # RESTAURANTES E SERVIÇOS DE ALIMENTAÇÃO
+  # Aceitam: Vale Refeição e Cartão GF
+  # ==========================================
+  '5611':     ['VR', 'GF']            # Restaurantes e serviços de alimentação
+  '56112':    ['VR']                    # Restaurantes e estabelecimentos de alimentação
+  '5611201':  ['VR']                    # Restaurantes e similares
+  '5611203':  ['VR']                    # Lanchonetes, casas de chá e sucos
+  '5611204':  ['VR']                    # Bares sem entretenimento
+  '5611205':  ['VR']                    # Bares com entretenimento
+  
+  # SERVIÇOS DE CATERING E ALIMENTAÇÃO
+  '5612':     ['VR']                    # Serviços ambulantes de alimentação
+  '5612100':  ['VR']                    # Serviços ambulantes
+  '5620':     ['VR']                    # Catering e bufê
+  '56201':    ['VR']                    # Serviços de catering e bufê
+  '5620101':  ['VR']                    # Alimentação para empresas
+  '5620102':  ['VR']                    # Serviços de bufê para eventos
+  '5620103':  ['VR']                    # Cantinas
+  '5620104':  ['VR']                    # Alimentos preparados para consumo domiciliar
+  
+  # ==========================================
+  # POSTOS DE COMBUSTÍVEL
+  # Aceitam: Vale Combustível
+  # ==========================================
+  '4731':     ['VC']                 # Comércio varejista de combustíveis
+  '47318':    ['VC']                 # Comércio de combustíveis para veículos
+  '4731800':  ['VC']                 # Postos de gasolina
+  
+  # ==========================================
+  # ESTABELECIMENTOS DIVERSOS
+  # Aceitam: Cartão GF (para compras diversas)
+  # ==========================================
+  '4751':     ['GF']                        # Tecidos e artigos do vestuário
+  '4752':     ['GF']                        # Calçados e artigos de couro
+  '4753':     ['GF']                        # Eletrodomésticos
+  '4754':     ['GF']                        # Móveis e decoração
+  '4755':     ['GF']                        # Tecidos e artigos de cama
+  '4756':     ['GF']                        # Instrumentos musicais
+  '4757':     ['GF']                        # Peças e acessórios eletrônicos
+  '4761':     ['GF']                        # Livros, jornais e papelaria
+  '4762':     ['GF']                        # CDs, DVDs e instrumentos musicais
+  '4763':     ['GF']                        # Artigos recreativos e esportivos
+  '4771':     ['GF']                        # Farmácias e produtos farmacêuticos
+  '4772':     ['GF']                        # Perfumaria e cosméticos
+  '4773':     ['GF']                        # Artigos médicos e ortopédicos
+  '4774':     ['GF']                        # Artigos de óptica
+  '4789':     ['GF']                        # Outros comércios varejistas
+
+# =====================================
+# REGRAS DE NEGÓCIO PARA ACEITAÇÃO DE PRODUTOS
+# =====================================
+
+# REGRAS PARA VALE ALIMENTAÇÃO (VA):
+# - Aceito APENAS em estabelecimentos que vendem alimentos para preparo doméstico
+# - Supermercados, hipermercados, açougues, padarias, feiras
+# - NÃO aceito em restaurantes, lanchonetes ou estabelecimentos de refeição pronta
+# - Lojas de conveniência podem aceitar para produtos alimentícios específicos
+
+# REGRAS PARA VALE REFEIÇÃO (VR):
+# - Aceito APENAS em estabelecimentos que servem refeições prontas
+# - Restaurantes, lanchonetes, bares, food trucks, cantinas
+# - Serviços de catering e bufê para eventos
+# - NÃO aceito em supermercados ou estabelecimentos de venda de alimentos para preparo
+
+# REGRAS PARA VALE COMBUSTÍVEL (VC):
+# - Aceito EXCLUSIVAMENTE em postos de combustível
+# - Gasolina, álcool, diesel, GNV
+# - Pode incluir serviços relacionados como lavagem e lubrificação
+
+# REGRAS PARA CARTÃO GF (GF):
+# - Aceito em diversos estabelecimentos para compras de presentes e bonificações
+# - Supermercados, lojas de departamento, farmácias, vestuário, eletrônicos
+# - Usado como incentivo, premiação ou presente
+# - Flexibilidade maior que outros benefícios, mas com controles específicos
