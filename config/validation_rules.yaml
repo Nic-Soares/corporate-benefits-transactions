@@ -202,6 +202,7 @@ response_codes:
   "00": "Transação aprovada"
   
   # PROBLEMAS DE CARTÃO/PORTADOR
+  "13": "Cartão inativo"
   "14": "Cartão bloqueado"
   "15": "Cartão cancelado"
   "16": "Portador inativo"
@@ -232,6 +233,10 @@ response_codes:
   "28": "CNAE não aceita o produto"
   "29": "Regra MCC desativada"
   "30": "Regra CNAE desativada"
+  
+  # PROBLEMAS DE REGRAS DE NEGÓCIO
+  "59": "MCC não aceita modalidade"
+  "60": "CNAE não aceita produto"
   
   # PROBLEMAS DE SALDO/LIMITES
   "51": "Saldo insuficiente"
