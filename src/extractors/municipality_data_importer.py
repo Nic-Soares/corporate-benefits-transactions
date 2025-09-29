@@ -1,10 +1,10 @@
-import pandas as pd
+import polars as pl
 from shapely.geometry.base import BaseGeometry
 from src.utils.read_data_files import read_shapefile
-
+from datetime import datetime
 
 def generate_municipality_data(shapefile_path='./data/raw/municipios/municipios.shp'):
-    """Generates municipality DataFrame from shapefile"""
+    """Generates municipality DataFrame from shapefile using Polars"""
     gdf = read_shapefile(shapefile_path)
     gdf = gdf.rename(columns={
         'CD_MUN': 'municipality_id',
@@ -23,37 +23,42 @@ def generate_municipality_data(shapefile_path='./data/raw/municipios/municipios.
         'NM_CONCU': 'concu_name',
         'AREA_KM2': 'area_km2'
     })
-    gdf['created_at'] = pd.Timestamp.now()
-    gdf['updated_at'] = None
 
-    # Extrai apenas latitude e longitude do centroide
-    df_municipios = pd.DataFrame(gdf.drop(columns=['geometry']))
-    df_municipios['latitude'] = gdf['geometry'].apply(lambda geom: geom.centroid.y if geom is not None else None)
-    df_municipios['longitude'] = gdf['geometry'].apply(lambda geom: geom.centroid.x if geom is not None else None)
+    # Extrai latitude e longitude do centroide
+    gdf['latitude'] = gdf['geometry'].apply(lambda geom: geom.centroid.y if geom is not None else None)
+    gdf['longitude'] = gdf['geometry'].apply(lambda geom: geom.centroid.x if geom is not None else None)
 
-    # Reordena colunas para bater com a tabela
+    # Remove coluna geometry e cria DataFrame Polars
+    df_municipios = pl.from_pandas(gdf.drop(columns=['geometry']))
+
+    # Adiciona timestamps
+    df_municipios = df_municipios.with_columns([
+        pl.lit(datetime.now()).alias('created_at'),
+        pl.lit(None).alias('updated_at')
+    ])
+
+    # Reordena colunas
     colunas_ordem = [
         'municipality_id', 'municipality_name', 'rgi_id', 'rgi_name', 'rgint_id', 'rgint_name',
         'state_id', 'state_name', 'state_code', 'region_id', 'region_name', 'region_code',
         'concu_id', 'concu_name', 'area_km2', 'latitude', 'longitude', 'created_at', 'updated_at'
     ]
-    df_municipios = df_municipios[colunas_ordem]
+    df_municipios = df_municipios.select(colunas_ordem)
 
-    # Aplicação dos tipos de dados
+    # Tipos de dados
     string_cols = ['municipality_id', 'municipality_name', 'rgi_id', 'rgint_id', 'state_id', 'region_id', 'concu_id']
     for col in string_cols:
-        df_municipios[col] = df_municipios[col].astype('string')
+        df_municipios = df_municipios.with_columns(pl.col(col).cast(pl.Utf8))
 
     categorical_cols = ['rgi_name', 'rgint_name', 'state_name', 'state_code', 'region_name', 'region_code', 'concu_name']
     for col in categorical_cols:
-        df_municipios[col] = df_municipios[col].astype('category')
+        df_municipios = df_municipios.with_columns(pl.col(col).cast(pl.Categorical))
 
     numeric_cols = ['area_km2', 'latitude', 'longitude']
     for col in numeric_cols:
-        df_municipios[col] = df_municipios[col].astype('float64')
+        df_municipios = df_municipios.with_columns(pl.col(col).cast(pl.Float64))
 
     return df_municipios
-
 
 if __name__ == "__main__":
     shapefile_path = './data/raw/municipios/municipios.shp'

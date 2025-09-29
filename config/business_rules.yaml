@@ -140,6 +140,33 @@ capture_technologies:
   - name:        "QR Code"
     description: "Transação via QR Code"
 
+# TECNOLOGIAS DE TRANSAÇÃO (PADRÃO ESTRUTURADO)
+transaction_technologies:
+  - code: CHIP
+    category: physical
+    name: Chip
+    requires_physical_card: true
+  - code: MAG_STRIPE
+    category: physical
+    name: Magnetic Stripe
+    requires_physical_card: true
+  - code: CONTACTLESS
+    category: physical
+    name: Contactless
+    requires_physical_card: true
+  - code: MOBILE_NFC
+    category: digital
+    name: Mobile NFC
+    requires_physical_card: false
+  - code: APPLE_PAY
+    category: digital
+    name: Apple Pay
+    requires_physical_card: false
+  - code: GOOGLE_PAY
+    category: digital
+    name: Google Pay
+    requires_physical_card: false
+
 # STATUS DISPONÍVEIS
 status_options:
   cardholder:
