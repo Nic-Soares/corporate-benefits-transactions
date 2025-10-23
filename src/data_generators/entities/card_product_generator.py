@@ -11,7 +11,6 @@ datetime_provider = Datetime(Locale.PT_BR)
 
 def generate_card_products(cards_df, products_df, min_products=1, max_products=3):
     """Generate products associated with cards"""
-    person = Person(Locale.PT_BR)
     
     card_ids = cards_df['card_id'].to_list()
     product_ids = products_df['product_id'].to_list()

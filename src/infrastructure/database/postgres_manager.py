@@ -2,14 +2,14 @@ import psycopg
 import os
 from dotenv import load_dotenv
 load_dotenv()
-from src.utils.load_db_config import load_db_config
+from src.utils.read_yamls import load_database
 
 db_user = os.environ.get("DB_USER")
 db_password = os.environ.get("DB_PASSWORD")
 
 def connect_pg_db():
     """Conecta ao banco de dados PostgreSQL."""
-    pg_config = load_db_config("oltp_postgres")
+    pg_config = load_database("config/database.yaml")["oltp_postgres"]
     if not pg_config:
         print("❌ Configurações do PostgreSQL não carregadas. Não é possível conectar.")
         return None
@@ -105,7 +105,6 @@ def import_csv_to_pg(conn, csv_file_path, table_name, columns=None):
         conn.rollback() # Rollback in case of error during copy
         print(f"❌ Erro ao importar CSV para PostgreSQL: {e}")
         return False
-
 
 def insert_dataframe(conn, df, table_name):
     """Insert DataFrame into PostgreSQL using pandas to_sql or COPY"""
