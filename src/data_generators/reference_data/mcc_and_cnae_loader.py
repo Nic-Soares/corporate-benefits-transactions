@@ -1,9 +1,8 @@
 import polars as pl
 
-
-def extract_cnae_data():
+def extract_cnae_data() -> pl.DataFrame:
     from src.extractors.kaggle_downloader import download_kaggle_dataset
-    
+
     download_kaggle_dataset("diovanimerlo/cnae-brazil-2024")
 
     cnaes = pl.read_csv(
@@ -18,20 +17,19 @@ def extract_cnae_data():
             "grupo_id": pl.Utf8,
             "grupo": pl.Categorical,
             "classe_id": pl.Utf8,
-            "classse": pl.Categorical,
+            "classe": pl.Categorical,
             "subclasse_id": pl.Utf8,
             "subclasse": pl.Categorical
         }
     )
     return cnaes
 
-
-def extract_mcc_data():
-    mcc = pl.read_csv(
+def extract_mcc_data() -> pl.DataFrame:
+    mcc: pl.DataFrame = pl.read_csv(
         './data/raw/mcc.csv',
         separator=',',
         encoding='utf-8',
-        dtypes={
+        dtype={
             "mcc_id": pl.Utf8,
             "mcc_code": pl.Categorical,
             "mcc_description": pl.Utf8,

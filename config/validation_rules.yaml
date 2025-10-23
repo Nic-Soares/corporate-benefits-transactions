@@ -251,20 +251,16 @@ response_codes:
 # CONFIGURAÇÕES DE VALIDAÇÃO
 # =====================================
 validation_config:
-  # Timeout para validações
   timeout_ms: 3000
   
-  # Validações assíncronas (podem ser executadas em paralelo)
   async_validations:
     - "status_validations"
     - "temporal_validations"
   
-  # Validações que precisam de cache
   cached_validations:
     - "mcc_modality_mapping"
     - "cnae_product_mapping"
   
-  # Validações que exigem cálculos em tempo real
   realtime_validations:
     - "current_balance"
     - "daily_limit"
@@ -297,20 +293,3 @@ product_specific_rules:
     restricted_hours: null
     weekend_allowed: true
 
-# =====================================
-# ALERTAS E MONITORAMENTO
-# =====================================
-monitoring_rules:
-  # Alertas por alta taxa de declinação
-  decline_rate_alerts:
-    threshold: 0.15  # 15%
-    timeframe: "1h"
-    
-  # Alertas por códigos específicos
-  response_code_alerts:
-    "51":  # Saldo insuficiente - pode indicar problema de carga
-      threshold: 100
-      timeframe: "10m"
-    "27":  # MCC não aceito - pode indicar erro de configuração
-      threshold: 10
-      timeframe: "5m"

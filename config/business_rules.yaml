@@ -1,173 +1,87 @@
 # =====================================
 # business_rules.yaml
-# DADOS PARA ALIMENTAR DATAFRAMES DIMENSIONAIS
-# Este arquivo contém os dados estáticos usados para popular as tabelas de dimensão
+# REGRAS DE NEGÓCIO E CONFIGURAÇÕES OPERACIONAIS
 # =====================================
 
-# PRODUTOS DISPONÍVEIS
-products:
+# =====================================
+# REGRAS DE ACEITAÇÃO DE PRODUTOS
+# =====================================
+product_acceptance_rules:
   VA:
-    code: "VA"
     name: "Vale Alimentação"
-    category: "Beneficio"
-    description: "Benefício para compras em supermercados e estabelecimentos alimentícios"
+    description: "Aceito apenas para alimentos de preparo doméstico"
+    allowed_categories:
+      - "supermercados"
+      - "hipermercados"
+      - "acougues"
+      - "padarias"
+      - "feiras"
+      - "comercio_alimenticio"
+    forbidden_categories:
+      - "restaurantes"
+      - "lanchonetes"
+      - "bares"
 
-  RF:
-    code: "VR"
+  VR:
     name: "Vale Refeição"
-    category: "Beneficio"
-    description: "Benefício para refeições em restaurantes e lanchonetes"
+    description: "Aceito apenas para refeições prontas"
+    allowed_categories:
+      - "restaurantes"
+      - "lanchonetes"
+      - "bares"
+      - "cantinas"
+      - "catering"
+      - "bufe"
+    forbidden_categories:
+      - "supermercados"
+      - "hipermercados"
+      - "comercio_alimenticio"
 
   VC:
-    code: "VC"
     name: "Vale Combustível"
-    category: "Beneficio"
-    description: "Benefício para abastecimento de veículos"
+    description: "Aceito exclusivamente em postos de combustível"
+    allowed_categories:
+      - "postos_combustivel"
+    allowed_services:
+      - "gasolina"
+      - "alcool"
+      - "diesel"
+      - "gnv"
 
   GF:
-    code: "GF"
-    name: "Cartão GF"
-    category: "Incentivo"
-    description: "Cartão com objetivo de presentear ou bonificação extra"
+    name: "Vale Presente"
+    description: "Aceito em estabelecimentos diversos para presentes"
+    allowed_categories:
+      - "supermercados"
+      - "lojas_departamento"
+      - "farmacias"
+      - "vestuario"
+      - "eletronicos"
+      - "varejo_geral"
 
-# MODALIDADES DE TRANSAÇÃO
-transaction_modalities:
-  rede_credenciada:
-    name:           "Rede Própria"
-    type:           "proprietary_network"
+# =====================================
+# REGRAS DE COMISSÃO
+# =====================================
+commission_rules:
+  OWN:
     commission_rate: 0.0
+    description: "Rede própria - sem comissão"
 
-  visa:
-    name:           "Visa"
-    type:           "brand"
+  VISA:
     commission_rate: 0.025
+    description: "Bandeira Visa - 2.5%"
 
-  mastercard:
-    name:           "Mastercard"
-    type:           "brand"
+  MASTERCARD:
     commission_rate: 0.023
+    description: "Bandeira Mastercard - 2.3%"
 
-  elo:
-    name:           "Elo"
-    type:           "brand"
+  ELO:
     commission_rate: 0.020
+    description: "Bandeira Elo - 2.0%"
 
-# ADQUIRENTES DISPONÍVEIS
-acquirers:
-  - "Cielo"
-  - "Rede"
-  - "Stone"
-  - "GetNet"
-  - "PagSeguro"
-  - "SafraPay"
-
-# MODELOS DE TERMINAL POR ADQUIRENTE
-terminal_models_by_acquirer:
-  Cielo:
-    - "POS Cielo LIO"
-  Rede:
-    - "TEF Rede"
-  Stone:
-    - "Stone Ton"
-  GetNet:
-    - "GetNet POS"
-  PagSeguro:
-    - "Moderninha Pro"
-  SafraPay:
-    - "SafraPay POS"
-
-# SEGMENTOS DE EMPRESAS
-segments:
-  - segment_id: "SEG_TECH"
-    name:       "Tecnologia"
-    category:   "Tecnologia e Inovação"
-
-  - segment_id: "SEG_RETAIL"
-    name:       "Varejo"
-    category:   "Comércio"
-
-  - segment_id: "SEG_INDUSTRY"
-    name:       "Indústria"
-    category:   "Manufatura"
-
-  - segment_id: "SEG_FINANCE"
-    name:       "Serviços Financeiros"
-    category:   "Serviços"
-
-  - segment_id: "SEG_HEALTH"
-    name:       "Saúde"
-    category:   "Saúde e Bem-estar"
-
-  - segment_id: "SEG_EDUCATION"
-    name:       "Educação"
-    category:   "Educação"
-
-  - segment_id: "SEG_FOOD"
-    name:       "Alimentação"
-    category:   "Alimentação e Bebidas"
-
-  - segment_id: "SEG_CONSTRUCTION"
-    name:       "Construção"
-    category:   "Construção e Engenharia"
-
-  - segment_id: "SEG_AGRO"
-    name:       "Agronegócio"
-    category:   "Agropecuária"
-
-  - segment_id: "SEG_ENERGY"
-    name:       "Energia"
-    category:   "Energia e Utilities"
-
-  - segment_id: "SEG_LOGISTICS"
-    name:       "Logística"
-    category:   "Transporte e Logística"
-
-  - segment_id: "SEG_CONSULTING"
-    name:       "Consultoria"
-    category:   "Serviços Profissionais"
-
-# TECNOLOGIAS DE CAPTURA
-capture_technologies:
-  - name:        "Chip"
-    description: "Transação com chip EMV"
-
-  - name:        "Contactless"
-    description: "Transação por aproximação"
-
-  - name:        "Tarja Magnética"
-    description: "Transação com tarja magnética"
-
-  - name:        "QR Code"
-    description: "Transação via QR Code"
-
-# TECNOLOGIAS DE TRANSAÇÃO (PADRÃO ESTRUTURADO)
-transaction_technologies:
-  - code: CHIP
-    category: physical
-    name: Chip
-    requires_physical_card: true
-  - code: MAG_STRIPE
-    category: physical
-    name: Magnetic Stripe
-    requires_physical_card: true
-  - code: CONTACTLESS
-    category: physical
-    name: Contactless
-    requires_physical_card: true
-  - code: MOBILE_NFC
-    category: digital
-    name: Mobile NFC
-    requires_physical_card: false
-  - code: APPLE_PAY
-    category: digital
-    name: Apple Pay
-    requires_physical_card: false
-  - code: GOOGLE_PAY
-    category: digital
-    name: Google Pay
-    requires_physical_card: false
-
+# =====================================
 # STATUS DISPONÍVEIS
+# =====================================
 status_options:
   cardholder:
     - "active"
@@ -180,112 +94,35 @@ status_options:
     - "cancelled"
 
   establishment:
-    - "ATIVA"
-    - "INATIVA"
-    - "SUSPENSA"
-    - "BAIXADA"
+    - "active"
+    - "inactive"
+    - "suspended"
+    - "terminated"
 
 # =====================================
-# MAPEAMENTO CNAE-PRODUTOS
-# Define quais produtos de benefício são aceitos em cada categoria CNAE
+# REGRAS DE TECNOLOGIAS DE TRANSAÇÃO
 # =====================================
-cnae_products_mapping:
-  # ==========================================
-  # SUPERMERCADOS E HIPERMERCADOS
-  # Aceitam: Vale Alimentação e Cartão GF
-  # ==========================================
-  '4711':     ['VA', 'GF']         # Supermercados e hipermercados
-  '47113':    ['VA', 'GF']         # Hipermercados e supermercados  
-  '4711301':  ['VA', 'GF']         # Hipermercados
-  '4711302':  ['VA', 'GF']         # Supermercados
-  
-  # ==========================================
-  # COMÉRCIO DE PRODUTOS ALIMENTÍCIOS
-  # Aceitam: Vale Alimentação
-  # ==========================================
-  '4721':     ['VA']                 # Padarias, laticínios, doces
-  '4722':     ['VA']                 # Açougues e peixarias
-  '4723':     ['VA']                 # Comércio de bebidas
-  '4729':     ['VA']                 # Outros produtos alimentícios
-  '4729602':  ['VA', 'GF']         # Lojas de conveniência
-  '4729699':  ['VA']                 # Produtos alimentícios gerais
-  
-  # MERCADOS E FEIRAS
-  '4781':     ['VA']                 # Comércio ambulante de alimentos
-  '4784':     ['VA']                 # Comércio varejista de alimentos em via pública
-  
-  # ==========================================
-  # RESTAURANTES E SERVIÇOS DE ALIMENTAÇÃO
-  # Aceitam: Vale Refeição e Cartão GF
-  # ==========================================
-  '5611':     ['VR', 'GF']            # Restaurantes e serviços de alimentação
-  '56112':    ['VR']                    # Restaurantes e estabelecimentos de alimentação
-  '5611201':  ['VR']                    # Restaurantes e similares
-  '5611203':  ['VR']                    # Lanchonetes, casas de chá e sucos
-  '5611204':  ['VR']                    # Bares sem entretenimento
-  '5611205':  ['VR']                    # Bares com entretenimento
-  
-  # SERVIÇOS DE CATERING E ALIMENTAÇÃO
-  '5612':     ['VR']                    # Serviços ambulantes de alimentação
-  '5612100':  ['VR']                    # Serviços ambulantes
-  '5620':     ['VR']                    # Catering e bufê
-  '56201':    ['VR']                    # Serviços de catering e bufê
-  '5620101':  ['VR']                    # Alimentação para empresas
-  '5620102':  ['VR']                    # Serviços de bufê para eventos
-  '5620103':  ['VR']                    # Cantinas
-  '5620104':  ['VR']                    # Alimentos preparados para consumo domiciliar
-  
-  # ==========================================
-  # POSTOS DE COMBUSTÍVEL
-  # Aceitam: Vale Combustível
-  # ==========================================
-  '4731':     ['VC']                 # Comércio varejista de combustíveis
-  '47318':    ['VC']                 # Comércio de combustíveis para veículos
-  '4731800':  ['VC']                 # Postos de gasolina
-  
-  # ==========================================
-  # ESTABELECIMENTOS DIVERSOS
-  # Aceitam: Cartão GF (para compras diversas)
-  # ==========================================
-  '4751':     ['GF']                        # Tecidos e artigos do vestuário
-  '4752':     ['GF']                        # Calçados e artigos de couro
-  '4753':     ['GF']                        # Eletrodomésticos
-  '4754':     ['GF']                        # Móveis e decoração
-  '4755':     ['GF']                        # Tecidos e artigos de cama
-  '4756':     ['GF']                        # Instrumentos musicais
-  '4757':     ['GF']                        # Peças e acessórios eletrônicos
-  '4761':     ['GF']                        # Livros, jornais e papelaria
-  '4762':     ['GF']                        # CDs, DVDs e instrumentos musicais
-  '4763':     ['GF']                        # Artigos recreativos e esportivos
-  '4771':     ['GF']                        # Farmácias e produtos farmacêuticos
-  '4772':     ['GF']                        # Perfumaria e cosméticos
-  '4773':     ['GF']                        # Artigos médicos e ortopédicos
-  '4774':     ['GF']                        # Artigos de óptica
-  '4789':     ['GF']                        # Outros comércios varejistas
+transaction_technology_rules:
+  CHIP:
+    requires_physical_card: true
+    description: "Transação com chip EMV - requer cartão físico"
 
-# =====================================
-# REGRAS DE NEGÓCIO PARA ACEITAÇÃO DE PRODUTOS
-# =====================================
+  MAG_STRIPE:
+    requires_physical_card: true
+    description: "Transação com tarja magnética - requer cartão físico"
 
-# REGRAS PARA VALE ALIMENTAÇÃO (VA):
-# - Aceito APENAS em estabelecimentos que vendem alimentos para preparo doméstico
-# - Supermercados, hipermercados, açougues, padarias, feiras
-# - NÃO aceito em restaurantes, lanchonetes ou estabelecimentos de refeição pronta
-# - Lojas de conveniência podem aceitar para produtos alimentícios específicos
+  CONTACTLESS:
+    requires_physical_card: true
+    description: "Transação por aproximação - requer cartão físico"
 
-# REGRAS PARA VALE REFEIÇÃO (VR):
-# - Aceito APENAS em estabelecimentos que servem refeições prontas
-# - Restaurantes, lanchonetes, bares, food trucks, cantinas
-# - Serviços de catering e bufê para eventos
-# - NÃO aceito em supermercados ou estabelecimentos de venda de alimentos para preparo
+  MOBILE_NFC:
+    requires_physical_card: false
+    description: "Transação via NFC móvel - não requer cartão físico"
 
-# REGRAS PARA VALE COMBUSTÍVEL (VC):
-# - Aceito EXCLUSIVAMENTE em postos de combustível
-# - Gasolina, álcool, diesel, GNV
-# - Pode incluir serviços relacionados como lavagem e lubrificação
+  APPLE_PAY:
+    requires_physical_card: false
+    description: "Transação via Apple Pay - não requer cartão físico"
 
-# REGRAS PARA CARTÃO GF (GF):
-# - Aceito em diversos estabelecimentos para compras de presentes e bonificações
-# - Supermercados, lojas de departamento, farmácias, vestuário, eletrônicos
-# - Usado como incentivo, premiação ou presente
-# - Flexibilidade maior que outros benefícios, mas com controles específicos
+  GOOGLE_PAY:
+    requires_physical_card: false
+    description: "Transação via Google Pay - não requer cartão físico"

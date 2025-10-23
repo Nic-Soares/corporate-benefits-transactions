@@ -4,8 +4,7 @@ oltp_postgres:
   dbname: "transactions_benefits_db"
   user: ${DB_USER}
   password: ${DB_PASSWORD}
-  schema:
-    tables: ./database/oltp_postgres/tables.sql
+  schema: ./database/oltp_postgres/oltp_schema.sql
 
 olap_duck:
   engine: duckdb
