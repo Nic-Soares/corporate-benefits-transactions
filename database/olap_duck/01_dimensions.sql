@@ -1,98 +1,101 @@
-CREATE TABLE "dim_municipios" (
-  "municipio_id" VARCHAR PRIMARY KEY,
-  "municipio_nome" VARCHAR,
-  "rgi_id" VARCHAR,
-  "rgi_nome" VARCHAR,
-  "rgint_id" VARCHAR,
-  "rgint_nome" VARCHAR,
-  "uf_id" VARCHAR,
-  "uf_nome" VARCHAR,
-  "uf_sigla" VARCHAR,
-  "regiao_id" VARCHAR,
-  "regiao_nome" VARCHAR,
-  "regiao_sigla" VARCHAR,
-  "concu_id" VARCHAR,
-  "concu_nome" VARCHAR,
-  "area_km2" DOUBLE,
-  "latitude" DOUBLE,
-  "longitude" DOUBLE,
-  "created_at" TIMESTAMP
+-- ============================================================================
+-- SNOWFLAKE OLAP - DIMENSIONS (Direct OLTP Mapping)
+-- ============================================================================
+-- Only create dimensions from tables that EXIST in OLTP
+-- No synthetic or derived dimensions
+-- ============================================================================
+
+-- From OLTP: products table
+CREATE TABLE IF NOT EXISTS dim_products (
+  product_id VARCHAR PRIMARY KEY,
+  name VARCHAR NOT NULL,
+  category VARCHAR NOT NULL,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP_NTZ
 );
 
-CREATE TABLE "dim_cnae" (
-  "cnae_id" VARCHAR PRIMARY KEY,
-  "codigo_cnae" VARCHAR,
-  "descricao_cnae" VARCHAR,
-  "secao" VARCHAR,
-  "divisao" VARCHAR,
-  "grupo" VARCHAR,
-  "classe" VARCHAR,
-  "subclasse" VARCHAR,
-  "created_at" TIMESTAMP
+-- From OLTP: transaction_modalities table
+CREATE TABLE IF NOT EXISTS dim_modalities (
+  modality_id VARCHAR PRIMARY KEY,
+  code VARCHAR UNIQUE NOT NULL,
+  name VARCHAR NOT NULL,
+  type VARCHAR NOT NULL,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP_NTZ
 );
 
-CREATE TABLE "dim_segmentos" (
-  "segmento_id" VARCHAR PRIMARY KEY,
-  "segmento_nome" VARCHAR,
-  "categoria_segmento" VARCHAR,
-  "created_at" TIMESTAMP
+-- From OLTP: acquirers table
+CREATE TABLE IF NOT EXISTS dim_acquirers (
+  acquirer_id VARCHAR PRIMARY KEY,
+  name VARCHAR NOT NULL,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP_NTZ
 );
 
-CREATE TABLE "dim_data" (
-  "data_id" VARCHAR PRIMARY KEY,
-  "data_completa" DATE,
-  "ano" INTEGER,
-  "mes" INTEGER,
-  "dia" INTEGER,
-  "dia_semana" INTEGER,
-  "nome_dia_semana" VARCHAR,
-  "is_feriado" BOOLEAN,
-  "is_fim_semana" BOOLEAN,
-  "trimestre" INTEGER,
-  "semestre" INTEGER,
-  "created_at" TIMESTAMP
+-- From OLTP: cards table (denormalized for quick lookup)
+CREATE TABLE IF NOT EXISTS dim_cards (
+  card_id VARCHAR PRIMARY KEY,
+  cardholder_id VARCHAR NOT NULL,
+  modality_id VARCHAR,
+  card_type VARCHAR NOT NULL,
+  expiration_date DATE NOT NULL,
+  issue_date DATE NOT NULL,
+  status VARCHAR NOT NULL,
+  created_at TIMESTAMP_NTZ
 );
 
-CREATE TABLE "dim_adquirentes" (
-  "adquirente_id" VARCHAR PRIMARY KEY,
-  "codigo_adquirente" VARCHAR,
-  "nome_adquirente" VARCHAR,
-  "created_at" TIMESTAMP
+-- From OLTP: cardholders table (denormalized)
+CREATE TABLE IF NOT EXISTS dim_cardholders (
+  cardholder_id VARCHAR PRIMARY KEY,
+  company_id VARCHAR NOT NULL,
+  name VARCHAR NOT NULL,
+  city VARCHAR NOT NULL,
+  state VARCHAR NOT NULL,
+  position VARCHAR,
+  department VARCHAR,
+  admission_date DATE NOT NULL,
+  status VARCHAR NOT NULL,
+  created_at TIMESTAMP_NTZ
 );
 
-CREATE TABLE "dim_bandeiras" (
-  "bandeira_id" VARCHAR PRIMARY KEY,
-  "codigo_bandeira" VARCHAR,
-  "nome_bandeira" VARCHAR,
-  "created_at" TIMESTAMP
+-- From OLTP: companies table (denormalized)
+CREATE TABLE IF NOT EXISTS dim_companies (
+  company_id VARCHAR PRIMARY KEY,
+  cnpj VARCHAR UNIQUE NOT NULL,
+  company_name VARCHAR NOT NULL,
+  trade_name VARCHAR,
+  segment VARCHAR NOT NULL,
+  city VARCHAR NOT NULL,
+  state VARCHAR NOT NULL,
+  status VARCHAR NOT NULL,
+  registration_date DATE NOT NULL,
+  created_at TIMESTAMP_NTZ
 );
 
-CREATE TABLE "dim_tecnologias_captura" (
-  "tecnologia_id" VARCHAR PRIMARY KEY,
-  "codigo_tecnologia" VARCHAR,
-  "categoria_tecnologia" VARCHAR,
-  "nome_tecnologia" VARCHAR,
-  "requires_plastico" BOOLEAN,
-  "created_at" TIMESTAMP
+-- From OLTP: establishments table (denormalized)
+CREATE TABLE IF NOT EXISTS dim_establishments (
+  establishment_id VARCHAR PRIMARY KEY,
+  cnpj VARCHAR UNIQUE NOT NULL,
+  company_name VARCHAR NOT NULL,
+  trade_name VARCHAR,
+  main_cnae VARCHAR NOT NULL,
+  mcc_code VARCHAR NOT NULL,
+  category VARCHAR NOT NULL,
+  city VARCHAR NOT NULL,
+  state VARCHAR NOT NULL,
+  status VARCHAR NOT NULL,
+  accreditation_date DATE NOT NULL,
+  created_at TIMESTAMP_NTZ
 );
 
-CREATE TABLE "dim_produtos" (
-  "produto_id" VARCHAR PRIMARY KEY,
-  "codigo" VARCHAR,
-  "nome" VARCHAR,
-  "categoria" VARCHAR,
-  "descricao" VARCHAR,
-  "created_at" TIMESTAMP
-);
-
--- dim_terminais moved to after establishments table creation
--- since it references establishments
-
-CREATE TABLE "dim_motivos_negacao" (
-  "motivo_negacao_id" VARCHAR PRIMARY KEY,
-  "codigo_retorno" VARCHAR,
-  "descricao_motivo" VARCHAR,
-  "categoria_motivo" VARCHAR,
-  "eh_fraude_potencial" BOOLEAN,
-  "created_at" TIMESTAMP
+-- From OLTP: terminals table (denormalized)
+CREATE TABLE IF NOT EXISTS dim_terminals (
+  terminal_id VARCHAR PRIMARY KEY,
+  establishment_id VARCHAR NOT NULL,
+  acquirer_id VARCHAR NOT NULL,
+  model VARCHAR,
+  type VARCHAR NOT NULL,
+  status VARCHAR NOT NULL,
+  installation_date DATE NOT NULL,
+  created_at TIMESTAMP_NTZ
 );

@@ -270,3 +270,56 @@ transaction_technologies:
   - code: GOOGLE_PAY
     category: digital
     name: Google Pay
+
+# =====================================
+# CÓDIGOS DE RESPOSTA PADRÃO
+# =====================================
+response_codes:
+  # APROVAÇÕES
+  "00": "Transação aprovada"
+  
+  # PROBLEMAS DE CARTÃO/PORTADOR
+  "13": "Cartão inativo"
+  "14": "Cartão bloqueado"
+  "15": "Cartão cancelado"
+  "16": "Portador inativo"
+  "17": "Portador desligado"
+  "54": "Cartão vencido"
+  "55": "Produto ainda não ativado"
+  "56": "Transação antes da admissão do portador"
+  
+  # PROBLEMAS DE ESTABELECIMENTO
+  "18": "Empresa inativa"
+  "19": "Estabelecimento inativo"
+  "20": "Estabelecimento suspenso"
+  "21": "Estabelecimento baixado"
+  "57": "Estabelecimento ainda não credenciado"
+  
+  # PROBLEMAS DE TERMINAL/INFRAESTRUTURA
+  "22": "Terminal inativo"
+  "31": "Terminal/adquirente incompatível"
+  "32": "Tipo de captura não suportado"
+  "58": "Terminal ainda não instalado"
+  
+  # PROBLEMAS DE PRODUTO/CONFIGURAÇÃO
+  "23": "Produto do cartão inativo"
+  "24": "Produto desativado"
+  "25": "Modalidade desativada"
+  "26": "Adquirente desativado"
+  "27": "MCC não aceito pela modalidade"
+  "28": "CNAE não aceita o produto"
+  "29": "Regra MCC desativada"
+  "30": "Regra CNAE desativada"
+  
+  # PROBLEMAS DE REGRAS DE NEGÓCIO
+  "59": "MCC não aceita modalidade"
+  "60": "CNAE não aceita produto"
+  
+  # PROBLEMAS DE SALDO/LIMITES
+  "51": "Saldo insuficiente"
+  "61": "Limite diário excedido"
+  "62": "Limite mensal excedido"
+  
+  # ERROS DE SISTEMA
+  "96": "Erro no sistema"
+  "91": "Sistema indisponível"

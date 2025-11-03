@@ -1,7 +1,8 @@
-faker
+mimesis
 duckdb
-pandas
 dbt-core
 dbt-duckdb
 pyyaml
 kagglehub
+polars
+ulid

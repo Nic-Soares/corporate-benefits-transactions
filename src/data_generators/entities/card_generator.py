@@ -1,4 +1,5 @@
 from datetime import datetime, date
+from mimesis import Datetime
 import random
 import uuid
 import hashlib
@@ -15,6 +16,8 @@ class Card:
             cardholder_id: ID da pessoa que vai usar o cartão (obrigatório)
             modality_id: ID do tipo de cartão (opcional - pode ser None)
         """
+        datetime_provider = Datetime()
+        
         # Gera um ID único para este cartão
         self.id = str(uuid.uuid4())
         
@@ -29,7 +32,7 @@ class Card:
         self.card_number_hash = self._gerar_hash_cartao(card_number)
         
         # Gera data de validade do cartão (obrigatório)
-        self.expiration_date = self._gerar_data_validade()
+        self.expiration_date = datetime_provider.date(start=2025, end=2029)
         
         # Define se é cartão de crédito ou débito (obrigatório)
         self.card_type = random.choice(['credit', 'debit'])
@@ -38,7 +41,7 @@ class Card:
         self.status = random.choice(['active', 'inactive', 'blocked', 'canceled'])
         
         # Define data de emissão do cartão (obrigatório)
-        self.issue_date = self._gerar_data_emissao()
+        self.issue_date = datetime_provider.date(start=2020, end=2024)
 
     def _gerar_numero_cartao(self):
         """Método privado para gerar número do cartão (16 dígitos)"""
@@ -48,26 +51,6 @@ class Card:
         """Método privado para gerar hash do número do cartão"""
         # Usa SHA-256 para criar hash do número do cartão
         return hashlib.sha256(card_number.encode()).hexdigest()
-
-    def _gerar_data_validade(self):
-        """Método privado para gerar data de validade entre 2025 e 2029"""
-        ano = random.randint(2025, 2029)
-        mes = random.randint(1, 12)
-        # Último dia do mês para data de validade
-        if mes == 2:
-            dia = 28  # Fevereiro
-        elif mes in [4, 6, 9, 11]:
-            dia = 30  # Meses com 30 dias
-        else:
-            dia = 31  # Meses com 31 dias
-        return date(ano, mes, dia)
-
-    def _gerar_data_emissao(self):
-        """Método privado para gerar data de emissão (entre 2020 e hoje)"""
-        ano = random.randint(2020, 2024)
-        mes = random.randint(1, 12)
-        dia = random.randint(1, 28)  # Uso 28 para evitar problemas
-        return date(ano, mes, dia)
 
     def to_dict(self):
         """Converte o cartão para dicionário - exatamente como a tabela SQL"""
