@@ -1,8 +1,8 @@
 import polars as pl
 from typing import Dict
 
-def load_response_codes(validation_rules: ValidationRulesReference) -> pl.DataFrame:
-    """Loads DataFrame for Response Codes from validation_rules.yaml"""
+def load_response_codes(pre_populated_data: Dict) -> pl.DataFrame:
+    """Loads DataFrame for Response Codes from pre_populated_data.yaml"""
 
     # Extract response codes
     response_codes = [
@@ -10,7 +10,7 @@ def load_response_codes(validation_rules: ValidationRulesReference) -> pl.DataFr
             'id': code,
             'description': description,
         }
-        for code in validation_rules['response_codes'].items()
+        for code, description in pre_populated_data['response_codes'].items()
     ]
 
     return pl.DataFrame(response_codes).with_columns([

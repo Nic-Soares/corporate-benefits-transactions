@@ -6,12 +6,12 @@ def load_transaction_modalities(pre_populated_data: Dict[str, Any]) -> pl.DataFr
 
     transaction_modalities = [
       {
-        "id": modalitites['id'],
-        "name": modalitites['name'],
-        "type": modalitites['type'],
+        "id": modality['id'],
+        "name": modality['name'],
+        "type": modality['type'],
         "active": True
       }
-      for modalitites in pre_populated_data["transaction_modalities"].items()
+      for modality in pre_populated_data["transaction_modalities"]
     ]
 
     return pl.DataFrame(transaction_modalities).with_columns([
