@@ -1,32 +1,31 @@
-// Use DBML to define your database structure
-// Docs: https://dbml.dbdiagram.io/docs
-
 // OLTP Model - Corporate Benefits Operational System
 // Focus: Fast transactions, CRUD operations, normalization
+// PK naming: 'id' for all primary keys
+// FK naming: '*_id' for all foreign keys
 
 // SUPPORT TABLES
 Table products {
-  product_id varchar [primary key]
-  code varchar [unique, not null] // VA, VR, PREMIUM
+  id char(2) [primary key]
   name varchar [not null]
-  category varchar [not null] // benefit, management, wellness
+  category varchar [not null]
   active boolean [default: true]
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
 
 Table transaction_modalities {
-  modality_id varchar [primary key]
-  code varchar [unique, not null] // ELO, MASTER, VISA, PROPRIETARY_NETWORK
+  id varchar [primary key]
+  code varchar [unique, not null]
   name varchar [not null]
-  type varchar [not null] // 'brand', 'proprietary_network'
+  type varchar [not null]
   active boolean [default: true]
   created_at timestamp [default: `now()`]
+  updated_at timestamp
 }
 
 Table acquirers {
-  acquirer_id varchar [primary key]
-  name varchar [not null] // Cielo, Rede, Stone
+  id varchar [primary key]
+  name varchar [not null]
   active boolean [default: true]
   created_at timestamp [default: `now()`]
 }
@@ -35,8 +34,8 @@ Table acquirers {
 Table mcc_modalities {
   mcc_code varchar [not null]
   modality_id varchar [not null]
-  mcc_description varchar [not null] // "RESTAURANTS", "GROCERY STORES"
-  observation varchar // "(Germany Only)", "Visa specific rules"
+  mcc_description varchar [not null]
+  observation varchar
   active boolean [default: true]
   created_at timestamp [default: `now()`]
 
@@ -47,8 +46,8 @@ Table mcc_modalities {
 Table cnae_products {
   cnae_code varchar [not null]
   product_id varchar [not null]
-  cnae_description varchar [not null] // "Restaurants", "Supermarkets"
-  observation varchar // "Business hours only", "Except alcoholic beverages"
+  cnae_description varchar [not null]
+  observation varchar
   active boolean [default: true]
   created_at timestamp [default: `now()`]
 
@@ -57,12 +56,13 @@ Table cnae_products {
 
 // MAIN TABLES
 Table companies {
-  company_id varchar [primary key]
+  id varchar [primary key]
+  parent_id varchar [note: 'NULL = holding; filled = filial/branch']
   cnpj varchar [unique, not null]
-  legal_name varchar [not null]
+  name varchar [not null]
   trade_name varchar
   segment varchar [not null]
-  municipality varchar [not null]
+  city varchar [not null]
   state varchar [not null]
   status varchar [not null, default: 'active']
   registration_date date [not null]
@@ -71,35 +71,33 @@ Table companies {
 }
 
 Table cardholders {
-  cardholder_id varchar [primary key]
+  id varchar [primary key]
   company_id varchar [not null]
   cpf_hash varchar [unique, not null]
   name varchar [not null]
-  municipality varchar [not null]
+  city varchar [not null]
   state varchar [not null]
   admission_date date [not null]
-  position varchar
-  department varchar
   status varchar [not null, default: 'active']
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
 
 Table cards {
-  card_id varchar [primary key]
+  id varchar [primary key]
   cardholder_id varchar [not null]
   card_number_hash varchar [unique, not null]
   modality_id varchar [note: 'NULL = proprietary network']
   expiration_date date [not null]
-  card_type varchar [not null] // physical, virtual
+  card_type varchar [not null]
   status varchar [not null, default: 'active']
-  issuance_date date [not null]
+  issue_date date [not null]
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
 
 Table card_products {
-  card_product_id varchar [primary key]
+  id varchar [primary key]
   card_id varchar [not null]
   product_id varchar [not null]
   current_balance decimal(15,2) [not null, default: 0]
@@ -111,28 +109,16 @@ Table card_products {
   updated_at timestamp
 }
 
-Table states {
-  state_id varchar [primary key]
-  state_code varchar [unique] // SP, RJ, MG
-  state_name varchar
-}
-
-Table municipalities {
-  municipality_id varchar [primary key]
-  municipality_name varchar
-  state_id varchar [not null]
-}
-
 Table establishments {
-  establishment_id varchar [primary key]
+  id varchar [primary key]
   cnpj varchar [unique, not null]
-  legal_name varchar [not null]
+  name varchar [not null]
   trade_name varchar
   main_cnae varchar [not null]
-  mcc_code varchar [not null] // Industry standard Merchant Category Code
-  category varchar [not null] // restaurant, supermarket, pharmacy
-  municipality_id varchar [not null]
-  state_id varchar [not null]
+  mcc_code varchar [not null]
+  category varchar [not null]
+  city varchar [not null]
+  state varchar [not null]
   status varchar [not null, default: 'active']
   accreditation_date date [not null]
   created_at timestamp [default: `now()`]
@@ -140,12 +126,11 @@ Table establishments {
 }
 
 Table terminals {
-  terminal_id varchar [primary key]
+  id varchar [primary key]
   establishment_id varchar [not null]
   acquirer_id varchar [not null]
-  terminal_code varchar [not null]
   model varchar
-  type varchar [not null] // POS, PDV, TEF
+  type varchar [not null]
   status varchar [not null, default: 'active']
   installation_date date [not null]
   created_at timestamp [default: `now()`]
@@ -154,64 +139,59 @@ Table terminals {
 
 // TRANSACTIONS (basic attempt data)
 Table transactions {
-  transaction_id varchar [primary key]
+  id varchar [primary key]
   card_id varchar [not null]
   product_id varchar [not null]
   establishment_id varchar [not null]
   terminal_id varchar [not null]
   amount decimal(15,2) [not null]
   date timestamp [not null]
-  capture_type varchar [not null] // chip, magnetic_stripe, contactless, nfc
-
-  // FINANCIAL TRANSACTION STANDARD CODES
-  response_code varchar [not null] // '00', '51', '14', '30', '96', etc
-  response_message varchar // details for any status
-
+  capture_type varchar [not null]
+  response_code varchar [not null]
+  response_message varchar
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
 
 // AUTHORIZATIONS (authorizer response)
 Table authorizations {
-  authorization_id varchar [primary key]
+  id varchar [primary key]
   transaction_id varchar [not null]
-
-  // SPECIFIC AUTHORIZER RESPONSE
   authorization_code varchar
   nsu varchar [not null]
   authorization_datetime timestamp [not null]
-  status varchar [not null] // 'approved', 'denied', 'timeout', 'system_error'
-
+  status varchar [not null]
   created_at timestamp [default: `now()`]
 }
 
 // BALANCE HISTORY (audit)
 Table balance_history {
-  history_id varchar [primary key]
+  id varchar [primary key]
   card_product_id varchar [not null]
   transaction_id varchar
-  operation_type varchar [not null] // credit, debit, reversal
+  operation_type varchar [not null]
   operation_amount decimal(15,2) [not null]
   previous_balance decimal(15,2) [not null]
-  new_balance decimal(15,2) [not null]
+  posterior_balance decimal(15,2) [not null]
   operation_date timestamp [not null]
   created_at timestamp [default: `now()`]
 }
 
 // RELATIONSHIPS
-Ref: cardholders.company_id > companies.company_id
-Ref: cards.cardholder_id > cardholders.cardholder_id
-Ref: cards.modality_id > transaction_modalities.modality_id
-Ref: card_products.card_id > cards.card_id
-Ref: card_products.product_id > products.product_id
-Ref: terminals.establishment_id > establishments.establishment_id
-Ref: terminals.acquirer_id > acquirers.acquirer_id
-Ref: mcc_modalities.modality_id > transaction_modalities.modality_id
-Ref: cnae_products.product_id > products.product_id
-Ref: transactions.card_id > cards.card_id
-Ref: transactions.product_id > products.product_id
-Ref: transactions.establishment_id > establishments.establishment_id
-Ref: transactions.terminal_id > terminals.terminal_id
-Ref: authorizations.transaction_id > transactions.transaction_id
-Ref: balance_history.card_product_id > card_products.card_product_id
-Ref: balance_history.transaction_id > transactions.transaction_id
+Ref: companies.parent_id > companies.id
+Ref: cardholders.company_id > companies.id
+Ref: cards.cardholder_id > cardholders.id
+Ref: cards.modality_id > transaction_modalities.id
+Ref: card_products.card_id > cards.id
+Ref: card_products.product_id > products.id
+Ref: terminals.establishment_id > establishments.id
+Ref: terminals.acquirer_id > acquirers.id
+Ref: mcc_modalities.modality_id > transaction_modalities.id
+Ref: cnae_products.product_id > products.id
+Ref: transactions.card_id > cards.id
+Ref: transactions.product_id > products.id
+Ref: transactions.establishment_id > establishments.id
+Ref: transactions.terminal_id > terminals.id
+Ref: authorizations.transaction_id > transactions.id
+Ref: balance_history.card_product_id > card_products.id
+Ref: balance_history.transaction_id > transactions.id

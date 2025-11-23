@@ -1,253 +1,145 @@
-// Updated OLAP Model - Corporate Benefits Analytics
-// Standardized English nomenclature in compliance with OLTP model
+// OLAP Model - Corporate Benefits Analytics (Snowflake/DuckDB)
+// Denormalized for analytics performance while maintaining field name consistency with OLTP
 // Docs: https://dbml.dbdiagram.io/docs
+// Naming Convention:
+// - Primary Keys: 'id' for all tables
+// - Foreign Keys: '*_id' (descriptive suffix)
+// - Timestamps: NONE (read-only, append-only system)
 
-// DIMENSION TABLES
-Table dim_municipalities {
-  municipality_id varchar [primary key]
-  municipality_name varchar
-  rgi_id varchar
-  rgi_name varchar
-  rgint_id varchar
-  rgint_name varchar
-  state_id varchar
-  state_name varchar
-  state_code char(2)
-  region_id varchar
-  region_name varchar
-  region_code char(2)
-  concu_id varchar
-  concu_name varchar
-  area_km2 decimal(10,2)
-  latitude double
-  longitude double
-  created_at timestamp
-  updated_at timestamp
-}
+// ============================================================================
+// DIMENSION TABLES (Denormalized from OLTP)
+// ============================================================================
 
-Table dim_cnae {
-  cnae_id varchar [primary key]
-  cnae_code varchar
-  cnae_description varchar
-  section varchar
-  division varchar
-  group varchar
-  class varchar
-  subclass varchar
-  created_at timestamp
-}
-
-Table dim_segments {
-  segment_id varchar [primary key]
-  name varchar
-  category varchar
-  created_at timestamp
-}
-
-Table dim_date {
-  date_id varchar [primary key]
-  full_date date
-  year integer
-  month integer
-  day integer
-  weekday integer
-  weekday_name varchar
-  is_holiday boolean
-  is_weekend boolean
-  quarter integer
-  semester integer
-  created_at timestamp
-}
-
-Table dim_acquirers {
-  acquirer_id varchar [primary key]
-  name varchar [note: 'Cielo, Rede, Stone, GetNet, etc']
+Table dim_products {
+  id varchar [primary key]
+  name varchar [not null]
+  category varchar [not null]
   active boolean [default: true]
-  created_at timestamp
 }
 
 Table dim_transaction_modalities {
-  modality_id varchar [primary key]
-  modality_code varchar
-  modality_name varchar [note: 'Elo, Mastercard, Visa, Proprietary Network']
-  modality_type varchar [note: 'brand, proprietary_network']
-  created_at timestamp
+  id varchar [primary key]
+  code varchar [unique, not null]
+  name varchar [not null]
+  type varchar [not null]
+  active boolean [default: true]
 }
 
-Table dim_capture_technologies {
-  technology_id varchar [primary key]
-  technology_code varchar
-  technology_category varchar [note: 'physical, digital']
-  technology_name varchar [note: 'chip, magnetic_stripe, contactless, mobile_nfc, apple_pay, google_pay']
-  requires_physical_card boolean [note: 'true for chip/stripe, false for mobile NFC']
-  created_at timestamp
+Table dim_acquirers {
+  id varchar [primary key]
+  name varchar [not null]
+  active boolean [default: true]
 }
 
-Table dim_products {
-  product_id varchar [primary key]
-  product_code varchar [note: 'VA, VR, PREMIUM, GIFT, PHARMACY']
-  product_name varchar [note: 'Food Voucher, Meal Voucher, etc']
-  category varchar [note: 'food, meal, multipurpose, health']
-  description varchar
-  created_at timestamp
+Table dim_cards {
+  id varchar [primary key]
+  cardholder_id varchar [not null]
+  modality_id varchar [note: 'NULL for proprietary network']
+  card_type varchar [not null]
+  expiration_date date [not null]
+  issue_date date [not null]
+  status varchar [not null]
+}
+
+Table dim_cardholders {
+  id varchar [primary key]
+  company_id varchar [not null]
+  name varchar [not null]
+  city varchar [not null]
+  state varchar [not null]
+  position varchar
+  department varchar
+  admission_date date [not null]
+  status varchar [not null]
+}
+
+Table dim_companies {
+  id varchar [primary key]
+  parent_id varchar [note: 'NULL = holding; filled = filial/branch']
+  cnpj varchar [unique, not null]
+  name varchar [not null]
+  trade_name varchar
+  segment varchar [not null]
+  city varchar [not null]
+  state varchar [not null]
+  status varchar [not null]
+  registration_date date [not null]
+}
+
+Table dim_establishments {
+  id varchar [primary key]
+  cnpj varchar [unique, not null]
+  name varchar [not null]
+  trade_name varchar
+  main_cnae varchar [not null]
+  mcc_code varchar [not null]
+  category varchar [not null]
+  city varchar [not null]
+  state varchar [not null]
+  status varchar [not null]
+  accreditation_date date [not null]
 }
 
 Table dim_terminals {
-  terminal_id varchar [primary key]
-  code varchar
+  id varchar [primary key]
   establishment_id varchar [not null]
   acquirer_id varchar [not null]
-  type varchar [note: 'POS, PDV, TEF']
-  status varchar [note: 'active, inactive, maintenance']
-  installation_date date
-  created_at timestamp
+  model varchar
+  type varchar [not null]
+  status varchar [not null]
+  installation_date date [not null]
 }
 
-Table dim_response_codes {
-  response_code_id varchar [primary key]
-  response_code varchar [note: 'Technical code from authorizer (ex: 51, 14, 55)']
-  response_description varchar [note: 'Insufficient balance, incorrect password, expired card']
-  response_category varchar [note: 'balance, password, card, network, establishment, issuer']
-  is_potential_fraud boolean [note: 'true if may indicate fraud attempt']
-  created_at timestamp
-}
+// ============================================================================
+// FACT TABLE (Denormalized from OLTP transactions + authorizations)
+// ============================================================================
 
-Table dim_mcc_categories {
-  mcc_id varchar [primary key]
-  mcc_code varchar [note: 'Merchant Category Code']
-  mcc_description varchar [note: 'RESTAURANTS, GROCERY STORES, etc']
-  valid_payment_brands varchar
-  category varchar [note: 'restaurant, supermarket, pharmacy, etc']
-  created_at timestamp
-}
-
-// MAIN ENTITY TABLES
-Table establishments {
-  establishment_id varchar [primary key]
-  cnpj varchar
-  legal_name varchar
-  trade_name varchar
-  main_cnae_id varchar [not null]
-  mcc_code varchar [not null]
-  legal_nature varchar
-  company_size varchar [note: 'EPP, ME, etc']
-  municipality_id varchar [not null]
-  postal_code varchar
-  street varchar
-  number varchar
-  complement varchar
-  neighborhood varchar
-  email varchar
-  phone varchar
-  registration_status varchar [note: 'ACTIVE, INACTIVE, etc']
-  status_date date
-  status_reason varchar
-  opening_date date
-  created_at timestamp
-}
-
-Table companies {
-  company_id varchar [primary key]
-  parent_company_id varchar [note: 'Parent/holding company ID']
-  name varchar
-  cnpj varchar
-  company_type varchar
-  segment_id varchar [not null]
-  municipality_id varchar [not null]
-  contract_registration_date date
-  created_at timestamp
-}
-
-Table cardholders {
-  cardholder_id varchar [primary key]
-  company_id varchar [not null]
-  full_name varchar
-  cpf varchar
-  municipality_id varchar [not null]
-  admission_date date
-  position varchar
-  department varchar
-  status varchar [note: 'active, inactive, terminated']
-  created_at timestamp
-}
-
-Table cards {
-  card_id varchar [primary key]
-  cardholder_id varchar [not null]
-  card_number_hash varchar
-  modality_id varchar [note: 'NULL = proprietary network, filled = branded']
-  expiration_date date
-  cvv_hash varchar
-  card_type varchar [note: 'physical, virtual']
-  issuance_date date
-  status varchar [note: 'active, blocked, cancelled']
-  created_at timestamp
-}
-
-Table card_products {
-  card_product_id varchar [primary key]
-  card_id varchar [not null]
-  product_id varchar [not null]
-  current_balance decimal(15,2)
-  daily_limit decimal(15,2)
-  monthly_limit decimal(15,2)
-  activation_date date [note: 'When gained access to the product']
-  deactivation_date date [note: 'NULL = still active']
-  status varchar [note: 'active, suspended, cancelled, pending_card']
-  created_at timestamp
-}
-
-// FACT TABLE
 Table fact_transactions {
-  transaction_id varchar [primary key]
-  related_transaction_id varchar [note: 'Original transaction ID in case of reversal']
+  id varchar [primary key]
+  related_transaction_id varchar [note: 'Self-reference for reversals']
+
+  // Foreign Keys to dimensions
   card_id varchar [not null]
-  product_id varchar [not null, note: 'Which product was used in this transaction']
+  cardholder_id varchar [not null]
+  product_id varchar [not null]
   establishment_id varchar [not null]
   terminal_id varchar [not null]
-  technology_id varchar [not null]
-  response_code_id varchar [note: 'NULL if approved, filled if denied']
-  transaction_date varchar [not null, note: 'FK to dim_date - receipt date']
-  transaction_time time
-  effective_transaction_date date [note: 'Accounting date of transaction']
-  capture_timestamp timestamp [note: 'Exact moment system recorded']
-  transaction_nsu varchar
-  authorization_nsu varchar
-  transaction_type_code varchar
-  transaction_amount decimal(18, 2) [note: 'Purchase amount']
-  commission_amount decimal(18, 2) [note: 'Commission paid to brand - NULL for proprietary network']
-  currency_code varchar
-  transaction_description varchar
-  transaction_origin varchar
-  capture_network_code varchar
-  processing_code varchar
-  transaction_status varchar [note: 'approved, denied, pending, reversed']
-  network_type varchar [note: 'proprietary_network, branded_network']
-  requires_brand_settlement boolean [note: 'true for branded, false for proprietary']
-  settlement_date date [note: 'when settled by brand']
-  settlement_status varchar [note: 'pending, settled, rejected']
-  created_at timestamp
+
+  // Financial Measures
+  amount decimal(15,2) [not null]
+
+  // Transaction Timing
+  date timestamp [not null]
+
+  // Transaction Details (from OLTP transactions)
+  capture_type varchar [not null]
+  response_code varchar [not null]
+  response_message varchar
+
+  // Authorization Details (denormalized from OLTP authorizations table)
+  authorization_code varchar
+  nsu varchar
+  authorization_datetime timestamp
+  authorization_status varchar
 }
 
+// ============================================================================
 // RELATIONSHIPS
-Ref: companies.parent_company_id > companies.company_id
-Ref: establishments.main_cnae_id > dim_cnae.cnae_id
-Ref: establishments.municipality_id > dim_municipalities.municipality_id
-Ref: companies.segment_id > dim_segments.segment_id
-Ref: companies.municipality_id > dim_municipalities.municipality_id
-Ref: cardholders.company_id > companies.company_id
-Ref: cardholders.municipality_id > dim_municipalities.municipality_id
-Ref: cards.cardholder_id > cardholders.cardholder_id
-Ref: cards.modality_id > dim_transaction_modalities.modality_id
-Ref: card_products.card_id > cards.card_id
-Ref: card_products.product_id > dim_products.product_id
-Ref: dim_terminals.establishment_id > establishments.establishment_id
-Ref: dim_terminals.acquirer_id > dim_acquirers.acquirer_id
-Ref: fact_transactions.related_transaction_id > fact_transactions.transaction_id
-Ref: fact_transactions.card_id > cards.card_id
-Ref: fact_transactions.product_id > dim_products.product_id
-Ref: fact_transactions.establishment_id > establishments.establishment_id
-Ref: fact_transactions.terminal_id > dim_terminals.terminal_id
-Ref: fact_transactions.technology_id > dim_capture_technologies.technology_id
-Ref: fact_transactions.response_code_id > dim_response_codes.response_code_id
-Ref: fact_transactions.transaction_date > dim_date.date_id
+// ============================================================================
+
+Ref: dim_companies.parent_id > dim_companies.id [comment: 'Corporate hierarchy: holding/branch']
+
+Ref: dim_cards.cardholder_id > dim_cardholders.id
+Ref: dim_cards.modality_id > dim_transaction_modalities.id
+
+Ref: dim_cardholders.company_id > dim_companies.id
+
+Ref: dim_terminals.establishment_id > dim_establishments.id
+Ref: dim_terminals.acquirer_id > dim_acquirers.id
+
+Ref: fact_transactions.related_transaction_id > fact_transactions.id
+Ref: fact_transactions.card_id > dim_cards.id
+Ref: fact_transactions.cardholder_id > dim_cardholders.id
+Ref: fact_transactions.product_id > dim_products.id
+Ref: fact_transactions.establishment_id > dim_establishments.id
+Ref: fact_transactions.terminal_id > dim_terminals.id
