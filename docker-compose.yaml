@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:latest
+    image: postgres:18
     container_name: corporate_benefits_db
     restart: always
     environment:
@@ -10,7 +10,8 @@ services:
     ports:
       - "5432:5432"
     volumes:
-      - postgres_data:/var/lib/postgresql/data
+      # Postgres 18+ keeps its data in a versioned subfolder of /var/lib/postgresql
+      - postgres_data:/var/lib/postgresql
 
 volumes:
   postgres_data:
