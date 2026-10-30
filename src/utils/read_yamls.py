@@ -33,3 +33,9 @@ def load_validation_rules(
 
 def load_database(yaml_path: str | Path = CONFIG_DIR / "database.yaml") -> dict[str, Any]:
     return load_yaml(yaml_path)
+
+
+def load_simulation_config(
+    yaml_path: str | Path = CONFIG_DIR / "simulation_config.yaml",
+) -> dict[str, Any]:
+    return load_yaml(yaml_path)

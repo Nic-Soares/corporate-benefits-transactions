@@ -1,48 +1,34 @@
 import random
-from datetime import datetime
 
 import polars as pl
-from mimesis import Datetime, Person
-from mimesis.locales import Locale
 
-# Initialize providers
-person = Person(Locale.PT_BR)
-datetime_provider = Datetime(Locale.PT_BR)
+from src.data_generators.providers import fake
 
 
-def generate_card_products(cards_df, products_df, min_products=1, max_products=3):
-    """Generate products associated with cards"""
+def generate_card_products(
+    cards_df: pl.DataFrame, products_df: pl.DataFrame, min_products: int = 1, max_products: int = 3
+) -> pl.DataFrame:
+    """Each card gets between `min_products` and `max_products` distinct products.
 
-    card_ids = cards_df["card_id"].to_list()
-    product_ids = products_df["product_id"].to_list()
-    statuses = ["active", "suspended", "cancelled"]
+    `cards_df` needs `id` and `issue_date` (activation comes after it);
+    `products_df` needs `id`.
+    """
+    product_ids = products_df["id"].to_list()
 
     card_products = []
-    for card_id in card_ids:
-        n_products = random.randint(min_products, max_products)
-        for _ in range(n_products):
-            activation_date = datetime_provider.date(start=2010, end=2024)
-
-            # 30% chance of being deactivated
-            if random.random() < 0.3:
-                deactivation_date = datetime_provider.date(start=activation_date.year, end=2024)
-                status = random.choice(["suspended", "cancelled"])
-            else:
-                deactivation_date = None
-                status = "active"
-
+    for card in cards_df.select("id", "issue_date").iter_rows(named=True):
+        n_products = min(random.randint(min_products, max_products), len(product_ids))
+        for product_id in random.sample(product_ids, n_products):
             card_products.append(
                 {
-                    "card_product_id": person.identifier(),
-                    "card_id": card_id,
-                    "product_id": random.choice(product_ids),
+                    "id": fake.new_id("card_product"),
+                    "card_id": card["id"],
+                    "product_id": product_id,
                     "current_balance": round(random.uniform(0, 5000), 2),
                     "daily_limit": round(random.uniform(100, 2000), 2),
                     "monthly_limit": round(random.uniform(1000, 10000), 2),
-                    "activation_date": activation_date,
-                    "deactivation_date": deactivation_date,
-                    "status": status,
-                    "created_at": datetime.now(),
+                    "activation_date": fake.date_between(card["issue_date"], fake.reference_date),
+                    "status": fake.status("card_product"),
                 }
             )
 

@@ -1,22 +1,10 @@
 import random
-import uuid
 from datetime import date
 
 import polars as pl
-from mimesis import Datetime, Person
-from mimesis.locales import Locale
 
-from src.data_generators.providers.brazil_provider import BrazilProvider
+from src.data_generators.providers import fake
 
-# Initialize providers
-person = Person(Locale.PT_BR)
-datetime_provider = Datetime(Locale.PT_BR)
-brazil = BrazilProvider()
-
-# Valid statuses for cardholders
-VALID_CARDHOLDER_STATUSES = ["active", "inactive", "suspended"]
-
-# Job positions
 JOB_POSITIONS = [
     "Director",
     "Manager",
@@ -28,7 +16,6 @@ JOB_POSITIONS = [
     "Officer",
 ]
 
-# Departments
 DEPARTMENTS = [
     "Finance",
     "Operations",
@@ -42,103 +29,63 @@ DEPARTMENTS = [
 
 
 class Cardholder:
-    """Classe que representa um portador de cartão corporativo"""
+    """An employee of a client company who holds benefit cards."""
 
     def __init__(
         self,
         company_id: str,
         municipio_data: dict[str, str],
+        hired_from: date | None = None,
     ) -> None:
-        self.id: str = f"cardholder_{uuid.uuid7()}"
+        """`hired_from`: earliest admission date (the company's registration)."""
+        self.id: str = fake.new_id("cardholder")
         self.company_id: str = company_id
-        self.cpf: str = brazil.cpf()
-        self.name: str = person.full_name()
+        self.cpf: str = fake.brazil.cpf()
+        self.name: str = fake.person.full_name()
         self.city: str = municipio_data["municipio_nome"]
         self.state: str = municipio_data["uf_sigla"]
         self.position: str = random.choice(JOB_POSITIONS)
         self.department: str = random.choice(DEPARTMENTS)
-        self.admission_date: date = datetime_provider.date(start=2015, end=2024)
-        self.status: str = random.choice(VALID_CARDHOLDER_STATUSES)
+        self.admission_date: date = fake.date_in_range("cardholder_admission", hired_from)
+        self.status: str = fake.status("cardholder")
 
     def to_dict(self) -> dict[str, str | date]:
-        """Converte o portador para dicionário - Ajustado para dim_cardholders"""
+        """Columns of the `cardholders` table; the CPF is stored hashed."""
         return {
             "id": self.id,
             "company_id": self.company_id,
+            "cpf_hash": fake.sha256(self.cpf),
             "name": self.name,
             "city": self.city,
             "state": self.state,
+            "admission_date": self.admission_date,
             "position": self.position,
             "department": self.department,
-            "admission_date": self.admission_date,
             "status": self.status,
         }
 
 
 class CardholderGenerator:
-    """Gerador de portadores de cartão corporativo"""
+    """Generates cardholders located in real IBGE municipalities."""
 
     def __init__(self, municipios_df: pl.DataFrame) -> None:
-        """
-        Inicializa o gerador com dados de municípios.
-
-        Args:
-            municipios_df: DataFrame Polars com dados de municípios do IBGE
-                           (requer colunas: municipio_nome, uf_sigla)
-        """
-        self.municipios_df: pl.DataFrame = municipios_df
-        self._extract_reference_data()
-
-    def _extract_reference_data(self) -> None:
-        """Extrai dados de referência para geração de portadores"""
-        self.municipios_list: list[dict[str, str]] = (
-            self.municipios_df.select(["municipio_nome", "uf_sigla"]).unique().to_dicts()
+        """`municipios_df` needs the columns `municipio_nome` and `uf_sigla`."""
+        self.municipios: list[dict[str, str]] = (
+            municipios_df.select(["municipio_nome", "uf_sigla"])
+            .unique(maintain_order=True)
+            .to_dicts()
         )
 
-    def generate_cardholder(self, company_id: str) -> Cardholder:
-        """
-        Gera um portador de cartão corporativo para uma empresa.
-
-        Args:
-            company_id: ID da empresa à qual o portador pertence
-
-        Returns:
-            Cardholder: Instância de Cardholder gerada
-        """
-        municipio_data: dict[str, str] = random.choice(self.municipios_list)
-        return Cardholder(company_id=company_id, municipio_data=municipio_data)
-
-    def generate_cardholders_for_company(
-        self, company_id: str, n_cardholders: int
-    ) -> list[Cardholder]:
-        """
-        Gera múltiplos portadores para uma empresa.
-
-        Args:
-            company_id: ID da empresa
-            n_cardholders: Número de portadores a gerar
-
-        Returns:
-            list[Cardholder]: Lista de portadores gerados
-        """
-        return [self.generate_cardholder(company_id) for _ in range(n_cardholders)]
+    def generate_cardholder(self, company_id: str, hired_from: date | None = None) -> Cardholder:
+        return Cardholder(company_id, random.choice(self.municipios), hired_from)
 
     def generate_cardholders_as_dataframe(
-        self, company_ids: list[str], cardholders_per_company: int
+        self, companies_df: pl.DataFrame, cardholders_per_company: int
     ) -> pl.DataFrame:
-        """
-        Gera portadores como DataFrame Polars.
-
-        Args:
-            company_ids: Lista de IDs de empresas
-            cardholders_per_company: Número de portadores por empresa
-
-        Returns:
-            pl.DataFrame: DataFrame com colunas de portador
-        """
-        cardholders_list = []
-        for company_id in company_ids:
-            cardholders = self.generate_cardholders_for_company(company_id, cardholders_per_company)
-            cardholders_list.extend(cardholders)
-
-        return pl.DataFrame([c.to_dict() for c in cardholders_list])
+        """`companies_df` needs `id` and `registration_date` (admissions come after it)."""
+        cardholders = [
+            self.generate_cardholder(company["id"], company["registration_date"])
+            for company in companies_df.select("id", "registration_date").iter_rows(named=True)
+            for _ in range(cardholders_per_company)
+        ]
+        return pl.DataFrame([cardholder.to_dict() for cardholder in cardholders])
