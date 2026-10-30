@@ -1,10 +1,10 @@
 # =====================================
 # pre_populated_data.yaml
-# DADOS PRÉ-POPULADOS PARA TABELAS DIMENSIONAIS
+# Fixed reference data loaded into the database
 # =====================================
 
 # =====================================
-# PRODUTOS (4 produtos fixos)
+# Products
 # =====================================
 products:
   - id: "VA"
@@ -19,12 +19,20 @@ products:
     name: "Vale Combustível"
     category: "Beneficio"
 
-  - id: "GF"
-    name: "Vale Presente"
+  - id: "VF"
+    name: "Vale Farmácia"
+    category: "Beneficio"
+
+  - id: "VM"
+    name: "Multibenefícios"
+    category: "Beneficio"
+
+  - id: "PR"
+    name: "Premiação"
     category: "Incentivo"
 
 # =====================================
-# MODALIDADES DE TRANSAÇÃO (4 modalidades)
+# Transaction modalities: the proprietary network and the brands
 # =====================================
 transaction_modalities:
   - id: "OWN"
@@ -44,7 +52,7 @@ transaction_modalities:
     type: "brand"
 
 # =====================================
-# ADQUIRENTES (6 adquirentes)
+# Acquirers
 # =====================================
 acquirers:
   - id: "CIE"
@@ -66,7 +74,7 @@ acquirers:
     name: "SafraPay"
 
 # =====================================
-# MODELOS DE TERMINAIS POR ADQUIRENTE
+# Terminal models per acquirer (acquirer id → model and type)
 # =====================================
 terminal_models_by_acquirer:
   CIE:
@@ -118,65 +126,75 @@ terminal_models_by_acquirer:
       type: "TEF"
 
 # =====================================
-# MAPEAMENTO CNAE x PRODUTOS
+# CNAE × products: what the proprietary network authorizes
 # =====================================
 cnae_products:
-  # Supermercados e Hipermercados
-  "4711": ["VA", "GF"]
-  "47113": ["VA", "GF"]
-  "4711301": ["VA", "GF"]
-  "4711302": ["VA", "GF"]
+  # Longest prefix wins: a 7-digit subclass entry overrides its 4-digit class.
+  # VM (multi-benefit) is accepted wherever VA, VR or VF is; PR (incentive) at
+  # supermarkets, restaurants and general retail.
 
-  # Comércio de Produtos Alimentícios
-  "4721": ["VA"]
-  "4722": ["VA"]
-  "4723": ["VA"]
-  "4729": ["VA"]
-  "4729602": ["VA", "GF"]
-  "4729699": ["VA"]
-  "4781": ["VA"]
-  "4784": ["VA"]
+  # Supermarkets and hypermarkets
+  "4711": ["VA", "VM", "PR"]
+  "47113": ["VA", "VM", "PR"]
+  "4711301": ["VA", "VM", "PR"]
+  "4711302": ["VA", "VM", "PR"]
 
-  # Restaurantes e Serviços de Alimentação
-  "5611": ["VR", "GF"]
-  "56112": ["VR"]
-  "5611201": ["VR"]
-  "5611203": ["VR"]
-  "5611204": ["VR"]
-  "5611205": ["VR"]
-  "5612": ["VR"]
-  "5612100": ["VR"]
-  "5620": ["VR"]
-  "56201": ["VR"]
-  "5620101": ["VR"]
-  "5620102": ["VR"]
-  "5620103": ["VR"]
-  "5620104": ["VR"]
+  # Food retail
+  "4721": ["VA", "VM"]        # bakeries, dairy, cold cuts
+  "4722": ["VA", "VM"]        # butchers, fishmongers
+  "4723": ["VA", "VM"]        # beverages
+  "4724": ["VA", "VM"]        # fruit and vegetables
+  "4729": ["VA", "VM"]        # other food
+  "4729602": ["VA", "VM", "PR"]
+  "4729699": ["VA", "VM"]
 
-  # Postos de Combustível
+  # Restaurants and food services
+  "5611": ["VR", "VM", "PR"]
+  "56112": ["VR", "VM"]
+  "5611201": ["VR", "VM"]     # restaurants
+  "5611203": ["VR", "VM"]     # snack bars
+  "5611204": ["VR", "VM"]     # bars
+  "5611205": ["VR", "VM"]     # bars with entertainment
+  "5612": ["VR", "VM"]
+  "5612100": ["VR", "VM"]     # street food
+  "5620": ["VR", "VM"]
+  "56201": ["VR", "VM"]
+  "5620101": ["VR", "VM"]     # catering for companies
+  "5620102": ["VR", "VM"]     # catering for events
+  "5620103": ["VR", "VM"]     # canteens
+  "5620104": ["VR", "VM"]     # home delivery
+
+  # Fuel stations
   "4731": ["VC"]
   "47318": ["VC"]
   "4731800": ["VC"]
 
-  # Estabelecimentos Diversos
-  "4751": ["GF"]
-  "4752": ["GF"]
-  "4753": ["GF"]
-  "4754": ["GF"]
-  "4755": ["GF"]
-  "4756": ["GF"]
-  "4757": ["GF"]
-  "4761": ["GF"]
-  "4762": ["GF"]
-  "4763": ["GF"]
-  "4771": ["GF"]
-  "4772": ["GF"]
-  "4773": ["GF"]
-  "4774": ["GF"]
-  "4789": ["GF"]
+  # Pharmacies
+  "4771": ["VF", "VM", "PR"]
+  "4771701": ["VF", "VM", "PR"]  # without compounding
+  "4771702": ["VF", "VM", "PR"]  # with compounding
+  "4771703": ["VF", "VM", "PR"]  # homeopathic
+
+  # General retail
+  "4751": ["PR"]              # IT equipment
+  "4752": ["PR"]              # telecom equipment
+  "4753": ["PR"]              # home appliances
+  "4754": ["PR"]              # furniture and lighting
+  "4755": ["PR"]              # textiles and household linen
+  "4756": ["PR"]              # musical instruments
+  "4757": ["PR"]              # parts for home appliances
+  "4761": ["PR"]              # books, newspapers, stationery
+  "4762": ["PR"]              # music and video recordings
+  "4763": ["PR"]              # toys, sports, recreation
+  "4772": ["PR"]              # cosmetics and perfume
+  "4773": ["PR"]              # medical and orthopedic items
+  "4774": ["PR"]              # optical goods
+  "4781": ["PR"]              # clothing and accessories
+  "4782": ["PR"]              # footwear and leather goods
+  "4789": ["PR"]              # other new goods
 
 # =====================================
-# SEGMENTOS DE EMPRESAS
+# Industry segments
 # =====================================
 segments:
   - id: "SEG_TECH"
@@ -228,23 +246,7 @@ segments:
     category: "Serviços Profissionais"
 
 # =====================================
-# TECNOLOGIAS DE CAPTURA
-# =====================================
-capture_technologies:
-  - name: "Chip"
-    description: "Transação com chip EMV"
-
-  - name: "Contactless"
-    description: "Transação por aproximação"
-
-  - name: "Tarja Magnética"
-    description: "Transação com tarja magnética"
-
-  - name: "QR id"
-    description: "Transação via QR id"
-
-# =====================================
-# TECNOLOGIAS DE TRANSAÇÃO
+# Capture technologies (transactions.capture_type)
 # =====================================
 transaction_technologies:
   - code: CHIP
@@ -272,13 +274,13 @@ transaction_technologies:
     name: Google Pay
 
 # =====================================
-# CÓDIGOS DE RESPOSTA PADRÃO
+# Response codes (descriptions are shown to Brazilian users, so they stay in Portuguese)
 # =====================================
 response_codes:
-  # APROVAÇÕES
+  # Approved
   "00": "Transação aprovada"
   
-  # PROBLEMAS DE CARTÃO/PORTADOR
+  # Card / cardholder
   "13": "Cartão inativo"
   "14": "Cartão bloqueado"
   "15": "Cartão cancelado"
@@ -288,19 +290,19 @@ response_codes:
   "55": "Produto ainda não ativado"
   "56": "Transação antes da admissão do portador"
   
-  # PROBLEMAS DE ESTABELECIMENTO
+  # Establishment
   "18": "Empresa inativa"
   "19": "Estabelecimento inativo"
   "20": "Estabelecimento suspenso"
   "21": "Estabelecimento baixado"
   "57": "Estabelecimento ainda não credenciado"
   
-  # PROBLEMAS DE TERMINAL/INFRAESTRUTURA
+  # Terminal / infrastructure
   "22": "Terminal inativo"
   "32": "Tipo de captura não suportado"
   "58": "Terminal ainda não instalado"
   
-  # PROBLEMAS DE PRODUTO/CONFIGURAÇÃO
+  # Product / configuration
   "23": "Produto do cartão inativo"
   "24": "Produto desativado"
   "25": "Modalidade desativada"
@@ -310,12 +312,12 @@ response_codes:
   "29": "Regra MCC desativada"
   "30": "Regra CNAE desativada"
   
-  # PROBLEMAS DE SALDO/LIMITES
+  # Balance / limits
   "51": "Saldo insuficiente"
   "61": "Limite diário excedido"
   "62": "Limite mensal excedido"
   
-  # REGISTRO NÃO ENCONTRADO
+  # Record not found
   "92": "Cartão não encontrado"
   "93": "Produto não habilitado no cartão"
   "94": "Portador não encontrado"
@@ -324,6 +326,6 @@ response_codes:
   "98": "Terminal não encontrado"
   "99": "Adquirente não encontrado"
 
-  # ERROS DE SISTEMA
+  # System errors
   "91": "Sistema indisponível"
   "96": "Erro no sistema"
