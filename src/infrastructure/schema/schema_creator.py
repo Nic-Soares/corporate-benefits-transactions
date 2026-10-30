@@ -27,12 +27,12 @@ def create_schema_duckdb():
 
 
 if __name__ == "__main__":
-    print("Criando schemas dos bancos...")
+    print("Creating database schemas...")
 
-    print("📊 Criando schema PostgreSQL (OLTP)...")
+    print("📊 PostgreSQL schema (OLTP)...")
     create_schema_postgres()
 
-    print("🦆 Criando schema DuckDB (OLAP)...")
+    print("🦆 DuckDB schema (OLAP)...")
     create_schema_duckdb()
 
-    print("🎯 Schemas criados com sucesso!")
+    print("🎯 Schemas created.")

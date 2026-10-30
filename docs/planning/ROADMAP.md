@@ -11,7 +11,7 @@
 |---|---|---|
 | `EP-01` Baseline and toolchain | ✅ Done — merged into `develop` 2026-10-30 | code (`pyproject.toml`, `docker-compose.yaml`) |
 | `EP-02` Safety net (tests + CI) | ✅ Done — merged into `develop` 2026-10-30; CI runs after the first push | code (`tests/`, `.github/`) |
-| `EP-03` Clean up existing code | 🟡 In progress — `ST-03.1`, `ST-03.2`, `ST-03.4` merged into `develop` | code (`src/`) |
+| `EP-03` Clean up existing code | ✅ Done — merged into `develop` 2026-10-30 | code (`src/`) |
 | `EP-04` Config and model consistency | 🟡 `ST-04.2` merged into `develop` (pulled ahead of `ST-03.2`) | `config/`, `database/` |
 | `EP-05` Documentation | Not started | `README.md`, `docs/` |
 | `EP-06` Setup pipeline (reference data + entities) | Not started | code (`src/main.py`, `src/processors/`) |
@@ -162,7 +162,7 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 ### ST-02.3 — CI
 
 - [x] `.github/workflows/ci.yml`: `uv sync --locked`, `ruff format --check`, `pytest` (without `network`/`db`), on push to `main`/`develop` and on pull requests. Runs on GitHub after the first push
-- [ ] `ruff check` joins CI when `EP-03` brings the findings to zero (115 left after `ST-01.5`)
+- [x] `ruff check` joined CI in `ST-03.3`, once the findings reached zero
 - [x] Dependabot (`.github/dependabot.yml`): `uv`, GitHub Actions, and the Postgres image in `docker-compose.yaml`, weekly, minor/patch grouped
 
 ---
@@ -203,10 +203,11 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 
 ### ST-03.3 — Structure
 
-- [ ] `src/notebooks/`: move what's useful to `scripts/` or a top-level `notebooks/`, delete the rest
-- [ ] Rename Portuguese functions, variables, and comments to English
-- [ ] Type hints on public functions; replace `typing_extensions.Dict` with `dict`
-- [ ] Manual `ruff` findings left over from `ST-01.5` (36 after `ST-03.2`, all in `src/notebooks/`, `src/adapters/` and three infrastructure files)
+- [x] `src/notebooks/` deleted: scratch scripts with hard-coded Linux paths. `test_reference_data.py` became `tests/test_reference_loaders.py`; the pipeline sketch in `postgres_manipulation.py` is already in `docs/data-strategy.md` (and is `EP-06`)
+- [x] Dead code deleted: `src/utils/data_queries.py` (queried tables that don't exist, e.g. `dim_municipios`), `municipality_data_importer.py` + `read_data_files.py` (a second, unused municipality source from a shapefile — the project uses the IBGE API). `geopandas` and its native stack (`pandas`, `numpy`, `shapely`, `pyproj`, `pyogrio`) left the dependencies
+- [x] Portuguese functions, variables, comments, docstrings and messages in `src/` translated to English (the functions were renamed in `ST-03.1`/`ST-03.2`). Business data values (product names, response descriptions) stay in Portuguese — they're Brazilian-market terms
+- [x] `typing_extensions` → `typing` (`TypedDict`); `typing-extensions` left the dependencies
+- [x] `ruff check` finds nothing in the repo → it joined CI
 
 ### ST-03.4 — Broken imports
 
