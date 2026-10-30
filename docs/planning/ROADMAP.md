@@ -12,7 +12,7 @@
 | `EP-01` Baseline and toolchain | ✅ Done — merged into `develop` 2026-10-30 | code (`pyproject.toml`, `docker-compose.yaml`) |
 | `EP-02` Safety net (tests + CI) | ✅ Done — merged into `develop` 2026-10-30; CI runs after the first push | code (`tests/`, `.github/`) |
 | `EP-03` Clean up existing code | 🟡 In progress — `ST-03.1` merged into `develop` | code (`src/`) |
-| `EP-04` Config and model consistency | Not started | `config/`, `database/` |
+| `EP-04` Config and model consistency | 🟡 `ST-04.2` merged into `develop` (pulled ahead of `ST-03.2`) | `config/`, `database/` |
 | `EP-05` Documentation | Not started | `README.md`, `docs/` |
 | `EP-06` Setup pipeline (reference data + entities) | Not started | code (`src/main.py`, `src/processors/`) |
 | `EP-07` Transaction simulator | Not started | code (`src/processors/transaction_simulator.py`) |
@@ -189,7 +189,8 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 
 - [ ] `card_generator.py`: `Card` calls `_generate_card_hash`, which doesn't exist — no card can be generated (`test_cards` is xfail)
 - [ ] `cardholder_generator.py`: the CPF is generated but `to_dict()` leaves it out
-- [ ] Statuses differ between generators: establishments use `ATIVA/INATIVA/SUSPENSA/BAIXADA`, the rest `active/inactive/…` — align with `business_rules.yaml → status_options`
+- [ ] Statuses from `business_rules.yaml → status_options` (settled in `ST-04.2`): establishments emit `ATIVA/INATIVA/SUSPENSA/BAIXADA`, cardholders `suspended`, cards `canceled`
+- [ ] Branded vs. proprietary cards: `OWN` modality for the proprietary network, not `None`
 - [ ] Choose between `simple_*_generator` and `*_generator`; delete the other
 - [ ] Use `mimesis` everywhere (drop `faker` from `transaction_generator.py`)
 - [ ] Configurable seed for every generator (reproducible dataset)
@@ -222,18 +223,19 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 - [ ] `validation_rules.yaml → validation_order` matches the functions that exist in `src/validators/`
 - [ ] YAML comments and keys in English
 
-### ST-04.2 — Response codes and statuses (decisions for Nicolas)
+### ST-04.2 — Response codes and statuses
 
-Found while fixing the validators (`ST-03.1`). The validators follow `validation_rules.yaml` today; each item needs a decision before the config is aligned.
+Found while fixing the validators (`ST-03.1`); settled 2026-10-30 (Nicolas confirmed the CNAE rule and left the rest to the roadmap). Done ahead of `ST-03.2`, which needs the statuses.
 
-- [ ] Establishment codes: `validation_rules.yaml` has `INATIVA 18 / SUSPENSA 19 / BAIXADA 20`; `response_codes` has `18 Empresa inativa / 19 inativo / 20 suspenso / 21 baixado`
-- [ ] Duplicate meanings in `response_codes`: `27`/`59` (MCC × modality) and `28`/`60` (CNAE × product). The validators use `27`/`28` (from `validation_rules.yaml`)
-- [ ] "Record not found" codes (`NOT_FOUND` in `src/validators/_common.py`) aren't in `response_codes`: `97`/`98`/`99` have no description, `96` means "Erro no sistema", and one code covers two entities (`99` card and card product, `98` cardholder and modality, `96` terminal and acquirer)
-- [ ] Establishment statuses: Portuguese in `validation_rules.yaml` and the generator (`ATIVA`…), English in `business_rules.yaml → status_options` (`active`…)
-- [ ] Statuses the generators emit with no code: card `inactive` vs `canceled`/`cancelled`, cardholder `suspended`, terminal `maintenance` → fall back to `99`
-- [ ] Proprietary network: `validation_rules.yaml` says `cards.modality_id IS NULL`, but `pre_populated_data.yaml` has an `OWN` (Rede Própria) modality. The validators follow the null rule
-- [ ] CNAE rule: confirm "longest prefix wins" (`5611` → VR, GF but `5611201` → VR only means GF is declined at a `5611201` restaurant)
-- [ ] `terminal_acquirer_match` (code `31`) only checks the terminal exists: the transaction has no acquirer and there is no terminal × modality data. Drop the rule or define the data
+- [x] Establishment codes follow `response_codes` (the catalog with descriptions): `inactive 19 / suspended 20 / terminated 21`; `18` stays "Empresa inativa" for the employer
+- [x] Duplicate meanings removed from `response_codes`: `59` and `60` dropped, `27`/`28` kept
+- [x] "Record not found" codes in `validation_rules.yaml → not_found`, one per entity and described in `response_codes`: `92` card, `93` card product, `94` cardholder, `95` modality, `97` establishment, `98` terminal, `99` acquirer. A status outside the rule's list → `unknown_status: 96` ("Erro no sistema")
+- [x] Statuses in English everywhere, listed in `business_rules.yaml → status_options` (now also `card_product` and `terminal`); `canceled` → `cancelled`; terminal `maintenance` declines as `22`; card product `suspended`/`cancelled` → `23`
+- [x] Proprietary network = modality `OWN` (type `proprietary_network` in `pre_populated_data.yaml`), not a null `modality_id`. Matches the business: the 3-party model (issuer's own network, authorized by the establishment's CNAE) vs. the 4-party model (acquirer → brand, authorized by MCC)
+- [x] CNAE rule: the longest prefix wins — confirmed
+- [x] `terminal_acquirer_match` (code `31`) removed: it checked nothing. The real rule (an acquirer only takes the proprietary network once integrated with it) needs acquirer × network data → idea for `EP-07`
+- [x] `tests/test_validators.py::test_codes_are_documented`: every code a validator can return has a description
+- Generators still emit the old statuses (`ATIVA`…, cardholder `suspended`) → `ST-03.2`
 
 ### ST-04.3 — Data model
 
@@ -311,6 +313,7 @@ Found while fixing the validators (`ST-03.1`). The validators follow `validation
 ### ST-07.3 — Fraud scenarios
 
 - [ ] Define the scenarios (e.g. rapid repeated attempts, use outside the usual region)
+- [ ] Idea from `ST-04.2`: acquirer × network acceptance — an acquirer only takes the proprietary network once integrated with it (open arrangement under the 2025 PAT decree); would bring back a terminal/acquirer decline code
 - [ ] Label transactions generated by these scenarios (a column dataset users can train on)
 
 ---
