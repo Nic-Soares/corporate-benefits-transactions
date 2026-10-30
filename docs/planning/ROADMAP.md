@@ -9,7 +9,7 @@
 
 | Epic | Status | Where the work lives |
 |---|---|---|
-| `EP-01` Baseline and toolchain | 🟡 In progress — `ST-01.2`, `ST-01.3` merged into `develop` | code (`pyproject.toml`, `docker-compose.yaml`) |
+| `EP-01` Baseline and toolchain | 🟡 In progress — `ST-01.2` to `ST-01.4` merged into `develop`; `ST-01.5` and the README item of `ST-01.1` left | code (`pyproject.toml`, `docker-compose.yaml`) |
 | `EP-02` Safety net (tests + CI) | Not started | code (`tests/`, `.github/`) |
 | `EP-03` Clean up existing code | Not started | code (`src/`) |
 | `EP-04` Config and model consistency | Not started | `config/`, `database/` |
@@ -126,9 +126,9 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 
 ### ST-01.4 — Environment
 
-- [ ] `docker-compose.yaml`: pin the Postgres major version (e.g. `postgres:18`)
-- [ ] Create `.env.example` with `DB_USER` and `DB_PASSWORD`
-- [ ] Check `.gitignore` covers `.env`, `*.duckdb`, `data/raw/**`, `data/final_datasets/**`
+- [x] `docker-compose.yaml`: Postgres pinned to `postgres:18`; the volume mounts `/var/lib/postgresql` (18 moved its data dir into a versioned subfolder). Checked: 18.6 starts, `oltp_schema.sql` creates all 14 tables, `connect_pg_db()` connects
+- [x] Create `.env.example` with `DB_USER` and `DB_PASSWORD`
+- [x] `.gitignore` covers `.env` and `*.duckdb` (already) and now `data/raw/**` and `data/final_datasets/*`, keeping the `.gitkeep` skeleton
 
 ### ST-01.5 — Lint and format
 
@@ -186,7 +186,7 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 ### ST-03.4 — Broken imports
 
 - [ ] `mcc_and_cnae_loader.py` imports `src.extractors.mastercard_mcc_api` — point it to `src.extractors.mcc_extractor` or restore the module
-- [ ] `schema_creator.py` imports `src.common.*` — point it to `src.infrastructure.database.*`
+- [ ] `schema_creator.py` and `tests/test_pg_connection.py` import `src.common.*` — point them to `src.infrastructure.database.*`
 - [ ] Every module in `src/` imports cleanly (test in `EP-02` style)
 
 ---
