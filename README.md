@@ -56,38 +56,27 @@ corporate-benefits-transactions/
 └── 🐳 docker-compose.yaml    # PostgreSQL containerizado
 ```
 
-## 🚀 Como Executar
+## 🚀 How to run
 
-### Pré-requisitos
-- Python 3.9+
-- Docker & Docker Compose
-- Git
+### Prerequisites
+- [uv](https://docs.astral.sh/uv/) (installs Python 3.14 if needed)
+- Docker with Docker Compose
 
-### Instalação Rápida
+### Setup
 
 ```bash
-# 1. Clone o repositório
-git clone https://github.com/seu-usuario/corporate-benefits-transactions.git
-cd corporate-benefits-transactions
+# 1. Install the dependencies (creates .venv from uv.lock)
+uv sync
 
-# 2. Configure o ambiente
-python -m venv .venv
-source .venv/bin/activate  # Linux/Mac
-# .venv\Scripts\activate   # Windows
+# 2. Database credentials
+cp .env.example .env   # then set DB_PASSWORD
 
-# 3. Instale dependências
-pip install -r requirements.txt
-
-# 4. Configure variáveis de ambiente
-cp .env.example .env
-# Edite o arquivo .env com suas configurações
-
-# 5. Inicie a infraestrutura
-docker-compose up -d
-
-# 6. Execute o sistema
-python main.py
+# 3. Start PostgreSQL 18
+docker compose up -d
 ```
+
+There is no single entrypoint yet: `src/main.py` is planned in `EP-06` of the
+[roadmap](docs/planning/ROADMAP.md).
 
 ## 🏢 Contexto de Negócio: Benefícios Corporativos no Brasil
 
@@ -102,40 +91,17 @@ No Brasil, empresas fornecem aos funcionários cartões de benefícios que ofere
 
 O sistema reproduz a complexidade real do mercado, incluindo validações por MCC (Merchant Category Code) para redes bandeiradas e CNAE (Classificação Nacional de Atividades Econômicas) para redes fechadas.
 
-## 📈 Roadmap do Projeto
+## 📈 Roadmap
 
-### Fase 1: Fundação ✅
-- [x] Modelo de dados OLTP
-- [x] Infraestrutura Docker
-- [x] Geradores de dados sintéticos
+The development roadmap, its status board, and the decisions behind it live in
+[`docs/planning/ROADMAP.md`](docs/planning/ROADMAP.md).
 
-### Fase 2: Simulação 🚧
-- [x] Lógica de autorização
-- [x] Regras de negócio (MCC/CNAE)
-- [ ] Cenários de fraude
-- [ ] Validações de performance
+## 🔀 Development workflow
 
-### Fase 3: Analytics 📋
-- [ ] Modelo OLAP (DuckDB)
-- [ ] Views analíticas
-- [ ] Métricas de qualidade
-- [ ] Exportação Parquet
-
-### Fase 4: Distribuição 🎯
-- [ ] Dataset consolidado
-- [ ] Documentação Kaggle
-- [ ] Notebooks de exemplo
-- [ ] Publicação pública
-
-## 🤝 Contribuindo
-
-Contribuições são bem-vindas! Este projeto visa se tornar um recurso valioso para a comunidade:
-
-1. **Fork** o repositório
-2. **Create** uma branch para sua feature (`git checkout -b feature/AmazingFeature`)
-3. **Commit** suas mudanças (`git commit -m 'Add some AmazingFeature'`)
-4. **Push** para a branch (`git push origin feature/AmazingFeature`)
-5. **Open** um Pull Request
+- `main` = released code. `develop` = integration; every epic or story is merged into it with a `merge(<scope>): …` commit.
+- One branch per epic/story, cut from `develop`: `<type>/ep-XX-<slug>` or `<type>/st-XX.Y-<slug>`, where `<type>` is the conventional-commit type (`feat`, `fix`, `chore`, `docs`, `test`, `ci`, `refactor`).
+- Commits follow [Conventional Commits](https://www.conventionalcommits.org/) (`chore(deps): …`, `docs(roadmap): …`).
+- Lint and format with `uv run ruff check` and `uv run ruff format`.
 
 ## 📄 Licença
 

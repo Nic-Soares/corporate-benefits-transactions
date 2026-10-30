@@ -9,7 +9,7 @@
 
 | Epic | Status | Where the work lives |
 |---|---|---|
-| `EP-01` Baseline and toolchain | 🟡 In progress — `ST-01.2` to `ST-01.4` merged into `develop`; `ST-01.5` and the README item of `ST-01.1` left | code (`pyproject.toml`, `docker-compose.yaml`) |
+| `EP-01` Baseline and toolchain | ✅ Done — merged into `develop` 2026-10-30 | code (`pyproject.toml`, `docker-compose.yaml`) |
 | `EP-02` Safety net (tests + CI) | Not started | code (`tests/`, `.github/`) |
 | `EP-03` Clean up existing code | Not started | code (`src/`) |
 | `EP-04` Config and model consistency | Not started | `config/`, `database/` |
@@ -106,7 +106,7 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 ### ST-01.1 — Branch and workflow
 
 - [x] Create `develop` from `main`
-- [ ] Document the workflow (§0) in the README
+- [x] Document the workflow (§0) in the README — with it, "How to run" now uses `uv` (the `pip install -r requirements.txt` steps broke in `ST-01.2`) and the README roadmap points to this file. These two sections are already in English; the rest of the README is translated in `ST-05.1`
 
 ### ST-01.2 — Dependency management
 
@@ -132,8 +132,9 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 
 ### ST-01.5 — Lint and format
 
-- [ ] Adopt `ruff` (lint + format), configured in `pyproject.toml`
-- [ ] First pass with automatic fixes only; manual findings go to `EP-03`
+- [x] Adopt `ruff` (lint + format), configured in `pyproject.toml` — dev dependency; rules `E`, `F`, `I`, `UP`, `B`; line length 100
+- [x] First pass with automatic (safe) fixes + `ruff format` across the repo: 227 → 115 findings. Imports and `test_company_generator.py` behave as before
+- Left for `EP-03` (115): 76 `F821` undefined names (pandas `pd` never imported, loose module-level code), 17 `E402`, 10 `F841`, 5 `E501`, 3 `E712`, 1 `B007`, and 3 syntax errors in `tests/test_cardholder_generator.py` (the file holds only `..`). Over half sit in `src/validators/` and `src/notebooks/`
 
 ---
 
@@ -155,7 +156,8 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 
 ### ST-02.3 — CI
 
-- [ ] GitHub Actions: `ruff check`, `ruff format --check`, `pytest` (without the `network`/`db` markers), using `astral-sh/setup-uv`
+- [ ] GitHub Actions: `ruff format --check`, `pytest` (without the `network`/`db` markers), using `astral-sh/setup-uv`
+- [ ] `ruff check` joins CI when `EP-03` brings the findings to zero (115 left after `ST-01.5`)
 - [ ] Dependabot for `uv` and GitHub Actions (weekly, minor/patch grouped)
 
 ---
@@ -181,7 +183,7 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 - [ ] `src/notebooks/`: move what's useful to `scripts/` or a top-level `notebooks/`, delete the rest
 - [ ] Rename Portuguese functions, variables, and comments to English
 - [ ] Type hints on public functions; replace `typing_extensions.Dict` with `dict`
-- [ ] Manual `ruff` findings left over from `ST-01.5`
+- [ ] Manual `ruff` findings left over from `ST-01.5` (115 — breakdown in `ST-01.5`)
 
 ### ST-03.4 — Broken imports
 

@@ -1,11 +1,14 @@
-import psycopg
 import os
+
+import psycopg
 from dotenv import load_dotenv
+
 load_dotenv()
 from src.utils.read_yamls import load_database
 
 db_user = os.environ.get("DB_USER")
 db_password = os.environ.get("DB_PASSWORD")
+
 
 def connect_pg_db():
     """Conecta ao banco de dados PostgreSQL."""
@@ -19,13 +22,14 @@ def connect_pg_db():
             port=pg_config.get("port"),
             dbname=pg_config.get("dbname"),
             user=db_user,
-            password=db_password
+            password=db_password,
         )
         print("✅ Conectado ao PostgreSQL com sucesso!")
         return conn
     except Exception as e:
         print(f"❌ Erro ao conectar ao PostgreSQL: {e}")
         return None
+
 
 def execute_pg_query(conn, query, params=None):
     """Executa uma query SQL no PostgreSQL."""
@@ -47,6 +51,7 @@ def execute_pg_query(conn, query, params=None):
         print(f"❌ Erro ao executar query no PostgreSQL: {e}")
         return False
 
+
 def execute_pg_sql_file(conn, file_path):
     """Executa um arquivo SQL no PostgreSQL."""
     if not conn:
@@ -58,7 +63,7 @@ def execute_pg_sql_file(conn, file_path):
 
     print(f"📄 Executando arquivo SQL PostgreSQL: {file_path}")
     try:
-        with open(file_path, "r") as file:
+        with open(file_path) as file:
             sql_content = file.read()
             # psycop.connect() automatically commits DDL statements, but DML needs explicit commit
             # execute_pg_query handles commit for DML
@@ -68,6 +73,7 @@ def execute_pg_sql_file(conn, file_path):
     except Exception as e:
         print(f"❌ Erro ao executar arquivo SQL PostgreSQL: {e}")
         return False
+
 
 def import_csv_to_pg(conn, csv_file_path, table_name, columns=None):
     """
@@ -94,17 +100,18 @@ def import_csv_to_pg(conn, csv_file_path, table_name, columns=None):
             copy_command = f"COPY {table_name}"
             if columns:
                 copy_command += f" ({', '.join(columns)})"
-            copy_command += f" FROM STDIN WITH (FORMAT CSV, HEADER TRUE);"
+            copy_command += " FROM STDIN WITH (FORMAT CSV, HEADER TRUE);"
 
-            with open(csv_file_path, 'r') as f:
+            with open(csv_file_path) as f:
                 cur.copy_expert(copy_command, f)
             conn.commit()
             print(f"✅ Dados de {csv_file_path} importados com sucesso para {table_name}.")
             return True
     except Exception as e:
-        conn.rollback() # Rollback in case of error during copy
+        conn.rollback()  # Rollback in case of error during copy
         print(f"❌ Erro ao importar CSV para PostgreSQL: {e}")
         return False
+
 
 def insert_dataframe(conn, df, table_name):
     """Insert DataFrame into PostgreSQL using pandas to_sql or COPY"""
@@ -112,10 +119,7 @@ def insert_dataframe(conn, df, table_name):
         # Convert DataFrame to CSV string and use COPY
         csv_buffer = df.to_csv(index=False, header=False)
         with conn.cursor() as cur:
-            cur.copy_expert(
-                f"COPY {table_name} FROM STDIN WITH (FORMAT CSV)",
-                csv_buffer
-            )
+            cur.copy_expert(f"COPY {table_name} FROM STDIN WITH (FORMAT CSV)", csv_buffer)
         conn.commit()
         print(f"✅ {len(df)} rows inserted into PostgreSQL table {table_name}")
         return True
