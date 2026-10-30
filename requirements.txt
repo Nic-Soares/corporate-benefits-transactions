@@ -1,8 +1,0 @@
-mimesis
-duckdb
-dbt-core
-dbt-duckdb
-pyyaml
-kagglehub
-polars
-ulid
