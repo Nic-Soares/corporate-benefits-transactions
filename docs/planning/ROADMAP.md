@@ -9,7 +9,7 @@
 
 | Epic | Status | Where the work lives |
 |---|---|---|
-| `EP-01` Baseline and toolchain | 🟡 Started — `develop` created | code (`pyproject.toml`, `docker-compose.yaml`) |
+| `EP-01` Baseline and toolchain | 🟡 In progress — `ST-01.2` done on `chore/st-01.2-dependency-management` | code (`pyproject.toml`, `docker-compose.yaml`) |
 | `EP-02` Safety net (tests + CI) | Not started | code (`tests/`, `.github/`) |
 | `EP-03` Clean up existing code | Not started | code (`src/`) |
 | `EP-04` Config and model consistency | Not started | `config/`, `database/` |
@@ -68,11 +68,13 @@
 
 | Problem | Where | Epic |
 |---|---|---|
-| Imported but undeclared dependencies: `psycopg`, `faker`, `geopandas`, `requests`, `numpy`, `pandas` | `requirements.txt` | `EP-01` |
+| Imported but undeclared dependencies: `psycopg`, `faker`, `geopandas`, `requests`, `numpy`, `python-dotenv` | `requirements.txt` | `EP-01` |
+| `mimesis.builtins` (used for `BrazilSpecProvider`) was removed in mimesis 19 | entity generators | `EP-01` |
+| Imports of modules that don't exist: `src.extractors.mastercard_mcc_api`, `src.common.*` | `mcc_and_cnae_loader.py`, `schema_creator.py` (and `load_and_save_reference_data.py` through it) | `EP-03` |
 | No pinned versions; `postgres:latest` | `requirements.txt`, `docker-compose.yaml` | `EP-01` |
 | `.env.example` referenced by the README doesn't exist | repo root | `EP-01` |
 | `sys.path.insert` hacks to resolve imports | `tests/`, `src/notebooks/` | `EP-01` |
-| Functions defined 2–3 times in the same file + loose example code at module level (runs on import) | `src/validators/business_rules_validators.py` | `EP-03` |
+| Loose example code at module level that raises `NameError` on import; functions defined 2–3 times in the same file | `src/validators/business_rules_validators.py`, `balance_and_limits_validations.py`, `infrastructure_validations.py` | `EP-03` |
 | Validators use pandas syntax in a polars project | `src/validators/*.py` | `EP-03` |
 | Duplicate generators: `simple_company_generator` × `company_generator`, `simple_card_generator` × `card_generator` | `src/data_generators/entities/` | `EP-03` |
 | Two fake-data libraries: `mimesis` (entities) and `faker` (transactions) | `transaction_generator.py` | `EP-03` |
@@ -109,17 +111,19 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 
 ### ST-01.2 — Dependency management
 
-- [ ] `pyproject.toml` with every dependency the code actually imports, with version ranges; `requires-python = ">=3.14"`
-- [ ] `.python-version` pinned to 3.14
-- [ ] `uv.lock` committed
-- [ ] Remove `requirements.txt`, `dbt-core`, and `dbt-duckdb`
-- [ ] Install the project as a package so the `sys.path.insert` hacks can go
+- [x] `pyproject.toml` with every dependency the code actually imports, with version ranges; `requires-python = ">=3.14"` — all install on 3.14 (`geopandas` and `psycopg` included)
+- [x] `.python-version` pinned to 3.14
+- [x] `uv.lock` committed
+- [x] Remove `requirements.txt`, `dbt-core`, and `dbt-duckdb`
+- [x] Install the project as a package (hatchling, package `src`) — `sys.path.insert` removed from `load_and_save_reference_data.py` and `tests/test_company_generator.py`; the copies in `src/notebooks/` go with that folder in `ST-03.3`
+- [x] Import check of every module in `src/` (outside `notebooks/`) from outside the repo: 35 import; the 6 that fail are code bugs, not missing packages (`ST-03.1`, `ST-03.4`)
 
 ### ST-01.3 — Package upgrades
 
 - [ ] Write `docs/runbooks/dependency-upgrades.md` and run it
 - [ ] Move everything to the latest stable release; note breaking changes in `polars`, `mimesis`, and `duckdb`
-- [ ] Confirm every dependency has a Python 3.14 wheel (`geopandas` and `psycopg` binaries in particular)
+- [ ] `mimesis` is held at `>=18,<19` because 19 removed `mimesis.builtins`: replace `BrazilSpecProvider` (CPF/CNPJ) and move to 22
+- [x] Confirm every dependency has a Python 3.14 wheel — done in `ST-01.2`
 
 ### ST-01.4 — Environment
 
@@ -179,6 +183,12 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 - [ ] Rename Portuguese functions, variables, and comments to English
 - [ ] Type hints on public functions; replace `typing_extensions.Dict` with `dict`
 - [ ] Manual `ruff` findings left over from `ST-01.5`
+
+### ST-03.4 — Broken imports
+
+- [ ] `mcc_and_cnae_loader.py` imports `src.extractors.mastercard_mcc_api` — point it to `src.extractors.mcc_extractor` or restore the module
+- [ ] `schema_creator.py` imports `src.common.*` — point it to `src.infrastructure.database.*`
+- [ ] Every module in `src/` imports cleanly (test in `EP-02` style)
 
 ---
 
