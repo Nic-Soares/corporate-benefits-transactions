@@ -9,7 +9,7 @@
 
 | Epic | Status | Where the work lives |
 |---|---|---|
-| `EP-01` Baseline and toolchain | 🟡 In progress — `ST-01.2` done on `chore/st-01.2-dependency-management` | code (`pyproject.toml`, `docker-compose.yaml`) |
+| `EP-01` Baseline and toolchain | 🟡 In progress — `ST-01.2`, `ST-01.3` merged into `develop` | code (`pyproject.toml`, `docker-compose.yaml`) |
 | `EP-02` Safety net (tests + CI) | Not started | code (`tests/`, `.github/`) |
 | `EP-03` Clean up existing code | Not started | code (`src/`) |
 | `EP-04` Config and model consistency | Not started | `config/`, `database/` |
@@ -69,7 +69,6 @@
 | Problem | Where | Epic |
 |---|---|---|
 | Imported but undeclared dependencies: `psycopg`, `faker`, `geopandas`, `requests`, `numpy`, `python-dotenv` | `requirements.txt` | `EP-01` |
-| `mimesis.builtins` (used for `BrazilSpecProvider`) was removed in mimesis 19 | entity generators | `EP-01` |
 | Imports of modules that don't exist: `src.extractors.mastercard_mcc_api`, `src.common.*` | `mcc_and_cnae_loader.py`, `schema_creator.py` (and `load_and_save_reference_data.py` through it) | `EP-03` |
 | No pinned versions; `postgres:latest` | `requirements.txt`, `docker-compose.yaml` | `EP-01` |
 | `.env.example` referenced by the README doesn't exist | repo root | `EP-01` |
@@ -120,9 +119,9 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 
 ### ST-01.3 — Package upgrades
 
-- [ ] Write `docs/runbooks/dependency-upgrades.md` and run it
-- [ ] Move everything to the latest stable release; note breaking changes in `polars`, `mimesis`, and `duckdb`
-- [ ] `mimesis` is held at `>=18,<19` because 19 removed `mimesis.builtins`: replace `BrazilSpecProvider` (CPF/CNPJ) and move to 22
+- [x] Write `docs/runbooks/dependency-upgrades.md` and run it
+- [x] Move everything to the latest stable release — `uv tree --outdated` is empty; the only breaking change that reached the code was `mimesis`
+- [x] `mimesis` 18 → 22: `BrazilSpecProvider` ported to `src/data_generators/providers/brazil_provider.py`, same CPF/CNPJ as mimesis 18 for the same seed (checked over 20,000 values); `tests/test_company_generator.py` passes
 - [x] Confirm every dependency has a Python 3.14 wheel — done in `ST-01.2`
 
 ### ST-01.4 — Environment
