@@ -13,7 +13,6 @@ CREATE TABLE IF NOT EXISTS dim_products (
 
 CREATE TABLE IF NOT EXISTS dim_transaction_modalities (
   id VARCHAR PRIMARY KEY,
-  code VARCHAR UNIQUE NOT NULL,
   name VARCHAR NOT NULL,
   type VARCHAR NOT NULL,
   active BOOLEAN DEFAULT true
