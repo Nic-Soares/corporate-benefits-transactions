@@ -2,7 +2,7 @@ import polars as pl
 import random
 from datetime import datetime
 from mimesis import Person, Address, Finance, Datetime
-from mimesis.builtins import BrazilSpecProvider
+from src.data_generators.providers.brazil_provider import BrazilProvider
 from mimesis.locales import Locale
 
 # Initialize providers
@@ -10,7 +10,7 @@ person = Person(Locale.PT_BR)
 address = Address(Locale.PT_BR)
 finance = Finance(Locale.PT_BR)
 datetime_provider = Datetime(Locale.PT_BR)
-brazil = BrazilSpecProvider()
+brazil = BrazilProvider()
 
 
 def generate_establishments(n_establishments, df_cnae, df_mcc, df_municipalities, cnae_products_mapping, cnae_with_products_ratio=0.85):

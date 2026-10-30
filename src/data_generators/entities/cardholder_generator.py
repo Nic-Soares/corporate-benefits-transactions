@@ -5,13 +5,13 @@ from datetime import date
 
 import polars as pl
 from mimesis import Person, Datetime
-from mimesis.builtins import BrazilSpecProvider
+from src.data_generators.providers.brazil_provider import BrazilProvider
 from mimesis.locales import Locale
 
 # Initialize providers
 person = Person(Locale.PT_BR)
 datetime_provider = Datetime(Locale.PT_BR)
-brazil = BrazilSpecProvider()
+brazil = BrazilProvider()
 
 # Valid statuses for cardholders
 VALID_CARDHOLDER_STATUSES = ["active", "inactive", "suspended"]
