@@ -33,7 +33,7 @@ establishments               CNAE mostly one that accepts a product; category fr
 - Reproducible: `src/data_generators/providers/fake.py → seed(n, today=…)` fixes every random source.
 - Loading order matters: `companies.parent_id` references `companies`, so holdings go in before branches.
 
-## Transactional tables — simulated (planned, `EP-07`)
+## Transactional tables — simulated (planned, `EP-08`)
 
 | Table | Content |
 |---|---|
@@ -43,10 +43,10 @@ establishments               CNAE mostly one that accepts a product; category fr
 
 A transaction picks a card product (so the card holds the product it pays with) and a terminal (so the establishment has one), runs the validators in order, and records the first failing code or `00`.
 
-## Pipeline (planned, `EP-06`)
+## Pipeline (planned, `EP-07`)
 
 1. Create the schemas (`src/infrastructure/schema/schema_creator.py` — exists).
 2. Load the reference tables.
 3. Generate and load the entities, at the volumes in `simulation_config.yaml → data_volumes`.
 4. Simulate transactions.
-5. ETL into the DuckDB star schema (`EP-08`), export Parquet (`EP-09`).
+5. ETL into the DuckDB star schema (`EP-09`), export Parquet (`EP-10`).
