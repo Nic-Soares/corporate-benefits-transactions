@@ -7,15 +7,12 @@ license = "MIT"
 requires-python = ">=3.14"
 dependencies = [
     "duckdb>=2.0.0",
-    "faker>=40.44.0",
     "geopandas>=1.2.0",
     "kagglehub>=1.0.3",
     "mimesis>=22.2",
-    "numpy>=2.5.4",
     "polars>=2.1.0",
     "psycopg[binary]>=3.3.6",
     "python-dotenv>=1.2.4",
-    "python-ulid>=4.1.0",
     "pyyaml>=6.0.3",
     "requests>=2.34.2",
     "typing-extensions>=4.16.0",

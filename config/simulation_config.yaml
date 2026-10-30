@@ -34,6 +34,12 @@ generation_settings:
   cnae_with_products_ratio: 0.85  # 85% dos estabelecimentos devem ter CNAE que aceita produtos
   
   # Distribuição de status
+  # (os status válidos estão em business_rules.yaml → status_options)
+  company_status_distribution:
+    active: 0.90
+    inactive: 0.07
+    suspended: 0.03
+
   cardholder_status_distribution:
     active: 0.85
     inactive: 0.10
@@ -41,14 +47,25 @@ generation_settings:
 
   card_status_distribution:
     active: 0.80
-    blocked: 0.15
+    inactive: 0.05
+    blocked: 0.10
     cancelled: 0.05
 
+  card_product_status_distribution:
+    active: 0.70
+    suspended: 0.15
+    cancelled: 0.15
+
   establishment_status_distribution:
-    ATIVA: 0.90
-    INATIVA: 0.07
-    SUSPENSA: 0.02
-    BAIXADA: 0.01
+    active: 0.90
+    inactive: 0.07
+    suspended: 0.02
+    terminated: 0.01
+
+  terminal_status_distribution:
+    active: 0.90
+    inactive: 0.05
+    maintenance: 0.05
 
   # Produtos por cartão
   products_per_card:
@@ -70,6 +87,12 @@ generation_settings:
     establishment_opening:
       start: "-8y"
       end: "today"
+  # Each date also starts no earlier than its parent's: admission ≥ company
+  # registration, card issue ≥ admission, product activation ≥ card issue,
+  # terminal installation ≥ establishment accreditation.
+  card_validity_years:
+    min: 3
+    max: 5
 
 
 # PADRÕES DE USO
