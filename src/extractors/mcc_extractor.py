@@ -3,12 +3,7 @@ import requests
 
 
 def fetch_mcc_codes() -> pl.DataFrame:
-    """
-    Busca dados de MCC (Merchant Category Codes) de fonte pública no GitHub.
-
-    Returns:
-        pl.DataFrame: DataFrame com dados dos MCCs
-    """
+    """MCCs (Merchant Category Codes) from a public list on GitHub."""
     url = "https://raw.githubusercontent.com/greggles/mcc-codes/main/mcc_codes.json"
 
     response = requests.get(url)
