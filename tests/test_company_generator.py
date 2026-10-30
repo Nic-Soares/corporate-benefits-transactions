@@ -1,12 +1,4 @@
 # %% Setup
-import os
-import sys
-from pathlib import Path
-
-# Get the project root correctly
-project_root = str(Path(__file__).parent.parent) if '__file__' in dir() else str(Path.cwd().parent)
-sys.path.insert(0, project_root)
-
 import polars as pl
 from src.data_generators.entities.company_generator import CompanyGenerator
 from src.extractors.ibge_municipalities import fetch_municipios
