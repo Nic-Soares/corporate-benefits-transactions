@@ -4,8 +4,8 @@
 // FK naming: '*_id' for all foreign keys
 
 // SUPPORT TABLES
-Table products {
-  id char(2) [primary key]
+Table wallets {
+  id varchar [primary key]
   name varchar [not null]
   category varchar [not null]
   active boolean [default: true]
@@ -29,6 +29,24 @@ Table acquirers {
   created_at timestamp [default: `now()`]
 }
 
+Table card_programs {
+  id varchar [primary key]
+  name varchar [not null]
+  network_type varchar [not null, note: 'proprietary_network (3-party) or brand (4-party)']
+  active boolean [default: true]
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
+}
+
+Table card_program_wallets {
+  program_id varchar [not null]
+  wallet_id varchar [not null]
+
+  Indexes {
+    (program_id, wallet_id) [pk]
+  }
+}
+
 // MCC x MODALITIES MAPPING TABLE (for brands)
 Table mcc_modalities {
   mcc_code varchar [not null]
@@ -42,15 +60,25 @@ Table mcc_modalities {
 }
 
 // CNAE x PRODUCTS MAPPING TABLE (for proprietary network)
-Table cnae_products {
+Table cnae_wallets {
   cnae_code varchar [not null]
-  product_id varchar [not null]
+  wallet_id varchar [not null]
   cnae_description varchar
   observation varchar
   active boolean [default: true]
   created_at timestamp [default: `now()`]
 
-  Primary Key (cnae_code, product_id)
+  Primary Key (cnae_code, wallet_id)
+}
+
+Table mcc_wallets {
+  mcc_code varchar [not null]
+  wallet_id varchar [not null]
+  Note: 'Brand (4-party) cards: wallets the issuer can charge at each MCC; GIFT takes any MCC and has no rows'
+
+  Indexes {
+    (mcc_code, wallet_id) [pk]
+  }
 }
 
 // MAIN TABLES
@@ -87,8 +115,9 @@ Table cardholders {
 Table cards {
   id varchar [primary key]
   cardholder_id varchar [not null]
+  program_id varchar [not null]
   card_number_hash varchar [unique, not null]
-  modality_id varchar [note: 'NULL = proprietary network']
+  modality_id varchar [not null, note: 'OWN for proprietary-network programs; VISA, MASTERCARD or ELO for brand programs']
   expiration_date date [not null]
   card_type varchar [not null]
   status varchar [not null, default: 'active']
@@ -97,10 +126,10 @@ Table cards {
   updated_at timestamp
 }
 
-Table card_products {
+Table card_wallets {
   id varchar [primary key]
   card_id varchar [not null]
-  product_id varchar [not null]
+  wallet_id varchar [not null]
   current_balance decimal(15,2) [not null, default: 0]
   daily_limit decimal(15,2) [default: 0]
   monthly_limit decimal(15,2) [default: 0]
@@ -142,14 +171,16 @@ Table terminals {
 Table transactions {
   id varchar [primary key]
   card_id varchar [not null]
-  product_id varchar [not null]
+  wallet_id varchar [note: 'Chosen by the cardholder (3-party) or routed by MCC (4-party); NULL when none could be routed']
   establishment_id varchar [not null]
   terminal_id varchar [not null]
   amount decimal(15,2) [not null]
   date timestamp [not null]
   capture_type varchar [not null]
-  response_code varchar [not null]
+  pin_status varchar [not null, note: 'ok, wrong or not_required']
+  response_code varchar [not null, note: 'ISO 8583']
   response_message varchar
+  decline_reason varchar [note: 'Specific cause behind the ISO code; NULL when approved']
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
@@ -168,7 +199,7 @@ Table authorizations {
 // BALANCE HISTORY (audit)
 Table balance_history {
   id varchar [primary key]
-  card_product_id varchar [not null]
+  card_wallet_id varchar [not null]
   transaction_id varchar
   operation_type varchar [not null]
   operation_amount decimal(15,2) [not null]
@@ -182,17 +213,21 @@ Table balance_history {
 Ref: companies.parent_id > companies.id
 Ref: cardholders.company_id > companies.id
 Ref: cards.cardholder_id > cardholders.id
+Ref: cards.program_id > card_programs.id
 Ref: cards.modality_id > transaction_modalities.id
-Ref: card_products.card_id > cards.id
-Ref: card_products.product_id > products.id
+Ref: card_program_wallets.program_id > card_programs.id
+Ref: card_program_wallets.wallet_id > wallets.id
+Ref: card_wallets.card_id > cards.id
+Ref: card_wallets.wallet_id > wallets.id
 Ref: terminals.establishment_id > establishments.id
 Ref: terminals.acquirer_id > acquirers.id
 Ref: mcc_modalities.modality_id > transaction_modalities.id
-Ref: cnae_products.product_id > products.id
+Ref: cnae_wallets.wallet_id > wallets.id
+Ref: mcc_wallets.wallet_id > wallets.id
 Ref: transactions.card_id > cards.id
-Ref: transactions.product_id > products.id
+Ref: transactions.wallet_id > wallets.id
 Ref: transactions.establishment_id > establishments.id
 Ref: transactions.terminal_id > terminals.id
 Ref: authorizations.transaction_id > transactions.id
-Ref: balance_history.card_product_id > card_products.id
+Ref: balance_history.card_wallet_id > card_wallets.id
 Ref: balance_history.transaction_id > transactions.id

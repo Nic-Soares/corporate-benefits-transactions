@@ -1,13 +1,18 @@
 # =====================================
 # validation_rules.yaml
 # Transaction validation and authorization rules
-# Every check that approves or declines a transaction (src/validators/)
+# Every check that approves or declines a transaction (src/validators/).
+# error_code: the ISO 8583 response code returned to the terminal
+#   (pre_populated_data.yaml → response_codes). The validator also returns a
+#   specific reason (transactions.decline_reason), since one ISO code covers
+#   several causes.
 # =====================================
 
-# Order the validation groups run in (cheapest first)
+# Order the validation groups run in; the first failure declines
 validation_order:
   - "status_validations"
-  - "temporal_validations" 
+  - "temporal_validations"
+  - "security_validations"
   - "business_rules_validations"
   - "balance_and_limits_validations"
   - "infrastructure_validations"
@@ -18,74 +23,55 @@ validation_order:
 status_validations:
   card_status:
     description: "Card must be active"
-    table: "cards"
-    field: "status"
     required_value: "active"
     error_codes:
-      inactive: "13"    # card inactive
-      blocked: "14"     # card blocked
-      cancelled: "15"   # card cancelled
+      inactive: "78"    # not unlocked yet
+      blocked: "62"     # restricted card
+      cancelled: "46"   # closed account
 
   cardholder_status:
     description: "Cardholder must be active"
-    table: "cardholders"
-    field: "status"
     required_value: "active"
     error_codes:
-      inactive: "16"    # cardholder inactive
-      terminated: "17"  # cardholder terminated
+      inactive: "62"
+      terminated: "62"
 
   establishment_status:
     description: "Establishment must be active"
-    table: "establishments"
-    field: "status"
     required_value: "active"
     error_codes:
-      inactive: "19"    # establishment inactive
-      suspended: "20"   # establishment suspended
-      terminated: "21"  # establishment closed
+      inactive: "03"
+      suspended: "03"
+      terminated: "03"
 
   terminal_status:
     description: "Terminal must be active"
-    table: "terminals"
-    field: "status"
     required_value: "active"
     error_codes:
-      inactive: "22"    # terminal inactive
-      maintenance: "22" # terminal under maintenance
+      inactive: "58"
+      maintenance: "58"
 
-  card_product_status:
-    description: "Product on the card must be active"
-    table: "card_products"
-    field: "status"
+  card_wallet_status:
+    description: "The wallet on the card must be active"
     required_value: "active"
     error_codes:
-      suspended: "23"   # card product inactive
-      cancelled: "23"   # card product inactive
+      suspended: "57"
+      cancelled: "57"
 
-  product_active:
-    description: "Product must be active"
-    table: "products"
-    field: "active"
-    required_value: true
+  wallet_active:
+    description: "Wallet must be enabled"
     error_codes:
-      false: "24"       # product disabled
+      false: "57"
 
   modality_active:
-    description: "Modality must be active"
-    table: "transaction_modalities"
-    field: "active"
-    required_value: true
+    description: "Modality must be enabled"
     error_codes:
-      false: "25"       # modality disabled
+      false: "57"
 
   acquirer_active:
-    description: "Acquirer must be active"
-    table: "acquirers"
-    field: "active"
-    required_value: true
+    description: "Acquirer must be enabled"
     error_codes:
-      false: "26"       # acquirer disabled
+      false: "58"
 
 # =====================================
 # Temporal validations
@@ -93,92 +79,83 @@ status_validations:
 temporal_validations:
   card_expiration:
     description: "Card must not be expired"
-    table: "cards"
-    field: "expiration_date"
     rule: "transaction_date <= expiration_date"
-    error_code: "54"    # card expired
+    error_code: "54"
 
   cardholder_admission:
     description: "Cardholder must already be hired"
-    table: "cardholders"
-    field: "admission_date"
     rule: "transaction_date >= admission_date"
-    error_code: "56"    # before admission
+    error_code: "62"
 
   establishment_accreditation:
     description: "Establishment must already be accredited"
-    table: "establishments"
-    field: "accreditation_date"
     rule: "transaction_date >= accreditation_date"
-    error_code: "57"    # before accreditation
+    error_code: "03"
 
   terminal_installation:
     description: "Terminal must already be installed"
-    table: "terminals"
-    field: "installation_date"
     rule: "transaction_date >= installation_date"
-    error_code: "58"    # before installation
+    error_code: "58"
 
 # =====================================
-# Business-rule validations (network routing: MCC for brands, CNAE for OWN)
+# Security validations
+# =====================================
+security_validations:
+  pin:
+    description: "The PIN must be right when the capture asks for one"
+    # transactions.pin_status: "ok", "wrong" or "not_required"
+    error_code: "55"
+
+# =====================================
+# Business-rule validations: where each wallet can be used
 # =====================================
 business_rules_validations:
-  mcc_modality_mapping:
-    description: "The brand must accept the establishment's MCC"
-    applies_to: "branded_cards"  # modality type "brand" (Visa, Mastercard, Elo)
+  cnae_wallet:
+    description: "Proprietary network: the establishment's CNAE accepts the chosen wallet"
+    applies_to: "proprietary_network"
     validation:
-      - "MCC × modality exists in mcc_modalities"
+      - "longest CNAE prefix × wallet exists in cnae_wallets"
+      - "cnae_wallets.active = true"
+    error_code: "57"
+
+  mcc_brand:
+    description: "Brand network: the brand accepts the establishment's MCC"
+    applies_to: "brand"
+    validation:
+      - "MCC × brand exists in mcc_modalities"
       - "mcc_modalities.active = true"
-    error_code: "27"    # MCC not accepted by the brand
+    error_code: "57"
 
-  cnae_product_mapping:
-    description: "The establishment's CNAE must accept the product"
-    applies_to: "proprietary_network_cards"  # modality type "proprietary_network" (OWN)
-    validation:
-      - "longest CNAE prefix × product exists in cnae_products"
-      - "cnae_products.active = true"
-    error_code: "28"    # CNAE doesn't accept the product
-
-  mcc_modality_rules_active:
-    description: "The MCC × modality rule must be active"
-    table: "mcc_modalities"
-    field: "active"
-    required_value: true
-    error_code: "29"    # MCC rule disabled
-
-  cnae_product_rules_active:
-    description: "The CNAE × product rule must be active"
-    table: "cnae_products"
-    field: "active"
-    required_value: true
-    error_code: "30"    # CNAE rule disabled
+  wallet_routing:
+    description: "Brand network: the issuer picks the wallet from the MCC"
+    applies_to: "brand"
+    # First wallet in this order that the card holds, that is active and
+    # whose MCC list (pre_populated_data.yaml → mcc_wallets) covers the
+    # establishment; GIFT takes any MCC. No candidate → 57; candidates
+    # without enough balance → 51.
+    wallet_priority: ["MEAL", "FOOD", "MOBILITY", "HEALTH", "HOME_OFFICE", "EDUCATION", "GIFT"]
+    error_code: "57"
 
 # =====================================
 # Balance and limit validations
 # =====================================
 balance_and_limits_validations:
   current_balance:
-    description: "Enough balance on the card product"
-    table: "card_products"
-    field: "current_balance"
+    description: "Enough balance on the wallet"
     rule: "current_balance >= transaction_amount"
-    error_code: "51"    # insufficient balance
+    error_code: "51"
 
   daily_limit:
     description: "Daily limit not exceeded"
-    table: "card_products"
-    field: "daily_limit"
     rule: "daily_usage + transaction_amount <= daily_limit"
     condition: "daily_limit > 0"  # a limit of 0 means no limit
-    error_code: "61"    # daily limit exceeded
+    error_code: "61"
 
   monthly_limit:
     description: "Monthly limit not exceeded"
-    table: "card_products"
-    field: "monthly_limit"
     rule: "monthly_usage + transaction_amount <= monthly_limit"
     condition: "monthly_limit > 0"  # a limit of 0 means no limit
-    error_code: "62"    # monthly limit exceeded
+    error_code: "61"
 
 # =====================================
 # Infrastructure validations
@@ -190,83 +167,23 @@ infrastructure_validations:
     supported_by_terminal_type:
       POS: ["CHIP", "MAG_STRIPE", "CONTACTLESS", "MOBILE_NFC", "APPLE_PAY", "GOOGLE_PAY"]
       TEF: ["CHIP", "MAG_STRIPE"]
-    error_code: "32"    # capture technology not supported
+    error_code: "58"
 
 # =====================================
 # A referenced record is missing
 # (the schema's foreign keys prevent it; guards against inconsistent data)
 # =====================================
 not_found:
-  card: "92"
-  card_product: "93"
-  cardholder: "94"
-  modality: "95"
-  establishment: "97"
-  terminal: "98"
-  acquirer: "99"
+  card: "14"
+  cardholder: "14"
+  card_wallet: "57"   # the card doesn't hold the wallet
+  modality: "15"
+  establishment: "03"
+  terminal: "58"
+  acquirer: "92"
 
 # A status missing from the rule's error_codes
 unknown_status: "96"
-
-# =====================================
-# Validation runtime settings
-# =====================================
-# Not read by the code yet (EP-08).
-validation_config:
-  timeout_ms: 3000
-  
-  async_validations:
-    - "status_validations"
-    - "temporal_validations"
-  
-  cached_validations:
-    - "mcc_modality_mapping"
-    - "cnae_product_mapping"
-  
-  realtime_validations:
-    - "current_balance"
-    - "daily_limit"
-    - "monthly_limit"
-
-# =====================================
-# Per-product rules
-# =====================================
-# Not read by the code yet (EP-08); the CNAE rule already restricts each
-# product to its establishments.
-product_specific_rules:
-  VA:  # Vale Alimentação
-    additional_validations:
-      - "cnae_food_only"
-    restricted_hours: null
-    weekend_allowed: true
-    
-  VR:  # Vale Refeição
-    additional_validations:
-      - "cnae_restaurant_only"
-    restricted_hours: null
-    weekend_allowed: true
-    
-  VC:  # Vale Combustível
-    additional_validations:
-      - "cnae_gas_station_only"
-    restricted_hours: null
-    weekend_allowed: true
-    
-  VF:  # Vale Farmácia
-    additional_validations:
-      - "cnae_pharmacy_only"
-    restricted_hours: null
-    weekend_allowed: true
-
-  VM:  # Multibenefícios
-    additional_validations: []
-    restricted_hours: null
-    weekend_allowed: true
-
-  PR:  # Premiação
-    additional_validations: []
-    restricted_hours: null
-    weekend_allowed: true
 
 # MCC × brands that accept it (E = Elo | M = Mastercard | V = Visa)
 

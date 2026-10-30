@@ -10,10 +10,17 @@
 // DIMENSION TABLES (Denormalized from OLTP)
 // ============================================================================
 
-Table dim_products {
+Table dim_wallets {
   id varchar [primary key]
   name varchar [not null]
   category varchar [not null]
+  active boolean [default: true]
+}
+
+Table dim_card_programs {
+  id varchar [primary key]
+  name varchar [not null]
+  network_type varchar [not null]
   active boolean [default: true]
 }
 
@@ -33,7 +40,8 @@ Table dim_acquirers {
 Table dim_cards {
   id varchar [primary key]
   cardholder_id varchar [not null]
-  modality_id varchar [note: 'NULL for proprietary network']
+  program_id varchar [not null]
+  modality_id varchar [not null]
   card_type varchar [not null]
   expiration_date date [not null]
   issue_date date [not null]
@@ -100,7 +108,8 @@ Table fact_transactions {
   // Foreign Keys to dimensions
   card_id varchar [not null]
   cardholder_id varchar [not null]
-  product_id varchar [not null]
+  program_id varchar [not null]
+  wallet_id varchar
   establishment_id varchar [not null]
   terminal_id varchar [not null]
 
@@ -112,8 +121,10 @@ Table fact_transactions {
 
   // Transaction Details (from OLTP transactions)
   capture_type varchar [not null]
+  pin_status varchar [not null]
   response_code varchar [not null]
   response_message varchar
+  decline_reason varchar
 
   // Authorization Details (denormalized from OLTP authorizations table)
   authorization_code varchar
@@ -129,6 +140,7 @@ Table fact_transactions {
 Ref: dim_companies.parent_id > dim_companies.id [comment: 'Corporate hierarchy: holding/branch']
 
 Ref: dim_cards.cardholder_id > dim_cardholders.id
+Ref: dim_cards.program_id > dim_card_programs.id
 Ref: dim_cards.modality_id > dim_transaction_modalities.id
 
 Ref: dim_cardholders.company_id > dim_companies.id
@@ -139,6 +151,7 @@ Ref: dim_terminals.acquirer_id > dim_acquirers.id
 Ref: fact_transactions.related_transaction_id > fact_transactions.id
 Ref: fact_transactions.card_id > dim_cards.id
 Ref: fact_transactions.cardholder_id > dim_cardholders.id
-Ref: fact_transactions.product_id > dim_products.id
+Ref: fact_transactions.program_id > dim_card_programs.id
+Ref: fact_transactions.wallet_id > dim_wallets.id
 Ref: fact_transactions.establishment_id > dim_establishments.id
 Ref: fact_transactions.terminal_id > dim_terminals.id

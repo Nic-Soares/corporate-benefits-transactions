@@ -7,8 +7,8 @@
 -- - Foreign Keys: '*_id' (descriptive suffix)
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS products (
-  id CHAR(2) PRIMARY KEY,
+CREATE TABLE IF NOT EXISTS wallets (
+  id VARCHAR PRIMARY KEY,
   name VARCHAR NOT NULL,
   category VARCHAR NOT NULL,
   active BOOLEAN DEFAULT true,
@@ -32,6 +32,25 @@ CREATE TABLE IF NOT EXISTS acquirers (
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS card_programs (
+  id VARCHAR PRIMARY KEY,
+  name VARCHAR NOT NULL,
+  network_type VARCHAR NOT NULL,
+  active BOOLEAN DEFAULT true,
+  created_at TIMESTAMP DEFAULT now(),
+  updated_at TIMESTAMP
+);
+
+COMMENT ON COLUMN card_programs.network_type IS 'proprietary_network (3-party) or brand (4-party)';
+
+CREATE TABLE IF NOT EXISTS card_program_wallets (
+  program_id VARCHAR NOT NULL,
+  wallet_id VARCHAR NOT NULL,
+  PRIMARY KEY (program_id, wallet_id),
+  FOREIGN KEY (program_id) REFERENCES card_programs(id),
+  FOREIGN KEY (wallet_id) REFERENCES wallets(id)
+);
+
 CREATE TABLE IF NOT EXISTS mcc_modalities (
   mcc_code VARCHAR NOT NULL,
   modality_id VARCHAR NOT NULL,
@@ -43,16 +62,25 @@ CREATE TABLE IF NOT EXISTS mcc_modalities (
   FOREIGN KEY (modality_id) REFERENCES transaction_modalities(id)
 );
 
-CREATE TABLE IF NOT EXISTS cnae_products (
+CREATE TABLE IF NOT EXISTS cnae_wallets (
   cnae_code VARCHAR NOT NULL,
-  product_id VARCHAR NOT NULL,
+  wallet_id VARCHAR NOT NULL,
   cnae_description VARCHAR,
   observation VARCHAR,
   active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT now(),
-  PRIMARY KEY (cnae_code, product_id),
-  FOREIGN KEY (product_id) REFERENCES products(id)
+  PRIMARY KEY (cnae_code, wallet_id),
+  FOREIGN KEY (wallet_id) REFERENCES wallets(id)
 );
+
+CREATE TABLE IF NOT EXISTS mcc_wallets (
+  mcc_code VARCHAR NOT NULL,
+  wallet_id VARCHAR NOT NULL,
+  PRIMARY KEY (mcc_code, wallet_id),
+  FOREIGN KEY (wallet_id) REFERENCES wallets(id)
+);
+
+COMMENT ON TABLE mcc_wallets IS 'Brand (4-party) cards: wallets the issuer can charge at each MCC; GIFT takes any MCC and has no rows';
 
 CREATE TABLE IF NOT EXISTS companies (
   id VARCHAR PRIMARY KEY,
@@ -89,8 +117,9 @@ CREATE TABLE IF NOT EXISTS cardholders (
 CREATE TABLE IF NOT EXISTS cards (
   id VARCHAR PRIMARY KEY,
   cardholder_id VARCHAR NOT NULL,
+  program_id VARCHAR NOT NULL,
   card_number_hash VARCHAR UNIQUE NOT NULL,
-  modality_id VARCHAR,
+  modality_id VARCHAR NOT NULL,
   expiration_date DATE NOT NULL,
   card_type VARCHAR NOT NULL,
   status VARCHAR NOT NULL DEFAULT 'active',
@@ -98,15 +127,16 @@ CREATE TABLE IF NOT EXISTS cards (
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP,
   FOREIGN KEY (cardholder_id) REFERENCES cardholders(id),
+  FOREIGN KEY (program_id) REFERENCES card_programs(id),
   FOREIGN KEY (modality_id) REFERENCES transaction_modalities(id)
 );
 
-COMMENT ON COLUMN cards.modality_id IS 'NULL = proprietary network';
+COMMENT ON COLUMN cards.modality_id IS 'OWN for proprietary-network programs; VISA, MASTERCARD or ELO for brand programs';
 
-CREATE TABLE IF NOT EXISTS card_products (
+CREATE TABLE IF NOT EXISTS card_wallets (
   id VARCHAR PRIMARY KEY,
   card_id VARCHAR NOT NULL,
-  product_id VARCHAR NOT NULL,
+  wallet_id VARCHAR NOT NULL,
   current_balance DECIMAL(15,2) NOT NULL DEFAULT 0,
   daily_limit DECIMAL(15,2) DEFAULT 0,
   monthly_limit DECIMAL(15,2) DEFAULT 0,
@@ -115,7 +145,8 @@ CREATE TABLE IF NOT EXISTS card_products (
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP,
   FOREIGN KEY (card_id) REFERENCES cards(id),
-  FOREIGN KEY (product_id) REFERENCES products(id)
+  FOREIGN KEY (wallet_id) REFERENCES wallets(id),
+  UNIQUE (card_id, wallet_id)
 );
 
 CREATE TABLE IF NOT EXISTS establishments (
@@ -151,21 +182,27 @@ CREATE TABLE IF NOT EXISTS terminals (
 CREATE TABLE IF NOT EXISTS transactions (
   id VARCHAR PRIMARY KEY,
   card_id VARCHAR NOT NULL,
-  product_id VARCHAR NOT NULL,
+  wallet_id VARCHAR,
   establishment_id VARCHAR NOT NULL,
   terminal_id VARCHAR NOT NULL,
   amount DECIMAL(15,2) NOT NULL,
   date TIMESTAMP NOT NULL,
   capture_type VARCHAR NOT NULL,
+  pin_status VARCHAR NOT NULL,
   response_code VARCHAR NOT NULL,
   response_message VARCHAR,
+  decline_reason VARCHAR,
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP,
   FOREIGN KEY (card_id) REFERENCES cards(id),
-  FOREIGN KEY (product_id) REFERENCES products(id),
+  FOREIGN KEY (wallet_id) REFERENCES wallets(id),
   FOREIGN KEY (establishment_id) REFERENCES establishments(id),
   FOREIGN KEY (terminal_id) REFERENCES terminals(id)
 );
+
+COMMENT ON COLUMN transactions.wallet_id IS 'Wallet charged: chosen by the cardholder (3-party) or routed by MCC (4-party); NULL when no wallet could be routed';
+COMMENT ON COLUMN transactions.pin_status IS 'ok, wrong or not_required';
+COMMENT ON COLUMN transactions.decline_reason IS 'Specific cause behind the ISO response code; NULL when approved';
 
 CREATE TABLE IF NOT EXISTS authorizations (
   id VARCHAR PRIMARY KEY,
@@ -180,7 +217,7 @@ CREATE TABLE IF NOT EXISTS authorizations (
 
 CREATE TABLE IF NOT EXISTS balance_history (
   id VARCHAR PRIMARY KEY,
-  card_product_id VARCHAR NOT NULL,
+  card_wallet_id VARCHAR NOT NULL,
   transaction_id VARCHAR,
   operation_type VARCHAR NOT NULL,
   operation_amount DECIMAL(15,2) NOT NULL,
@@ -188,7 +225,7 @@ CREATE TABLE IF NOT EXISTS balance_history (
   posterior_balance DECIMAL(15,2) NOT NULL,
   operation_date TIMESTAMP NOT NULL,
   created_at TIMESTAMP DEFAULT now(),
-  FOREIGN KEY (card_product_id) REFERENCES card_products(id),
+  FOREIGN KEY (card_wallet_id) REFERENCES card_wallets(id),
   FOREIGN KEY (transaction_id) REFERENCES transactions(id)
 );
 
@@ -206,8 +243,10 @@ CREATE INDEX idx_cardholders_status ON cardholders(status);
 CREATE INDEX idx_cards_cardholder_id ON cards(cardholder_id);
 CREATE INDEX idx_cards_status ON cards(status);
 
-CREATE INDEX idx_card_products_card_id ON card_products(card_id);
-CREATE INDEX idx_card_products_product_id ON card_products(product_id);
+CREATE INDEX idx_cards_program_id ON cards(program_id);
+
+CREATE INDEX idx_card_wallets_card_id ON card_wallets(card_id);
+CREATE INDEX idx_card_wallets_wallet_id ON card_wallets(wallet_id);
 
 CREATE INDEX idx_establishments_cnpj ON establishments(cnpj);
 CREATE INDEX idx_establishments_status ON establishments(status);
@@ -216,7 +255,7 @@ CREATE INDEX idx_terminals_establishment_id ON terminals(establishment_id);
 CREATE INDEX idx_terminals_acquirer_id ON terminals(acquirer_id);
 
 CREATE INDEX idx_transactions_card_id ON transactions(card_id);
-CREATE INDEX idx_transactions_product_id ON transactions(product_id);
+CREATE INDEX idx_transactions_wallet_id ON transactions(wallet_id);
 CREATE INDEX idx_transactions_establishment_id ON transactions(establishment_id);
 CREATE INDEX idx_transactions_terminal_id ON transactions(terminal_id);
 CREATE INDEX idx_transactions_date ON transactions(date);
@@ -224,5 +263,5 @@ CREATE INDEX idx_transactions_response_code ON transactions(response_code);
 
 CREATE INDEX idx_authorizations_transaction_id ON authorizations(transaction_id);
 
-CREATE INDEX idx_balance_history_card_product_id ON balance_history(card_product_id);
+CREATE INDEX idx_balance_history_card_wallet_id ON balance_history(card_wallet_id);
 CREATE INDEX idx_balance_history_transaction_id ON balance_history(transaction_id);
