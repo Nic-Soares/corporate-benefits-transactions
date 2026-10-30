@@ -19,7 +19,6 @@ Table dim_products {
 
 Table dim_transaction_modalities {
   id varchar [primary key]
-  code varchar [unique, not null]
   name varchar [not null]
   type varchar [not null]
   active boolean [default: true]

@@ -15,7 +15,6 @@ Table products {
 
 Table transaction_modalities {
   id varchar [primary key]
-  code varchar [unique, not null]
   name varchar [not null]
   type varchar [not null]
   active boolean [default: true]
@@ -46,7 +45,7 @@ Table mcc_modalities {
 Table cnae_products {
   cnae_code varchar [not null]
   product_id varchar [not null]
-  cnae_description varchar [not null]
+  cnae_description varchar
   observation varchar
   active boolean [default: true]
   created_at timestamp [default: `now()`]
@@ -78,6 +77,8 @@ Table cardholders {
   city varchar [not null]
   state varchar [not null]
   admission_date date [not null]
+  position varchar
+  department varchar
   status varchar [not null, default: 'active']
   created_at timestamp [default: `now()`]
   updated_at timestamp
