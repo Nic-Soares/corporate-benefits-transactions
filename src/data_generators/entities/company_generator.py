@@ -4,8 +4,9 @@ from datetime import date
 
 import polars as pl
 from mimesis import Datetime, Finance
-from src.data_generators.providers.brazil_provider import BrazilProvider
 from mimesis.locales import Locale
+
+from src.data_generators.providers.brazil_provider import BrazilProvider
 
 # Initialize providers
 finance = Finance(Locale.PT_BR)
@@ -80,9 +81,7 @@ class CompanyGenerator:
         """Extrai dados de referência para geração de empresas"""
         self.segment_names: list[str] = COMPANY_SEGMENTS
         self.municipios_list: list[dict[str, str]] = (
-            self.municipios_df.select(["municipio_nome", "uf_sigla"])
-            .unique()
-            .to_dicts()
+            self.municipios_df.select(["municipio_nome", "uf_sigla"]).unique().to_dicts()
         )
 
     def generate_company(self, parent_id: str | None = None) -> Company:
