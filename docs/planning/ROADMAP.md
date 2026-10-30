@@ -14,7 +14,7 @@
 | `EP-03` Clean up existing code | ✅ Done — merged into `develop` 2026-10-30 | code (`src/`) |
 | `EP-04` Config and model consistency | ✅ Done — merged into `develop` 2026-10-30 | `config/`, `database/` |
 | `EP-05` Documentation | ✅ Done — merged into `develop` 2026-10-30 | `README.md`, `docs/` |
-| `EP-06` Transaction core review | 🟡 Decisions settled 2026-10-30 — model changes (`ST-06.3`) next | `docs/`, then `config/`, `database/`, `src/` |
+| `EP-06` Transaction core review | ✅ Done — merged into `develop` 2026-10-30 (ADR-007) | `docs/`, then `config/`, `database/`, `src/` |
 | `EP-07` Setup pipeline (reference data + entities) | Not started — after `EP-06`, which changes the model | code (`src/main.py`, `src/processors/`) |
 | `EP-08` Transaction simulator | Not started | code (`src/processors/transaction_simulator.py`) |
 | `EP-09` OLAP: Postgres → DuckDB | Not started | code + `database/olap_duck/` |
@@ -302,7 +302,7 @@ Found while fixing the validators (`ST-03.1`); settled 2026-10-30 (Nicolas confi
 
 ## EP-06 — Transaction core review
 
-**Scope:** findings #1–#5. **Goal:** the transaction core — who issues, what the card holds, where it's accepted, how the balance moves, why a purchase is declined — behaves like a real Brazilian benefits issuer, not only a consistent one. **Dependencies:** `EP-05`. **Size:** M (~1 week).
+**Scope:** findings #1–#5 — done. **Goal:** the transaction core — who issues, what the card holds, where it's accepted, how the balance moves, why a purchase is declined — behaves like a real Brazilian benefits issuer, not only a consistent one. **Dependencies:** `EP-05`. **Size:** M (~1 week).
 
 **Method:** compare the model with the business reference of an issuer (an internal knowledge base, **kept out of this repository**). Only market-wide concepts and public rules enter the repo — the 3-party / 4-party models, wallets, the PAT law. No issuer names, internal systems, parameters or limits: every number in `config/` stays synthetic.
 
@@ -337,15 +337,17 @@ What the project models today against how the market works. Priority: **must** (
 - [x] Balance (#4): no employer credit orders — a starting balance that the transactions move
 - [x] Scope: the five "must" items (#1–#5) here; the "should" items (#6, #9, #10, #11) go to the simulator (`ST-08.2`), where they show; the "could" items (#12–#14) stay ideas
 
-### ST-06.3 — Model changes (after the decisions)
+### ST-06.3 — Model changes
 
-- [ ] `products` → wallets; new `card_programs` (wallets, network, regime rules); `cards.program_id`; `card_products` → `card_wallets`
-- [ ] Network from the program; validators route by the program's network type (ADR-003 updated)
-- [ ] Wallet selection: chosen by the cardholder (3-party) or by MCC priority (4-party)
-- [ ] Starting balance per wallet; approved purchases debit it and reversals credit it back (`balance_history`)
-- [ ] ISO 8583 response codes; PIN and category declines
-- [ ] Schema, DBML, config, generators, validators and tests updated together (ADR-006)
-- [ ] ADR-007 — the transaction core model
+- [x] `products` → `wallets` (8); new `card_programs` (7: Food, Meal, Multi-benefit 3-party and 4-party, Gift, Premium, Fuel) and `card_program_wallets`; `cards.program_id`; `card_products` → `card_wallets` (every wallet of the program); `cnae_products` → `cnae_wallets`; new `mcc_wallets`
+- [x] Network from the program: `OWN` for 3-party programs, Visa / Mastercard / Elo for the 4-party one; `cards.modality_id` never null
+- [x] Wallet choice: the cardholder's pick, checked by `validate_cnae_wallet` (3-party); `validate_mcc_brand` + `route_wallet` by MCC priority (4-party), declining `57` when no wallet takes the MCC and `51` when none has the balance
+- [x] Balance follows the transactions: synthetic starting balance and limits per wallet (config); `src/processors/balance.py → debit` moves it and writes `balance_history`
+- [x] ISO 8583 response codes; every validator also returns a `decline_reason`, stored in `transactions`; PIN check (`55`) with `transactions.pin_status`
+- [x] Schema, DBML (match checked), config, generators, validators, loaders and tests changed together (ADR-006): 100 tests; the OLTP schema on DuckDB takes every reference and generated table under foreign keys; `pytest -m db` applies the 17 tables to Postgres 18
+- [x] ADR-007 — the transaction core model; ADR-003 refined
+- [x] Docs and diagrams: `README.md`, `docs/business-rule.md` (program, network and authorization diagrams, code table), `docs/data-strategy.md` (ER diagram), `docs/technical-architecture.md`, `docs/transactions_flow_diagram.mmd`
+- [x] Config sections no code read and that described the old products or fees removed (`product_acceptance_rules`, `commission_rules`, `product_specific_rules`, `validation_config`)
 
 ---
 

@@ -91,7 +91,7 @@ def save_multiple_dfs_to_parquet(
 
     Example:
         dfs = {
-            "products": products_df,
+            "wallets": wallets_df,
             "companies": companies_df,
             "cards": cards_df
         }
