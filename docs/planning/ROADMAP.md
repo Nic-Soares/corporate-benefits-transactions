@@ -1,0 +1,302 @@
+# Development Roadmap — Corporate Benefits Transactions
+
+**Repository:** `corporate-benefits-transactions` (Python 3.14 + uv + polars + mimesis, PostgreSQL in Docker as OLTP, DuckDB as OLAP, Parquet → Kaggle)
+**Last updated:** 2026-10-30
+
+---
+
+## 0. Status board
+
+| Epic | Status | Where the work lives |
+|---|---|---|
+| `EP-01` Baseline and toolchain | 🟡 Started — `develop` created | code (`pyproject.toml`, `docker-compose.yaml`) |
+| `EP-02` Safety net (tests + CI) | Not started | code (`tests/`, `.github/`) |
+| `EP-03` Clean up existing code | Not started | code (`src/`) |
+| `EP-04` Config and model consistency | Not started | `config/`, `database/` |
+| `EP-05` Documentation | Not started | `README.md`, `docs/` |
+| `EP-06` Setup pipeline (reference data + entities) | Not started | code (`src/main.py`, `src/processors/`) |
+| `EP-07` Transaction simulator | Not started | code (`src/processors/transaction_simulator.py`) |
+| `EP-08` OLAP: Postgres → DuckDB | Not started | code + `database/olap_duck/` |
+| `EP-09` Dataset export and quality | Not started | code + `data/final_datasets/` |
+| `EP-10` Kaggle release | Not started | Kaggle |
+
+### Git workflow
+
+- `main` = released code. `develop` = integration; every epic or story is merged into it with a `merge(<scope>): …` commit.
+- One branch per epic/story, cut from `develop`: `<type>/ep-XX-<slug>` or `<type>/st-XX.Y-<slug>`, where `<type>` is the conventional-commit type (`feat`, `fix`, `chore`, `docs`, `test`, `ci`, `refactor`).
+- Commits follow Conventional Commits (`chore(deps): …`, `docs(roadmap): …`).
+
+---
+
+## 1. Assumptions
+
+1. **Nothing new until the roadmap is settled.** `EP-01` to `EP-05` only refine what already exists (upgrade, clean up, align, document). New code starts in `EP-06`.
+2. **Epic order is execution order.** `EP-01` and `EP-02` are prerequisites for everything else: without a pinned toolchain and running tests, the `EP-03` cleanup has no safety net.
+3. **Polars is the DataFrame library.** Code still written with pandas syntax (`.empty`, `.iloc`) is migrated, not the other way around (`EP-03`).
+4. **`config/*.yaml` is the source of truth for business rules.** Where `docs/` disagrees with the YAML, the docs change (`EP-04`).
+5. **The final dataset is synthetic.** No real customer, card, or merchant data enters the repository.
+
+### Decisions (settled 2026-10-30)
+
+- **Language:** everything in English — code, comments, docs, README. Applied in `ST-03.3` (code) and `EP-05` (docs).
+- **Package manager:** `uv` + `pyproject.toml` + `uv.lock`. `requirements.txt` goes away (`ST-01.2`).
+- **Python:** `>=3.14`.
+- **dbt:** removed from the dependencies in `ST-01.2`; whether to adopt it is decided again in `EP-08`.
+- **Products:** `VA, VR, VC, VF, VM, PR` (the `simulation_config.yaml` list). `GF` leaves `pre_populated_data.yaml` and the docs in `ST-04.1`.
+
+---
+
+## 2. Assessment (2026-10-30)
+
+### 2.1 What exists (to be confirmed by tests in `EP-02`)
+
+| Area | Files |
+|---|---|
+| Data model | `database/model/*.dbml`, `database/oltp_postgres/oltp_schema.sql` (14 tables), `database/olap_duck/01_dimensions.sql` + `02_facts.sql` |
+| Reference data | `src/data_generators/reference_data/*_loader.py`, `src/extractors/` (IBGE, MCC, Kaggle) |
+| Entity generators | `company_generator`, `cardholder_generator`, `card_generator`, `card_product_generator`, `establishment_generator`, `terminal_generator` |
+| Validators | `src/validators/` — status, temporal, balance/limits, infrastructure, MCC × modality, CNAE × product |
+| Infra | `docker-compose.yaml` (Postgres), `src/infrastructure/database/*_manager.py` |
+
+### 2.2 What is empty
+
+- `src/main.py` — 0 lines
+- `src/processors/transaction_simulator.py` — 0 lines
+- `tests/test_cardholder_generator.py` — 0 lines
+
+### 2.3 What is broken or inconsistent
+
+| Problem | Where | Epic |
+|---|---|---|
+| Imported but undeclared dependencies: `psycopg`, `faker`, `geopandas`, `requests`, `numpy`, `pandas` | `requirements.txt` | `EP-01` |
+| No pinned versions; `postgres:latest` | `requirements.txt`, `docker-compose.yaml` | `EP-01` |
+| `.env.example` referenced by the README doesn't exist | repo root | `EP-01` |
+| `sys.path.insert` hacks to resolve imports | `tests/`, `src/notebooks/` | `EP-01` |
+| Functions defined 2–3 times in the same file + loose example code at module level (runs on import) | `src/validators/business_rules_validators.py` | `EP-03` |
+| Validators use pandas syntax in a polars project | `src/validators/*.py` | `EP-03` |
+| Duplicate generators: `simple_company_generator` × `company_generator`, `simple_card_generator` × `card_generator` | `src/data_generators/entities/` | `EP-03` |
+| Two fake-data libraries: `mimesis` (entities) and `faker` (transactions) | `transaction_generator.py` | `EP-03` |
+| Mixed Portuguese/English names (`gerar_varias_empresas` × `generate_cardholder`) | `src/` | `EP-03` |
+| `src/notebooks/` holds scratch `.py` files, not notebooks | `src/notebooks/` | `EP-03` |
+| `database.yaml` points to `02_entities.sql` and `03_facts.sql`, which don't exist | `config/database.yaml` | `EP-04` |
+| Product list differs between configs and `docs/` | `config/`, `docs/business-rule.md`, `docs/data-strategy.md` | `EP-04` |
+| README folder structure and run instructions don't match the repo; README is in Portuguese | `README.md` | `EP-05` |
+
+---
+
+## 3. Execution order
+
+```
+EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 Consistency ──► EP-05 Docs
+                                                                                  │
+                    ┌─────────────────────────────────────────────────────────────┘
+                    ▼
+              EP-06 Setup ──► EP-07 Simulator ──► EP-08 OLAP ──► EP-09 Export ──► EP-10 Kaggle
+```
+
+`EP-05` can run alongside `EP-03`/`EP-04`, but closes only after them (the README describes the final state).
+
+---
+
+## EP-01 — Baseline and toolchain
+
+**Dependencies:** none. **Size:** S (~1 day).
+
+### ST-01.1 — Branch and workflow
+
+- [x] Create `develop` from `main`
+- [ ] Document the workflow (§0) in the README
+
+### ST-01.2 — Dependency management
+
+- [ ] `pyproject.toml` with every dependency the code actually imports, with version ranges; `requires-python = ">=3.14"`
+- [ ] `.python-version` pinned to 3.14
+- [ ] `uv.lock` committed
+- [ ] Remove `requirements.txt`, `dbt-core`, and `dbt-duckdb`
+- [ ] Install the project as a package so the `sys.path.insert` hacks can go
+
+### ST-01.3 — Package upgrades
+
+- [ ] Write `docs/runbooks/dependency-upgrades.md` and run it
+- [ ] Move everything to the latest stable release; note breaking changes in `polars`, `mimesis`, and `duckdb`
+- [ ] Confirm every dependency has a Python 3.14 wheel (`geopandas` and `psycopg` binaries in particular)
+
+### ST-01.4 — Environment
+
+- [ ] `docker-compose.yaml`: pin the Postgres major version (e.g. `postgres:18`)
+- [ ] Create `.env.example` with `DB_USER` and `DB_PASSWORD`
+- [ ] Check `.gitignore` covers `.env`, `*.duckdb`, `data/raw/**`, `data/final_datasets/**`
+
+### ST-01.5 — Lint and format
+
+- [ ] Adopt `ruff` (lint + format), configured in `pyproject.toml`
+- [ ] First pass with automatic fixes only; manual findings go to `EP-03`
+
+---
+
+## EP-02 — Safety net: tests and CI
+
+**Dependencies:** `EP-01`. **Size:** S (~1 day).
+
+### ST-02.1 — Existing tests running
+
+- [ ] Configure `pytest` in `pyproject.toml`
+- [ ] Mark tests that need the network (`test_ibge_api.py`) or Docker (`test_pg_connection.py`) with markers (`network`, `db`) and leave them out of the default run
+- [ ] Make `test_company_generator.py` pass
+- [ ] Fill in or delete `test_cardholder_generator.py`
+
+### ST-02.2 — Minimum coverage before the cleanup
+
+- [ ] One test per validator in `src/validators/` (one approved case + one declined case) — locks the behavior before `EP-03`
+- [ ] One smoke test per entity generator (generates N rows, expected columns, no nulls where they aren't allowed)
+
+### ST-02.3 — CI
+
+- [ ] GitHub Actions: `ruff check`, `ruff format --check`, `pytest` (without the `network`/`db` markers), using `astral-sh/setup-uv`
+- [ ] Dependabot for `uv` and GitHub Actions (weekly, minor/patch grouped)
+
+---
+
+## EP-03 — Clean up existing code
+
+**Dependencies:** `EP-02`. **Size:** M (~2–3 days).
+
+### ST-03.1 — Validators
+
+- [ ] `business_rules_validators.py`: keep one definition of each function, remove loose module-level code
+- [ ] Migrate `src/validators/*.py` from pandas syntax to polars
+- [ ] Standardize the return value (`{'passed', 'error_code'}`) and align error codes with `pre_populated_data.yaml → response_codes`
+
+### ST-03.2 — Generators
+
+- [ ] Choose between `simple_*_generator` and `*_generator`; delete the other
+- [ ] Use `mimesis` everywhere (drop `faker` from `transaction_generator.py`)
+- [ ] Configurable seed for every generator (reproducible dataset)
+
+### ST-03.3 — Structure
+
+- [ ] `src/notebooks/`: move what's useful to `scripts/` or a top-level `notebooks/`, delete the rest
+- [ ] Rename Portuguese functions, variables, and comments to English
+- [ ] Type hints on public functions; replace `typing_extensions.Dict` with `dict`
+- [ ] Manual `ruff` findings left over from `ST-01.5`
+
+---
+
+## EP-04 — Config and model consistency
+
+**Dependencies:** `EP-03`. **Size:** S (~1 day).
+
+### ST-04.1 — Configs
+
+- [ ] `config/database.yaml`: fix the DuckDB SQL paths
+- [ ] Products `VA, VR, VC, VF, VM, PR` in every YAML: add `VF`, `VM`, `PR` to `pre_populated_data.yaml`, remove `GF`, update `cnae_products` and `product_acceptance_rules` to match
+- [ ] `validation_rules.yaml → validation_order` matches the functions that exist in `src/validators/`
+- [ ] YAML comments and keys in English
+
+### ST-04.2 — Data model
+
+- [ ] DBML × SQL: same tables, columns, and types (OLTP and OLAP)
+- [ ] Test that creates the OLTP schema on a clean Postgres and the OLAP schema on an in-memory DuckDB
+
+---
+
+## EP-05 — Documentation
+
+**Dependencies:** closes after `EP-04`. **Size:** S (~1 day).
+
+### ST-05.1 — README
+
+- [ ] Rewrite in English
+- [ ] "Project structure" and "How to run" written from the real repo (`uv sync`, `docker compose up -d`, `uv run …`)
+- [ ] Replace the README roadmap with a link to this file
+
+### ST-05.2 — Retroactive ADRs (`docs/adr/`)
+
+- [ ] `001` — Postgres (OLTP) + DuckDB (OLAP) + Parquet
+- [ ] `002` — polars instead of pandas
+- [ ] `003` — Authorization by MCC (branded network) × CNAE (proprietary network)
+- [ ] `004` — Reference data in YAML
+- [ ] `005` — Python toolchain: 3.14 + uv + ruff
+
+### ST-05.3 — Runbooks (`docs/runbooks/`)
+
+- [ ] `dependency-upgrades.md` (written in `ST-01.3`)
+- [ ] `local-setup.md` — from clone to a populated database
+
+### ST-05.4 — Business docs
+
+- [ ] `docs/business-rule.md` and `docs/data-strategy.md` aligned with the YAML (product list from §1)
+- [ ] `docs/transactions_flow_diagram.mmd` checked against the real flow
+
+---
+
+## EP-06 — Setup pipeline
+
+**Dependencies:** `EP-05`. **Size:** M (~2–3 days).
+
+### ST-06.1 — Reference data
+
+- [ ] `src/processors/load_and_save_reference_data.py` loads every pre-populated table into Postgres
+- [ ] Idempotent: running it twice doesn't duplicate rows
+
+### ST-06.2 — Entities
+
+- [ ] Generate companies → cardholders → cards → card products → establishments → terminals, at the volumes in `simulation_config.yaml → data_volumes`
+- [ ] Write to Postgres respecting the foreign keys
+
+### ST-06.3 — Entrypoint
+
+- [ ] `src/main.py` with subcommands: `setup`, `simulate`, `export`
+- [ ] Progress logging and row counts per table
+
+---
+
+## EP-07 — Transaction simulator
+
+**Dependencies:** `EP-06`. **Size:** L (~1 week).
+
+### ST-07.1 — Authorization flow
+
+- [ ] `transaction_simulator.py`: transaction → validations in `validation_order` → authorization → `balance_history` when approved
+- [ ] Branded network checks MCC; proprietary network checks CNAE
+
+### ST-07.2 — Realism
+
+- [ ] Approval rates calibrated from `approval_rates` (overall, per network, per product)
+- [ ] Usage patterns from `usage_patterns` (hour, weekday, average ticket per product)
+- [ ] Balance and daily/monthly limits respected over time
+
+### ST-07.3 — Fraud scenarios
+
+- [ ] Define the scenarios (e.g. rapid repeated attempts, use outside the usual region)
+- [ ] Label transactions generated by these scenarios (a column dataset users can train on)
+
+---
+
+## EP-08 — OLAP: Postgres → DuckDB
+
+**Dependencies:** `EP-07`. **Size:** M (~2–3 days).
+
+- [ ] Decide dbt × plain SQL (ADR)
+- [ ] ETL from OLTP into `dim_*` and `fact_transactions`
+- [ ] Basic analytical views (approval by product, average ticket, declines by response code)
+
+---
+
+## EP-09 — Dataset export and quality
+
+**Dependencies:** `EP-08`. **Size:** S (~1 day).
+
+- [ ] Export dimensions and facts to `data/final_datasets/*.parquet`
+- [ ] Quality checks: foreign keys, nulls, approval rates vs. config
+- [ ] Data dictionary (one line per column)
+
+---
+
+## EP-10 — Kaggle release
+
+**Dependencies:** `EP-09`. **Size:** S (~1 day).
+
+- [ ] Dataset page (description, benefits-market context, license)
+- [ ] Example notebook
+- [ ] Publish and link from the README
