@@ -315,23 +315,26 @@ What the project models today against how the market works. Priority: **must** (
 | 1 | **Products vs. wallets** | Six "products" (`VA, VR, VC, VF, VM, PR`) on a card; `VM` Multibenefícios is one of them | A card belongs to a **program** and holds one or more **wallets** (*carteiras*). Mono-product programs (Food, Meal) have one wallet; the multi-benefit program has several (Food, Meal, Mobility, Health & wellness, Home office, Education, Gift). Multi-benefit is a card, not a wallet | must |
 | 2 | **Network per program** | Each card draws `OWN`, Visa, Mastercard or Elo at random | The network is a property of the program: most programs run on the issuer's own network (3-party); a multi-benefit program may run on a market brand — Visa, Mastercard or Elo (4-party). A card never "picks" a brand | must |
 | 3 | **Wallet chosen at purchase** | The transaction samples a random card product | 3-party: the cardholder chooses the wallet on the terminal (food / meal / other). 4-party: the issuer picks it from the MCC, in a priority order (meal → food → other closed wallets → gift), skipping paused or empty wallets | must |
-| 4 | **Balance lifecycle** | `current_balance` drawn at random | Balance comes from the employer's **credit orders** (usually monthly, on a scheduled day) and goes down with each purchase. Credits can expire or be blocked after a period with no new credit; unspent balance is breakage. `balance_history` should hold credits, purchases, reversals and expiries | must |
+| 4 | **Balance follows the transactions** | `current_balance` drawn at random and never changes | Each wallet starts the simulation with a balance; every approved purchase lowers it and a reversal gives it back, so later purchases can be declined for insufficient funds. `balance_history` holds those movements. Where the balance comes from (employer credit orders) is out of scope | must |
 | 5 | **Response codes** | Own numbering; `55`–`58` reused for temporal checks | ISO 8583 codes are the market's language: `51` insufficient funds, `55` wrong PIN, `54` expired card, `57` not permitted to cardholder, `58` not permitted to terminal, `61` amount limit, `65` frequency limit, `14` invalid card, `05` do not honor. Wrong PIN and "establishment registered under another category" are among the most common declines and aren't modeled | must |
 | 6 | **Limits** | Daily and monthly amount per card product | A wallet has a daily amount limit **and a daily transaction count**; monthly credit caps per wallet | should |
-| 9 | **Transaction types** | Purchase only | Purchase, reversal / cancellation, credit; in 4-party, cash withdrawal on the gift wallet with a fee and limits. Channels: card present (chip, contactless, wallets), e-commerce, virtual card | should |
+| 9 | **Transaction types** | Purchase only | Purchase, reversal / cancellation; in 4-party, cash withdrawal on the gift wallet with a fee and limits. Channels: card present (chip, contactless, wallets), e-commerce, virtual card | should |
 | 10 | **Usage patterns** | Uniform: any card, any terminal, any time in 30 days | Meal on weekdays around lunch, near work; food in larger tickets after the credit day; fuel spread through the week. `usage_patterns` in the config already describes this and nothing reads it | should |
 | 11 | **Company segments and size** | `Public`, `Corporate`, `Middle`, `SME`, `High SME`; cardholders per company fixed | SME, Middle, Corporate and Public; the segment follows the number of employees, which sets how many cardholders a company has | should |
 | 12 | **Establishment acceptance** | CNAE prefix × product, checked at each purchase | On the proprietary network the issuer **accredits** the establishment for specific wallets (from its CNAE) and curates the network; market acquirers' terminals only capture | could |
 | 13 | **Card formats** | Every card nominal | Non-nominal reusable cards tied to a company credit pool (first day, temporary staff); virtual cards | could |
 | 14 | **Negative balance** | Impossible | Offline or forced transactions can leave a wallet negative; it's written off after a long period without credits | could |
 
-**Out of scope** (Nicolas, 2026-10-30): fees and establishment payments — the PAT/Auxílio rules on fees, reimbursement and transfers (#7) and establishment settlement (#8) are not part of this project.
+**Out of scope** (Nicolas, 2026-10-30) — the project is about the transaction:
+- fees and establishment payments: the PAT/Auxílio rules on fees, reimbursement and transfers (#7) and establishment settlement (#8);
+- the employer side: credit orders, credit schedules and expiry (cut from #4).
 
 ### ST-06.2 — Decisions (Nicolas)
 
 - [x] Product model (#1): **programs + wallets** — agreed. Programs: Food, Meal, Multi-benefit 3-party, Multi-benefit 4-party, Gift, Premium, Fuel
 - [x] Market brands for 4-party (#2): **keep Visa, Mastercard and Elo**
 - [x] Response codes (#5): **ISO 8583**, the card industry standard; not-found codes stay in the `9x` range
+- [x] Balance (#4): no employer credit orders — a starting balance that the transactions move
 - [ ] Scope: the five "must" items here, and the "should" items (#6, #9, #10, #11) here too or in the simulator (`EP-08`)?
 
 ### ST-06.3 — Model changes (after the decisions)
@@ -339,7 +342,7 @@ What the project models today against how the market works. Priority: **must** (
 - [ ] `products` → wallets; new `card_programs` (wallets, network, regime rules); `cards.program_id`; `card_products` → `card_wallets`
 - [ ] Network from the program; validators route by the program's network type (ADR-003 updated)
 - [ ] Wallet selection: chosen by the cardholder (3-party) or by MCC priority (4-party)
-- [ ] Balances from credit orders; `balance_history` operation types; credit expiry
+- [ ] Starting balance per wallet; approved purchases debit it and reversals credit it back (`balance_history`)
 - [ ] ISO 8583 response codes; PIN and category declines
 - [ ] Schema, DBML, config, generators, validators and tests updated together (ADR-006)
 - [ ] ADR-007 — the transaction core model
