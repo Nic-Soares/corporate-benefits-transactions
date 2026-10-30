@@ -13,7 +13,7 @@
 | `EP-02` Safety net (tests + CI) | ✅ Done — merged into `develop` 2026-10-30; CI runs after the first push | code (`tests/`, `.github/`) |
 | `EP-03` Clean up existing code | ✅ Done — merged into `develop` 2026-10-30 | code (`src/`) |
 | `EP-04` Config and model consistency | ✅ Done — merged into `develop` 2026-10-30 | `config/`, `database/` |
-| `EP-05` Documentation | Not started | `README.md`, `docs/` |
+| `EP-05` Documentation | ✅ Done — merged into `develop` 2026-10-30 | `README.md`, `docs/` |
 | `EP-06` Setup pipeline (reference data + entities) | Not started | code (`src/main.py`, `src/processors/`) |
 | `EP-07` Transaction simulator | Not started | code (`src/processors/transaction_simulator.py`) |
 | `EP-08` OLAP: Postgres → DuckDB | Not started | code + `database/olap_duck/` |
@@ -269,27 +269,31 @@ Found while fixing the validators (`ST-03.1`); settled 2026-10-30 (Nicolas confi
 
 ### ST-05.1 — README
 
-- [ ] Rewrite in English
-- [ ] "Project structure" and "How to run" written from the real repo (`uv sync`, `docker compose up -d`, `uv run …`)
-- [ ] Replace the README roadmap with a link to this file
+- [x] Rewritten in English: business context (products, the two networks), how it works, project structure as it is, getting started, workflow
+- [x] "Getting started" from the real repo (`uv sync`, `uv run pytest`, `docker compose up -d`, `pytest -m db`, the schema creator) — each command checked
+- [x] Links to this roadmap, the ADRs and the runbooks
 
 ### ST-05.2 — Retroactive ADRs (`docs/adr/`)
 
-- [ ] `001` — Postgres (OLTP) + DuckDB (OLAP) + Parquet
-- [ ] `002` — polars instead of pandas
-- [ ] `003` — Authorization by MCC (branded network) × CNAE (proprietary network)
-- [ ] `004` — Reference data in YAML
-- [ ] `005` — Python toolchain: 3.14 + uv + ruff
+- [x] `001` — Postgres (OLTP) + DuckDB (OLAP) + Parquet
+- [x] `002` — Polars instead of pandas
+- [x] `003` — Network routing: MCC for brands, CNAE (longest prefix) for the proprietary network `OWN`
+- [x] `004` — Business rules and reference data in YAML
+- [x] `005` — Python toolchain: 3.14 + uv + ruff + pytest + CI
+- [x] `006` — The OLTP schema is the column contract (assumption 6)
 
 ### ST-05.3 — Runbooks (`docs/runbooks/`)
 
-- [ ] `dependency-upgrades.md` (written in `ST-01.3`)
-- [ ] `local-setup.md` — from clone to a populated database
+- [x] `dependency-upgrades.md` (written in `ST-01.3`; `geopandas` notes removed)
+- [x] `local-setup.md` — from clone to a database with the schema, reset, troubleshooting
 
 ### ST-05.4 — Business docs
 
-- [ ] `docs/business-rule.md` and `docs/data-strategy.md` aligned with the YAML (product list from §1)
-- [ ] `docs/transactions_flow_diagram.mmd` checked against the real flow
+- [x] `docs/business-rule.md`: products, networks, CNAE/MCC rules, validation order and codes, statuses — from the YAML
+- [x] `docs/data-strategy.md`: source of each table; entities generated in batches, parents first (it described an on-demand `get_or_create` flow the code doesn't follow)
+- [x] `docs/technical-architecture.md`: stack with its ADRs, data flow, what exists vs. planned, testing
+- [x] `docs/transactions_flow_diagram.mmd`: in English and checked against the code — it named Prefect (not used), 15 tables (14), `GF`, a terminal/acquirer check (removed in `ST-04.2`), and `dim_time` / `fact_authorizations` (not in the OLAP model). Planned steps are dashed
+- [x] Every relative link in `README.md` and `docs/` resolves
 
 ---
 
