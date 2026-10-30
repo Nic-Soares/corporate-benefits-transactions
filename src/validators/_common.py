@@ -2,8 +2,9 @@
 
 Every validator takes the transaction as a dict (columns of the `transactions`
 table) plus the Polars DataFrames it needs, with the column names of
-`database/oltp_postgres/oltp_schema.sql`, and returns `{"passed", "error_code"}`.
-Error codes come from `config/validation_rules.yaml`.
+`database/oltp_postgres/oltp_schema.sql`, and returns
+`{"passed", "error_code", "reason"}`: the ISO 8583 response code from
+`config/validation_rules.yaml` and the specific cause (`decline_reason`).
 """
 
 from datetime import date, datetime
@@ -25,11 +26,15 @@ PROPRIETARY_MODALITIES = {
     if modality["type"] == "proprietary_network"
 }
 
-PASS: dict[str, Any] = {"passed": True, "error_code": None}
+PASS: dict[str, Any] = {"passed": True, "error_code": None, "reason": None}
 
 
-def fail(error_code: str) -> dict[str, Any]:
-    return {"passed": False, "error_code": error_code}
+def fail(error_code: str, reason: str) -> dict[str, Any]:
+    return {"passed": False, "error_code": error_code, "reason": reason}
+
+
+def not_found(entity: str) -> dict[str, Any]:
+    return fail(NOT_FOUND[entity], f"{entity}_not_found")
 
 
 def find_one(df: pl.DataFrame, **match: Any) -> dict[str, Any] | None:

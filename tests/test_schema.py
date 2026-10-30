@@ -13,8 +13,14 @@ import pytest
 
 from src.data_generators.providers import fake
 from src.data_generators.reference_data.acquirer_loader import load_acquirers
+from src.data_generators.reference_data.card_program_loader import (
+    load_card_program_wallets,
+    load_card_programs,
+    load_cnae_wallets,
+    load_mcc_wallets,
+)
 from src.data_generators.reference_data.modalities_loader import load_transaction_modalities
-from src.data_generators.reference_data.product_loader import load_products
+from src.data_generators.reference_data.wallet_loader import load_wallets
 from src.utils.read_yamls import load_pre_populated_data
 
 DATABASE = Path(__file__).parent.parent / "database"
@@ -29,7 +35,7 @@ GENERATED_TABLES = [
     "companies",
     "cardholders",
     "cards",
-    "card_products",
+    "card_wallets",
     "establishments",
     "terminals",
 ]
@@ -43,12 +49,25 @@ def _insert(conn: duckdb.DuckDBPyConnection, table: str, df: pl.DataFrame) -> No
 
 
 def _reference_tables() -> dict[str, pl.DataFrame]:
+    """Reference tables in load order (parents first)."""
     data = load_pre_populated_data()
     return {
-        "products": load_products(data),
+        "wallets": load_wallets(data),
         "transaction_modalities": load_transaction_modalities(data),
         "acquirers": load_acquirers(data),
+        "card_programs": load_card_programs(data),
+        "card_program_wallets": load_card_program_wallets(data),
+        "cnae_wallets": load_cnae_wallets(data),
+        "mcc_wallets": load_mcc_wallets(data),
     }
+
+
+OLAP_DIMENSIONS = {
+    "wallets": "dim_wallets",
+    "card_programs": "dim_card_programs",
+    "transaction_modalities": "dim_transaction_modalities",
+    "acquirers": "dim_acquirers",
+}
 
 
 def test_oltp_takes_reference_and_generated_data(build_tables):
@@ -89,12 +108,13 @@ def test_olap_schema_and_reference_dimensions():
     for path in OLAP_SCHEMA:
         conn.execute(path.read_text())
 
-    for table, df in _reference_tables().items():
-        _insert(conn, f"dim_{table}", df)
+    reference = _reference_tables()
+    for table, dimension in OLAP_DIMENSIONS.items():
+        _insert(conn, dimension, reference[table])
 
     tables = {row[0] for row in conn.execute("SHOW TABLES").fetchall()}
     assert "fact_transactions" in tables
-    assert len(tables) == 9
+    assert len(tables) == 10
 
 
 @pytest.mark.db
@@ -111,7 +131,7 @@ def test_oltp_schema_on_postgres():
         count = conn.execute(
             "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'schema_check'"
         ).fetchone()[0]
-        assert count == 14
+        assert count == 17
     finally:
         conn.rollback()
         conn.close()
