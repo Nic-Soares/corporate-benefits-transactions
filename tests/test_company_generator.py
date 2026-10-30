@@ -1,5 +1,6 @@
 # %% Setup
 import polars as pl
+
 from src.data_generators.entities.company_generator import CompanyGenerator
 from src.extractors.ibge_municipalities import fetch_municipios
 
@@ -27,20 +28,22 @@ for key, value in branch.to_dict().items():
 # %% Generate DataFrame
 df = generator.generate_companies_as_dataframe(n_companies=100)
 
-print(f"\n✓ DATAFRAME GENERATED:")
+print("\n✓ DATAFRAME GENERATED:")
 print(f"  Total: {len(df)} companies")
 print(f"  Holdings: {df.filter(pl.col('parent_id').is_null()).shape[0]}")
 print(f"  Branches: {df.filter(pl.col('parent_id').is_not_null()).shape[0]}")
 
 print(f"\nColumns: {df.columns}")
-print(f"\nFirst 5 rows:")
+print("\nFirst 5 rows:")
 print(df.head(5))
 
 # %% Validate data
-print(f"\n✓ DATA VALIDATION:")
+print("\n✓ DATA VALIDATION:")
 print(f"  Unique IDs: {df.select('id').n_unique()}/{len(df)}")
 print(f"  Unique CNPJs: {df.select('cnpj').n_unique()}/{len(df)}")
-print(f"  All parent refs valid: {len(df.filter(pl.col('parent_id').is_not_null())) == df.filter(pl.col('parent_id').is_not_null()).shape[0]}")
+print(
+    f"  All parent refs valid: {len(df.filter(pl.col('parent_id').is_not_null())) == df.filter(pl.col('parent_id').is_not_null()).shape[0]}"
+)
 
 # %%
 print("\n✅ COMPANY GENERATOR TEST - SUCCESS")

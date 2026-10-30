@@ -1,4 +1,3 @@
-import hashlib
 import random
 from datetime import date
 
@@ -99,9 +98,7 @@ class CardGenerator:
         """Gera uma lista de múltiplos cartões."""
         return [self.generate_card() for _ in range(n_cards)]
 
-    def generate_cards_as_dicts(
-        self, n_cards: int
-    ) -> list[dict[str, str | date | None]]:
+    def generate_cards_as_dicts(self, n_cards: int) -> list[dict[str, str | date | None]]:
         """Gera uma lista de múltiplos cartões como dicionários."""
         return [card.to_dict() for card in self.generate_multiple_cards(n_cards)]
 

@@ -1,12 +1,12 @@
-import hashlib
 import random
 import uuid
 from datetime import date
 
 import polars as pl
-from mimesis import Person, Datetime
-from src.data_generators.providers.brazil_provider import BrazilProvider
+from mimesis import Datetime, Person
 from mimesis.locales import Locale
+
+from src.data_generators.providers.brazil_provider import BrazilProvider
 
 # Initialize providers
 person = Person(Locale.PT_BR)
@@ -92,9 +92,7 @@ class CardholderGenerator:
     def _extract_reference_data(self) -> None:
         """Extrai dados de referência para geração de portadores"""
         self.municipios_list: list[dict[str, str]] = (
-            self.municipios_df.select(["municipio_nome", "uf_sigla"])
-            .unique()
-            .to_dicts()
+            self.municipios_df.select(["municipio_nome", "uf_sigla"]).unique().to_dicts()
         )
 
     def generate_cardholder(self, company_id: str) -> Cardholder:
@@ -140,9 +138,7 @@ class CardholderGenerator:
         """
         cardholders_list = []
         for company_id in company_ids:
-            cardholders = self.generate_cardholders_for_company(
-                company_id, cardholders_per_company
-            )
+            cardholders = self.generate_cardholders_for_company(company_id, cardholders_per_company)
             cardholders_list.extend(cardholders)
 
         return pl.DataFrame([c.to_dict() for c in cardholders_list])

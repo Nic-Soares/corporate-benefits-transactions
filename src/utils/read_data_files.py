@@ -1,6 +1,7 @@
+from pathlib import Path
+
 import geopandas as gpd
 import polars as pl
-from pathlib import Path
 
 
 def read_shapefile(shapefile_path):

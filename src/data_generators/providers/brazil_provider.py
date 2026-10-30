@@ -32,8 +32,8 @@ class BrazilProvider(BaseProvider):
 
     @staticmethod
     def _cnpj_check_digit(digits: list[int]) -> int:
-        weights = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2][-len(digits):]
-        total = sum(weight * digit for weight, digit in zip(weights, digits))
+        weights = [6, 5, 4, 3, 2, 9, 8, 7, 6, 5, 4, 3, 2][-len(digits) :]
+        total = sum(weight * digit for weight, digit in zip(weights, digits, strict=True))
         remainder = total % 11
         return 0 if remainder < 2 else 11 - remainder
 
