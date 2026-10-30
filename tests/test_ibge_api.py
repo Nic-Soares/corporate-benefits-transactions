@@ -18,11 +18,7 @@ def test_fetch_municipios(municipios):
 
 
 @pytest.mark.network
-@pytest.mark.xfail(
-    reason="ST-03.4: UF comes from the microrregião, which the API leaves null for "
-    "Boa Esperança do Norte (MT)",
-    strict=True,
-)
 def test_every_municipio_has_a_uf(municipios):
+    # Boa Esperança do Norte (MT) has no microrregião; its UF comes from the região imediata
     assert municipios["uf_sigla"].null_count() == 0
     assert municipios["uf_sigla"].n_unique() == 27

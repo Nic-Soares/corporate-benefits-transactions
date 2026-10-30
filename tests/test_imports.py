@@ -11,11 +11,7 @@ import pytest
 SRC = Path(__file__).parent.parent / "src"
 
 # Remove each entry as EP-03 fixes it: strict xfail fails the run while a fixed module is listed.
-KNOWN_BROKEN = {
-    "src.data_generators.reference_data.mcc_and_cnae_loader": "ST-03.4: imports mastercard_mcc_api",
-    "src.infrastructure.schema.schema_creator": "ST-03.4: imports src.common",
-    "src.processors.load_and_save_reference_data": "ST-03.4: imports mcc_and_cnae_loader",
-}
+KNOWN_BROKEN: dict[str, str] = {}
 
 MODULES = sorted(
     ".".join(p.relative_to(SRC.parent).with_suffix("").parts).removesuffix(".__init__")

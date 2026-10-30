@@ -11,7 +11,7 @@ def download_kaggle_dataset(dataset: str, dest_dir: str = None) -> None:
 
     Parameters:
     - dataset: str, dataset name in the format "user/dataset-name"
-    - dest_dir: str, destination directory. If None, defaults to "../../data/raw" relative to this script.
+    - dest_dir: str, destination directory. If None, defaults to "data/raw" in the repository.
     """
     # Set destination directory
     if dest_dir is None:
