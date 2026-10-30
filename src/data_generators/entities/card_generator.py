@@ -1,108 +1,71 @@
 import random
-from datetime import date
+from datetime import date, timedelta
 
 import polars as pl
-import ulid
-from mimesis import Datetime
 
-# Valid statuses for cards
-VALID_CARD_STATUSES = ["active", "inactive", "blocked", "canceled"]
-VALID_CARD_TYPES = ["physical", "virtual"]
+from src.data_generators.providers import fake
+from src.utils.read_yamls import load_pre_populated_data
+
+CARD_TYPES = ["physical", "virtual"]
+
+MODALITY_IDS = [m["id"] for m in load_pre_populated_data()["transaction_modalities"]]
 
 
 class Card:
-    """Classe que representa um cartão corporativo."""
+    """A benefit card. Its modality decides the network: `OWN` or a brand."""
 
     def __init__(
         self,
         cardholder_id: str,
-        modality_id: str | None = None,
+        modality_id: str,
+        issued_from: date | None = None,
     ) -> None:
-        """
-        Construtor da classe Card - cria um novo cartão.
-
-        Args:
-            cardholder_id: ID do portador do cartão (obrigatório).
-            modality_id: ID da modalidade do cartão (opcional, pode ser None).
-        """
-        datetime_provider = Datetime()
-
-        self.card_id: str = f"card_{ulid.ULID()}"
+        """`issued_from`: earliest issue date (the cardholder's admission)."""
+        self.id: str = fake.new_id("card")
         self.cardholder_id: str = cardholder_id
-        self.modality_id: str | None = modality_id
+        self.modality_id: str = modality_id
+        self.card_number: str = "".join(str(random.randint(0, 9)) for _ in range(16))
+        self.card_type: str = random.choice(CARD_TYPES)
+        self.status: str = fake.status("card")
+        self.issue_date: date = fake.date_in_range("card_issuance", issued_from)
 
-        card_number = self._generate_card_number()
-        self.card_number_hash: str = self._generate_card_hash(card_number)
+        validity = fake.SETTINGS["card_validity_years"]
+        years = random.randint(validity["min"], validity["max"])
+        self.expiration_date: date = self.issue_date + timedelta(days=365 * years)
 
-        self.expiration_date: date = datetime_provider.date(start=2025, end=2029)
-        self.card_type: str = random.choice(VALID_CARD_TYPES)
-        self.status: str = random.choice(VALID_CARD_STATUSES)
-        self.issuance_date: date = datetime_provider.date(start=2020, end=2024)
-
-    def _generate_card_number(self) -> str:
-        """Método privado para gerar número do cartão (16 dígitos)."""
-        return "".join([str(random.randint(0, 9)) for _ in range(16)])
-
-    def to_dict(self) -> dict[str, str | date | None]:
-        """Converte o cartão para um dicionário compatível com a tabela SQL."""
+    def to_dict(self) -> dict[str, str | date]:
+        """Columns of the `cards` table; the card number is stored hashed."""
         return {
-            "card_id": self.card_id,
+            "id": self.id,
             "cardholder_id": self.cardholder_id,
-            "card_number": self.card_number_hash,
+            "card_number_hash": fake.sha256(self.card_number),
             "modality_id": self.modality_id,
             "expiration_date": self.expiration_date,
             "card_type": self.card_type,
             "status": self.status,
-            "issuance_date": self.issuance_date,
+            "issue_date": self.issue_date,
         }
-
-    def __str__(self) -> str:
-        """Representação em string do cartão para impressão."""
-        return f"Cartão {self.card_id} - {self.card_type} - {self.status}"
-
-    def __repr__(self) -> str:
-        """Representação detalhada para debug."""
-        return f"Card(card_id='{self.card_id}', cardholder_id='{self.cardholder_id}', status='{self.status}')"
 
 
 class CardGenerator:
-    """Gerador de cartões corporativos."""
+    """Generates cards for existing cardholders."""
 
     def __init__(
         self,
-        cardholder_ids: list[str],
+        cardholders_df: pl.DataFrame,
         modality_ids: list[str] | None = None,
     ) -> None:
-        """
-        Construtor do gerador de cartões.
-
-        Args:
-            cardholder_ids: Lista com IDs dos portadores que podem ter cartão.
-            modality_ids: Lista com IDs das modalidades de cartão (opcional).
-        """
-        self.cardholder_ids: list[str] = cardholder_ids
-        self.modality_ids: list[str] = modality_ids or []
+        """`cardholders_df` needs `id` and `admission_date`; modalities default to all of them."""
+        self.cardholders: list[dict] = cardholders_df.select("id", "admission_date").to_dicts()
+        self.modality_ids: list[str] = modality_ids or MODALITY_IDS
 
     def generate_card(self) -> Card:
-        """Gera um único cartão com dados aleatórios."""
-        cardholder_id = random.choice(self.cardholder_ids)
-        modality_id = random.choice(self.modality_ids) if self.modality_ids else None
-
-        return Card(cardholder_id=cardholder_id, modality_id=modality_id)
-
-    def generate_card_as_dict(self) -> dict[str, str | date | None]:
-        """Gera um cartão e o retorna como um dicionário."""
-        return self.generate_card().to_dict()
-
-    def generate_multiple_cards(self, n_cards: int) -> list[Card]:
-        """Gera uma lista de múltiplos cartões."""
-        return [self.generate_card() for _ in range(n_cards)]
-
-    def generate_cards_as_dicts(self, n_cards: int) -> list[dict[str, str | date | None]]:
-        """Gera uma lista de múltiplos cartões como dicionários."""
-        return [card.to_dict() for card in self.generate_multiple_cards(n_cards)]
+        cardholder = random.choice(self.cardholders)
+        return Card(
+            cardholder_id=cardholder["id"],
+            modality_id=random.choice(self.modality_ids),
+            issued_from=cardholder["admission_date"],
+        )
 
     def generate_cards_as_dataframe(self, n_cards: int) -> pl.DataFrame:
-        """Gera múltiplos cartões como um DataFrame Polars."""
-        card_dicts = self.generate_cards_as_dicts(n_cards)
-        return pl.DataFrame(card_dicts)
+        return pl.DataFrame([self.generate_card().to_dict() for _ in range(n_cards)])

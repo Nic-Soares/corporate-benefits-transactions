@@ -1,93 +1,80 @@
 import random
-from datetime import datetime
 
 import polars as pl
-from mimesis import Address, Datetime, Finance, Person
-from mimesis.locales import Locale
 
-from src.data_generators.providers.brazil_provider import BrazilProvider
+from src.data_generators.providers import fake
 
-# Initialize providers
-person = Person(Locale.PT_BR)
-address = Address(Locale.PT_BR)
-finance = Finance(Locale.PT_BR)
-datetime_provider = Datetime(Locale.PT_BR)
-brazil = BrazilProvider()
+# Category of an establishment, from the first product its CNAE accepts.
+# Matches the categories of `usage_patterns.peak_hours_by_category`.
+CATEGORY_BY_PRODUCT = {
+    "VR": "restaurant",
+    "VA": "supermarket",
+    "VC": "gas_station",
+    "VF": "pharmacy",
+}
+DEFAULT_CATEGORY = "other"
+
+
+def _accepted_products(cnae: str, cnae_products_mapping: dict[str, list[str]]) -> list[str]:
+    """Products of the longest CNAE prefix in the mapping (same rule as the validator)."""
+    prefixes = [prefix for prefix in cnae_products_mapping if cnae.startswith(prefix)]
+    return cnae_products_mapping[max(prefixes, key=len)] if prefixes else []
 
 
 def generate_establishments(
-    n_establishments,
-    df_cnae,
-    df_mcc,
-    df_municipalities,
-    cnae_products_mapping,
-    cnae_with_products_ratio=0.85,
-):
-    """Generate establishments DataFrame with intelligent CNAE selection
+    n_establishments: int,
+    df_cnae: pl.DataFrame,
+    df_mcc: pl.DataFrame,
+    municipios_df: pl.DataFrame,
+    cnae_products_mapping: dict[str, list[str]],
+    cnae_with_products_ratio: float = fake.SETTINGS["cnae_with_products_ratio"],
+) -> pl.DataFrame:
+    """Establishments, most of them with a CNAE that accepts some product.
+
     Args:
-        n_establishments: Number of establishments to generate
-        df_cnae: Polars DataFrame with CNAE codes
-        df_mcc: Polars DataFrame with MCC codes
-        df_municipalities: Polars DataFrame with municipalities
-        cnae_products_mapping: Dictionary mapping CNAE patterns to products
-        cnae_with_products_ratio: Ratio of establishments that should have CNAEs accepting products (default 0.85)
+        df_cnae: CNAE codes (`subclasse_id`)
+        df_mcc: MCC codes (`mcc_code`)
+        municipios_df: IBGE municipalities (`municipio_nome`, `uf_sigla`)
+        cnae_products_mapping: CNAE prefix → accepted products (`cnae_products` in
+            `pre_populated_data.yaml`)
+        cnae_with_products_ratio: share of establishments whose CNAE accepts a product
     """
+    all_cnaes = df_cnae["subclasse_id"].to_list()
+    cnaes_with_products = [
+        cnae for cnae in all_cnaes if _accepted_products(cnae, cnae_products_mapping)
+    ]
+    n_with_products = int(n_establishments * cnae_with_products_ratio)
+
+    mcc_codes = df_mcc["mcc_code"].to_list()
+    municipios = (
+        municipios_df.select("municipio_nome", "uf_sigla").unique(maintain_order=True).to_dicts()
+    )
 
     establishments = []
-
-    # Get CNAEs that accept products and all available CNAEs
-    cnaes_with_products = set()
-    for cnae_pattern in cnae_products_mapping.keys():
-        # Find CNAEs that match patterns (exact or partial)
-        matching_cnaes = df_cnae.filter(pl.col("subclasse_id").str.starts_with(cnae_pattern))[
-            "subclasse_id"
-        ].to_list()
-        cnaes_with_products.update(matching_cnaes)
-
-    cnaes_with_products = list(cnaes_with_products)
-    all_cnaes = df_cnae["subclasse_id"].to_list()
-    cnaes_without_products = [cnae for cnae in all_cnaes if cnae not in cnaes_with_products]
-
-    # Calculate how many establishments should have product-accepting CNAEs
-    n_with_products = int(n_establishments * cnae_with_products_ratio)
-    n_without_products = n_establishments - n_with_products
-
-    # Get lists for random selection
-    mcc_codes = df_mcc["mcc_code"].to_list()
-    municipality_ids = df_municipalities["municipality_id"].to_list()
-
-    # Status options
-    statuses = ["ATIVA", "INATIVA", "SUSPENSA", "BAIXADA"]
-
     for i in range(n_establishments):
-        # Intelligent CNAE selection
         if i < n_with_products and cnaes_with_products:
-            # Select from CNAEs that accept products
-            main_cnae_id = random.choice(cnaes_with_products)
+            main_cnae = random.choice(cnaes_with_products)
         else:
-            # Select from any CNAE (including those without products)
-            main_cnae_id = random.choice(all_cnaes)
+            main_cnae = random.choice(all_cnaes)
+        products = _accepted_products(main_cnae, cnae_products_mapping)
+        municipio = random.choice(municipios)
 
-        # Select municipality and get corresponding state
-        selected_municipality_id = random.choice(municipality_ids)
-        state_id = df_municipalities.filter(pl.col("municipality_id") == selected_municipality_id)[
-            "state_id"
-        ].item()
-
-        establishment = {
-            "establishment_id": f"EST_{i}",
-            "cnpj": brazil.cnpj(),  # CNPJ format
-            "legal_name": finance.company(),
-            "trade_name": f"{finance.company()} {person.surname()}",
-            "main_cnae": main_cnae_id,
-            "mcc_code": random.choice(mcc_codes),
-            "municipality_id": selected_municipality_id,
-            "state_id": state_id,
-            "status": random.choice(statuses),
-            "accreditation_date": datetime_provider.date(start=2010, end=2024),
-            "created_date": datetime.now(),
-            "updated_at": datetime.now(),
-        }
-        establishments.append(establishment)
+        establishments.append(
+            {
+                "id": fake.new_id("est"),
+                "cnpj": fake.brazil.cnpj(),
+                "name": fake.finance.company(),
+                "trade_name": f"{fake.finance.company()} {fake.person.surname()}",
+                "main_cnae": main_cnae,
+                "mcc_code": random.choice(mcc_codes),
+                "category": CATEGORY_BY_PRODUCT.get(products[0], DEFAULT_CATEGORY)
+                if products
+                else DEFAULT_CATEGORY,
+                "city": municipio["municipio_nome"],
+                "state": municipio["uf_sigla"],
+                "status": fake.status("establishment"),
+                "accreditation_date": fake.date_in_range("establishment_opening"),
+            }
+        )
 
     return pl.DataFrame(establishments)

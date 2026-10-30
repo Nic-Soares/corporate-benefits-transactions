@@ -1,57 +1,49 @@
 import random
-from datetime import datetime
+from datetime import datetime, timedelta
 
-import faker
-import numpy as np
 import polars as pl
 
-fake = faker.Faker("pt_BR")
+from src.data_generators.providers import fake
+
+CAPTURE_TYPES = ["chip", "magnetic_stripe", "contactless", "nfc"]
 
 
-def gerar_valor_transacao(max_valor=1000, escala=250):
+def transaction_amount(max_amount: float = 1000, scale: float = 250) -> float:
+    """Exponentially distributed: larger amounts are rarer."""
+    return round(min(random.expovariate(1 / scale), max_amount), 2)
+
+
+def generate_single_transaction(
+    card_products_df: pl.DataFrame, terminals_df: pl.DataFrame, days_back: int = 30
+) -> dict:
+    """One purchase attempt, not yet validated (`response_code` is empty).
+
+    Picks a card product (so the card has the product it pays with) and a
+    terminal (so the establishment has a terminal). Columns of `transactions`.
     """
-    Gera um valor aleatório progressivo para transação.
-    Quanto maior o valor, menor a chance de ocorrer.
-    """
-    valor = np.random.exponential(scale=escala)
-    return round(min(valor, max_valor), 2)
-
-
-def _sample_scalar(df: pl.DataFrame, col: str, filter_expr=None, default=None):
-    """Retorna um valor aleatório da coluna `col`. Se vazio, retorna `default`."""
-    sel = df.filter(filter_expr) if filter_expr is not None else df
-    if sel.is_empty():
-        return default
-    return sel.select(pl.col(col)).sample(1).to_series()[0]
-
-
-def generate_single_transaction(cards_df, establishments_df, terminals_df, card_products_df):
-    # escolhe um terminal (garante estabelecimento com terminal)
-    terminal_row = terminals_df.sample(1).to_dicts()[0]
-    terminal_id = terminal_row["terminal_id"]
-    establishment_id = terminal_row["establishment_id"]
-
-    # escolhe cartão e produto (produto pode ser None)
-    card_id = _sample_scalar(cards_df, "card_id")
-    product_id = _sample_scalar(
-        card_products_df, "product_id", filter_expr=(pl.col("card_id") == card_id), default=None
+    card_product = (
+        card_products_df.select("card_id", "product_id")
+        .sample(1, seed=random.getrandbits(32))
+        .row(0, named=True)
+    )
+    terminal = (
+        terminals_df.select("id", "establishment_id")
+        .sample(1, seed=random.getrandbits(32))
+        .row(0, named=True)
     )
 
-    amount = gerar_valor_transacao(max_valor=500, escala=100)
-    tx_date = fake.date_time_between(start_date="-30d", end_date="now")
+    end = datetime.combine(fake.reference_date, datetime.min.time())
+    moment = end - timedelta(seconds=random.randint(0, days_back * 24 * 3600))
 
-    transaction = {
-        "transaction_id": str(fake.uuid4()),
-        "card_id": card_id,
-        "product_id": product_id,
-        "establishment_id": establishment_id,
-        "terminal_id": terminal_id,
-        "amount": amount,
-        "date": tx_date,
-        "capture_type": random.choice(["chip", "magnetic_stripe", "contactless", "nfc"]),
+    return {
+        "id": fake.new_id("tx"),
+        "card_id": card_product["card_id"],
+        "product_id": card_product["product_id"],
+        "establishment_id": terminal["establishment_id"],
+        "terminal_id": terminal["id"],
+        "amount": transaction_amount(max_amount=500, scale=100),
+        "date": moment,
+        "capture_type": random.choice(CAPTURE_TYPES),
         "response_code": None,
         "response_message": None,
-        "created_at": datetime.now(),
-        "updated_at": datetime.now(),
     }
-    return transaction
