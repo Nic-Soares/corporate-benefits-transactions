@@ -12,7 +12,7 @@
 | `EP-01` Baseline and toolchain | ✅ Done — merged into `develop` 2026-10-30 | code (`pyproject.toml`, `docker-compose.yaml`) |
 | `EP-02` Safety net (tests + CI) | ✅ Done — merged into `develop` 2026-10-30; CI runs after the first push | code (`tests/`, `.github/`) |
 | `EP-03` Clean up existing code | ✅ Done — merged into `develop` 2026-10-30 | code (`src/`) |
-| `EP-04` Config and model consistency | 🟡 `ST-04.2` merged into `develop` (pulled ahead of `ST-03.2`) | `config/`, `database/` |
+| `EP-04` Config and model consistency | ✅ Done — merged into `develop` 2026-10-30 | `config/`, `database/` |
 | `EP-05` Documentation | Not started | `README.md`, `docs/` |
 | `EP-06` Setup pipeline (reference data + entities) | Not started | code (`src/main.py`, `src/processors/`) |
 | `EP-07` Transaction simulator | Not started | code (`src/processors/transaction_simulator.py`) |
@@ -254,8 +254,12 @@ Found while fixing the validators (`ST-03.1`); settled 2026-10-30 (Nicolas confi
 
 ### ST-04.3 — Data model
 
-- [ ] DBML × SQL: same tables, columns, and types (OLTP and OLAP)
-- [ ] Test that creates the OLTP schema on a clean Postgres and the OLAP schema on an in-memory DuckDB
+- [x] DBML × SQL: same tables, columns and types, OLTP and OLAP (the OLTP DBML lacked `cardholders.position` and `department`)
+- [x] `transaction_modalities.code` (and `dim_transaction_modalities.code`) dropped: required and unique, but nothing fills it — the config has none and `id` already holds `VISA`, `OWN`… Inserting the modalities would have failed
+- [x] `cnae_products.cnae_description` optional: the 4-digit prefixes (`4711`) aren't codes in the CNAE dataset, so they have no description to load
+- [x] `tests/test_schema.py`: the OLTP schema on in-memory DuckDB takes the config's reference data and every generated table, with the foreign keys enforced (and a dangling reference is rejected); the OLAP schema takes the reference dimensions; a `db` test applies the OLTP schema to Postgres 18
+- [x] `pyarrow` added: DuckDB needs it to read Polars DataFrames (`duckdb_manager.insert_dataframe` too)
+- For `EP-06`: `companies.parent_id` references `companies`, so holdings load before their branches
 
 ---
 
@@ -301,7 +305,8 @@ Found while fixing the validators (`ST-03.1`); settled 2026-10-30 (Nicolas confi
 ### ST-06.2 — Entities
 
 - [ ] Generate companies → cardholders → cards → card products → establishments → terminals, at the volumes in `simulation_config.yaml → data_volumes`
-- [ ] Write to Postgres respecting the foreign keys
+- [ ] Write to Postgres respecting the foreign keys — parents first, and holdings before branches (`companies.parent_id`)
+- [ ] Load `mcc_modalities` from `validation_rules.yaml → mcc_acceptance_rules` and `cnae_products` from `pre_populated_data.yaml → cnae_products` (description from the CNAE dataset when the code is a full class or subclass)
 
 ### ST-06.3 — Entrypoint
 

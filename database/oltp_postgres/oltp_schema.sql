@@ -18,7 +18,6 @@ CREATE TABLE IF NOT EXISTS products (
 
 CREATE TABLE IF NOT EXISTS transaction_modalities (
   id VARCHAR PRIMARY KEY,
-  code VARCHAR UNIQUE NOT NULL,
   name VARCHAR NOT NULL,
   type VARCHAR NOT NULL,
   active BOOLEAN DEFAULT true,
@@ -47,7 +46,7 @@ CREATE TABLE IF NOT EXISTS mcc_modalities (
 CREATE TABLE IF NOT EXISTS cnae_products (
   cnae_code VARCHAR NOT NULL,
   product_id VARCHAR NOT NULL,
-  cnae_description VARCHAR NOT NULL,
+  cnae_description VARCHAR,
   observation VARCHAR,
   active BOOLEAN DEFAULT true,
   created_at TIMESTAMP DEFAULT now(),
