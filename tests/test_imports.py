@@ -15,9 +15,6 @@ KNOWN_BROKEN = {
     "src.data_generators.reference_data.mcc_and_cnae_loader": "ST-03.4: imports mastercard_mcc_api",
     "src.infrastructure.schema.schema_creator": "ST-03.4: imports src.common",
     "src.processors.load_and_save_reference_data": "ST-03.4: imports mcc_and_cnae_loader",
-    "src.validators.balance_and_limits_validations": "ST-03.1: loose module-level code",
-    "src.validators.business_rules_validators": "ST-03.1: loose module-level code",
-    "src.validators.infrastructure_validations": "ST-03.1: loose module-level code",
 }
 
 MODULES = sorted(
