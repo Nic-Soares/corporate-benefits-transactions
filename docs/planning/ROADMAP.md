@@ -229,9 +229,14 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 ### ST-04.1 — Configs
 
 - [x] `config/database.yaml`: fix the DuckDB SQL paths — done in `ST-03.4`
-- [ ] Products `VA, VR, VC, VF, VM, PR` in every YAML: add `VF`, `VM`, `PR` to `pre_populated_data.yaml`, remove `GF`, update `cnae_products` and `product_acceptance_rules` to match
-- [ ] `validation_rules.yaml → validation_order` matches the functions that exist in `src/validators/`
-- [ ] YAML comments and keys in English
+- [x] Products `VA, VR, VC, VF, VM, PR` in every YAML; `GF` removed. `VF` Vale Farmácia (pharmacy CNAEs `4771…`), `VM` Multibenefícios (wherever VA, VR or VF is accepted), `PR` Premiação (incentive: supermarkets, restaurants, general retail — where `GF` was)
+- [x] `cnae_products` fixed on the way: `4781` (clothing) and `4784` (bottled gas) were mapped to VA; added `4724` (fruit and vegetables) and `4782` (footwear); every entry commented with its activity
+- [x] `terminal_models_by_acquirer` is keyed by acquirer id with `{model, type}`, but the generator read it by acquirer name with a hard-coded model → type map: with the real config every terminal came out as "POS Genérico". The generator now reads the config's shape, and the generator tests run against the real config
+- [x] One list of capture technologies: `transaction_technologies` (`CHIP`, `MAG_STRIPE`, `CONTACTLESS`, `MOBILE_NFC`, `APPLE_PAY`, `GOOGLE_PAY`) is what `transactions.capture_type` holds; the unused `capture_technologies` list is gone, and the terminal-type support moved from the validator into `validation_rules.yaml → capture_type_support`
+- [x] `validation_order` matches `src/validators/` (checked by `test_codes_are_documented`)
+- [x] YAML comments and descriptions in English. Business data values — product and segment names, response descriptions — stay in Portuguese
+- [x] Sections the code doesn't read yet are marked as such: `product_acceptance_rules`, `commission_rules`, `transaction_technology_rules`, `data_volumes`, `approval_rates`, `usage_patterns`, `validation_config`, `product_specific_rules`
+- Two segment lists stay on purpose: `pre_populated_data.yaml → segments` (industry) and the company size segments in `company_generator.py` (`Public`, `Corporate`, `SME`…), which is what `companies.segment` holds
 
 ### ST-04.2 — Response codes and statuses
 
