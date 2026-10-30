@@ -2,6 +2,7 @@
 
 from datetime import date
 
+import polars as pl
 import pytest
 
 from src.data_generators.entities.transaction_generator import generate_single_transaction
@@ -34,7 +35,7 @@ def tables(build_tables):
 
 @pytest.mark.parametrize(
     "table",
-    ["companies", "cardholders", "cards", "card_products", "establishments", "terminals"],
+    ["companies", "cardholders", "cards", "card_wallets", "establishments", "terminals"],
 )
 def test_columns_match_the_schema(tables, table):
     assert tables[table].columns == _schema_columns(table)
@@ -45,7 +46,7 @@ def test_columns_match_the_schema(tables, table):
     [
         ("cardholders", "cardholder"),
         ("cards", "card"),
-        ("card_products", "card_product"),
+        ("card_wallets", "card_wallet"),
         ("establishments", "establishment"),
         ("terminals", "terminal"),
     ],
@@ -68,7 +69,7 @@ def test_dates_follow_their_parents(tables):
     assert (issued["issue_date"] >= issued["admission_date"]).all()
     assert (t["cards"]["expiration_date"] > t["cards"]["issue_date"]).all()
 
-    activated = t["card_products"].join(t["cards"], left_on="card_id", right_on="id")
+    activated = t["card_wallets"].join(t["cards"], left_on="card_id", right_on="id")
     assert (activated["activation_date"] >= activated["issue_date"]).all()
 
     installed = t["terminals"].join(t["establishments"], left_on="establishment_id", right_on="id")
@@ -78,29 +79,44 @@ def test_dates_follow_their_parents(tables):
     for df, column in [
         (t["companies"], "registration_date"),
         (t["cards"], "issue_date"),
-        (t["card_products"], "activation_date"),
+        (t["card_wallets"], "activation_date"),
         (t["terminals"], "installation_date"),
     ]:
         assert df[column].max() <= today
 
 
-def test_card_products_are_distinct_per_card(tables):
-    pairs = tables["card_products"].select("card_id", "product_id")
-    assert pairs.n_unique() == len(pairs)
-    per_card = tables["card_products"]["card_id"].value_counts()["count"]
-    assert per_card.min() >= 1 and per_card.max() <= 3
+def test_card_wallets_follow_the_program(tables):
+    """Each card holds exactly the wallets of its program, once each."""
+    wallets_by_program = {p["id"]: set(p["wallets"]) for p in REFERENCE["card_programs"]}
+    held = tables["card_wallets"].group_by("card_id").agg(pl.col("wallet_id"))
+    cards = tables["cards"].join(held, left_on="id", right_on="card_id")
+    for program_id, wallet_ids in cards.select("program_id", "wallet_id").iter_rows():
+        assert len(wallet_ids) == len(set(wallet_ids))
+        assert set(wallet_ids) == wallets_by_program[program_id]
+
+
+def test_card_network_follows_the_program(tables):
+    """3-party programs run on OWN; the 4-party program on one of its brands."""
+    programs = {p["id"]: p for p in REFERENCE["card_programs"]}
+    for program_id, modality_id in tables["cards"].select("program_id", "modality_id").iter_rows():
+        program = programs[program_id]
+        if program["network_type"] == "proprietary_network":
+            assert modality_id == "OWN"
+        else:
+            assert modality_id in program["brands"]
+    assert tables["cards"]["program_id"].n_unique() > 3
 
 
 def test_establishments(tables):
     establishments = tables["establishments"]
-    # 85% (34 of 40) take a CNAE that accepts a product
+    # 85% (34 of 40) take a CNAE that accepts a wallet
     accepting = ["5611201", "4711302", "4731800", "4771701"]
     assert establishments.head(34)["main_cnae"].is_in(accepting).all()
     category = dict(establishments.select("main_cnae", "category").unique().iter_rows())
     assert category["5611201"] == "restaurant"
     assert category["4711302"] == "supermarket"
-    assert category["4731800"] == "gas_station"
-    assert category["4771701"] == "pharmacy"
+    assert category["4731800"] == "mobility"
+    assert category["4771701"] == "health"
 
 
 def test_terminals(tables):
@@ -116,14 +132,25 @@ def test_terminals(tables):
 
 
 def test_transaction(tables):
-    tx = generate_single_transaction(tables["card_products"], tables["terminals"])
+    cards, card_wallets = tables["cards"], tables["card_wallets"]
+    txs = [generate_single_transaction(cards, card_wallets, tables["terminals"]) for _ in range(50)]
 
-    assert tx["card_id"] in tables["cards"]["id"]
-    owned = tables["card_products"].filter(card_id=tx["card_id"])["product_id"]
-    assert tx["product_id"] in owned
-    terminal = tables["terminals"].filter(id=tx["terminal_id"]).row(0, named=True)
-    assert tx["establishment_id"] == terminal["establishment_id"]
-    assert 0 <= tx["amount"] <= 500
+    for tx in txs:
+        card = cards.filter(id=tx["card_id"]).row(0, named=True)
+        if card["modality_id"] == "OWN":
+            # the cardholder picked one of the card's wallets
+            held = card_wallets.filter(card_id=tx["card_id"])["wallet_id"]
+            assert tx["wallet_id"] in held
+        else:
+            # the issuer routes brand cards by MCC later
+            assert tx["wallet_id"] is None
+        terminal = tables["terminals"].filter(id=tx["terminal_id"]).row(0, named=True)
+        assert tx["establishment_id"] == terminal["establishment_id"]
+        assert 0 <= tx["amount"] <= 500
+        expected = (
+            {"ok", "wrong"} if tx["capture_type"] in ("CHIP", "MAG_STRIPE") else {"not_required"}
+        )
+        assert tx["pin_status"] in expected
 
 
 def test_same_seed_same_data(build_tables):
@@ -131,7 +158,9 @@ def test_same_seed_same_data(build_tables):
         fake.seed(7, today=date(2026, 10, 30))
         tables = build_tables()
         txs = [
-            generate_single_transaction(tables["card_products"], tables["terminals"])
+            generate_single_transaction(
+                tables["cards"], tables["card_wallets"], tables["terminals"]
+            )
             for _ in range(5)
         ]
         return tables, txs

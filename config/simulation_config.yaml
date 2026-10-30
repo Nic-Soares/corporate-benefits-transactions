@@ -10,28 +10,29 @@ data_volumes:
   cards: 2400
   establishments: 150
   terminals: 300
-  card_products: 3000
   transactions: 100
-
 
 # Target approval rates — Not read by the code yet (EP-08)
 approval_rates:
   overall: 0.92                  # 92% approved overall
   by_network:
-    proprietary_network: 0.95    # proprietary network
-    branded_network: 0.88        # branded networks
-  by_product:
-    VA: 0.94                     # Vale Alimentação
-    VR: 0.93                     # Vale Refeição
-    VC: 0.89                     # Vale Combustível
-    VF: 0.96                     # Vale Farmácia
-    VM: 0.90                     # Multibenefícios
-    PR: 0.91                     # Premiação
+    proprietary_network: 0.95
+    brand: 0.88
 
 # Data generation (read by src/data_generators/providers/fake.py)
 generation_settings:
-  cnae_with_products_ratio: 0.85  # share of establishments whose CNAE accepts some product
-  
+  cnae_with_wallets_ratio: 0.85  # share of establishments whose CNAE accepts some wallet
+
+  # Which program a card belongs to (pre_populated_data.yaml → card_programs)
+  card_program_distribution:
+    MULTI_3P: 0.35
+    MULTI_4P: 0.15
+    MEAL: 0.20
+    FOOD: 0.15
+    FUEL: 0.05
+    GIFT: 0.05
+    PREMIUM: 0.05
+
   # Status weights (valid statuses: business_rules.yaml → status_options)
   company_status_distribution:
     active: 0.90
@@ -49,10 +50,10 @@ generation_settings:
     blocked: 0.10
     cancelled: 0.05
 
-  card_product_status_distribution:
-    active: 0.70
-    suspended: 0.15
-    cancelled: 0.15
+  card_wallet_status_distribution:
+    active: 0.90
+    suspended: 0.05
+    cancelled: 0.05
 
   establishment_status_distribution:
     active: 0.90
@@ -65,11 +66,19 @@ generation_settings:
     inactive: 0.05
     maintenance: 0.05
 
-  # Products per card
-  products_per_card:
-    min: 1
-    max: 3
-    avg: 1.8
+  # Balance each wallet starts the simulation with, and its limits (synthetic)
+  wallet_starting_balance:
+    min: 0.00
+    max: 1500.00
+  wallet_daily_limit:
+    min: 300.00
+    max: 2000.00
+  wallet_monthly_limit:
+    min: 1500.00
+    max: 10000.00
+
+  # Share of PIN-verified captures (CHIP, MAG_STRIPE) where the PIN is wrong
+  wrong_pin_ratio: 0.03
 
   # Dates
   date_ranges:
@@ -86,12 +95,11 @@ generation_settings:
       start: "-8y"
       end: "today"
   # Each date also starts no earlier than its parent's: admission ≥ company
-  # registration, card issue ≥ admission, product activation ≥ card issue,
+  # registration, card issue ≥ admission, wallet activation ≥ card issue,
   # terminal installation ≥ establishment accreditation.
   card_validity_years:
     min: 3
     max: 5
-
 
 # Usage patterns — Not read by the code yet (EP-08)
 usage_patterns:
@@ -99,32 +107,16 @@ usage_patterns:
   peak_hours_by_category:
     restaurant: [12, 13, 18, 19, 20]
     supermarket: [10, 11, 17, 18, 19]
-    gas_station: [7, 8, 17, 18, 19]
-    pharmacy: [9, 10, 11, 15, 16, 17]
+    mobility: [7, 8, 17, 18, 19]
+    health: [9, 10, 11, 15, 16, 17]
 
-  # Transaction amounts per product
-  average_amounts:
-    VA:
-      min: 15.00
-      max: 250.00
-      avg: 65.00
-    VR:
-      min: 8.00
-      max: 700.00
-      avg: 28.50
-    VC:
-      min: 30.00
-      max: 500.00
-      avg: 180.00
-    VF:
-      min: 5.00
-      max: 200.00
-      avg: 42.00
-    VM:
-      min: 10.00
-      max: 300.00
-      avg: 75.00
-    PR:
-      min: 20.00
-      max: 800.00
-      avg: 150.00
+  # Transaction amounts per wallet
+  amounts_by_wallet:
+    FOOD:        {min: 15.00, max: 250.00, avg: 65.00}
+    MEAL:        {min: 8.00,  max: 150.00, avg: 35.00}
+    MOBILITY:    {min: 10.00, max: 400.00, avg: 150.00}
+    HEALTH:      {min: 5.00,  max: 300.00, avg: 60.00}
+    HOME_OFFICE: {min: 20.00, max: 800.00, avg: 180.00}
+    EDUCATION:   {min: 15.00, max: 600.00, avg: 120.00}
+    GIFT:        {min: 10.00, max: 500.00, avg: 90.00}
+    PREMIUM:     {min: 20.00, max: 800.00, avg: 150.00}

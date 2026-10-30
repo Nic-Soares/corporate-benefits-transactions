@@ -1,28 +1,30 @@
 # Corporate Benefits Transactions
 
-A synthetic dataset of Brazilian corporate benefits card transactions — meal, food, fuel, pharmacy, multi-benefit and incentive cards — built to behave like the real market: every purchase attempt goes through the checks an issuer runs before approving or declining it.
+A synthetic dataset of Brazilian corporate benefits card transactions — food, meal, multi-benefit, mobility and incentive cards — built to behave like the real market: every purchase attempt goes through the checks an issuer runs before approving or declining it.
 
 The goal is a public dataset on Kaggle for studying approval rates, decline reasons and spending patterns in the Brazilian benefits market.
 
-> **Status:** the existing code was refined and made consistent (roadmap `EP-01`–`EP-05`). Next: a review of the transaction core against how benefits issuers really work (`EP-06`), then the setup pipeline and the transaction simulator (`EP-07`, `EP-08`). See the [roadmap](docs/planning/ROADMAP.md).
+> **Status:** the existing code was refined and made consistent (`EP-01`–`EP-05`), and the transaction core was reshaped after how benefits issuers work (`EP-06`). Next: the setup pipeline and the transaction simulator (`EP-07`, `EP-08`). See the [roadmap](docs/planning/ROADMAP.md).
 
 ## Business context
 
-In Brazil, employers give employees benefit cards with balances that can only be spent on specific things:
+In Brazil, employers give employees benefit cards whose balances can only be spent on specific things. A card belongs to a **program**, and the program fixes the **wallets** (*carteiras*) the card holds — one balance each — and the network it runs on:
 
-| Product | Code | Accepted at |
+| Program | Wallets | Network |
 |---|---|---|
-| Vale Alimentação | `VA` | Supermarkets and food retail |
-| Vale Refeição | `VR` | Restaurants, snack bars, canteens |
-| Vale Combustível | `VC` | Fuel stations |
-| Vale Farmácia | `VF` | Pharmacies |
-| Multibenefícios | `VM` | Wherever VA, VR or VF is accepted |
-| Premiação | `PR` | Incentive balance: supermarkets, restaurants, general retail |
+| Alimentação | Food | Proprietary |
+| Refeição | Meal | Proprietary |
+| Multibenefícios (rede própria) | Food, Meal, Mobility, Health, Home office, Education, Gift | Proprietary |
+| Multibenefícios (bandeirado) | Same seven wallets | Visa, Mastercard or Elo |
+| Presente / Premiação | Gift / Premium | Proprietary |
+| Combustível | Mobility | Proprietary |
 
-A card runs on one of two networks, and each authorizes differently:
+The two networks authorize differently:
 
-- **Brand networks** (Visa, Mastercard, Elo — the 4-party model: acquirer → brand → issuer) authorize by the establishment's **MCC** (Merchant Category Code).
-- **The issuer's proprietary network** (`OWN` — the 3-party model) authorizes by the establishment's **CNAE** (Brazil's economic activity code), using the most specific code prefix that has a rule.
+- **The issuer's proprietary network** (`OWN`, the 3-party model): the cardholder picks the wallet on the terminal, and the establishment's **CNAE** (Brazil's economic activity code) must accept it — the most specific code prefix with a rule decides.
+- **Brand networks** (Visa, Mastercard, Elo — the 4-party model: acquirer → brand → issuer): the brand must accept the establishment's **MCC** (Merchant Category Code), and the issuer picks the wallet from it (meal first, then food, the other wallets, gift last).
+
+Every decline carries an ISO 8583 response code and a specific reason (wrong PIN, wallet not accepted here, insufficient balance…). An approved purchase spends the wallet's balance.
 
 Details in [`docs/business-rule.md`](docs/business-rule.md).
 
@@ -36,8 +38,8 @@ generators (seeded) ──► entities ──┤
 transactions ──► validators ───────┘   approved / declined with a response code
 ```
 
-- **Generators** (`src/data_generators/`) create companies, cardholders, cards, card products, establishments and terminals with real IBGE municipalities, statuses weighted as configured, and dates that follow their parent records. One seed reproduces a whole run.
-- **Validators** (`src/validators/`) check status, dates, network rules (MCC / CNAE), balance and limits, and capture technology. Each returns the response code configured in `config/validation_rules.yaml`.
+- **Generators** (`src/data_generators/`) create companies, cardholders, cards (with their program's wallets), establishments and terminals with real IBGE municipalities, statuses weighted as configured, and dates that follow their parent records. One seed reproduces a whole run.
+- **Validators** (`src/validators/`) check status, dates, PIN, network rules (CNAE for the proprietary network; MCC and wallet routing for brands), balance and limits, and capture technology. Each returns the ISO 8583 code configured in `config/validation_rules.yaml` and a `decline_reason`.
 - **Config** (`config/`) is the source of truth for business rules; the **OLTP schema** is the source of truth for table and column names.
 
 Architecture: [`docs/technical-architecture.md`](docs/technical-architecture.md). Decisions: [`docs/adr/`](docs/adr/).
@@ -62,7 +64,7 @@ corporate-benefits-transactions/
 │   │   └── reference_data/ # Loaders for the config's reference tables, MCC and CNAE
 │   ├── extractors/         # IBGE municipalities, MCC list, Kaggle downloads
 │   ├── infrastructure/     # PostgreSQL / DuckDB connections, schema creation
-│   ├── processors/         # Reference data export
+│   ├── processors/         # Wallet balance movements, reference data export
 │   ├── utils/              # YAML, CSV and Parquet helpers
 │   └── validators/         # Authorization rules
 ├── tests/

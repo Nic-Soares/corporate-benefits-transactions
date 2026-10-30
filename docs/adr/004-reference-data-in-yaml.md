@@ -13,7 +13,7 @@ applies them, and should be readable without reading Python.
 
 | File | Holds |
 |---|---|
-| `pre_populated_data.yaml` | Reference tables, CNAE × products, terminal models, response codes |
+| `pre_populated_data.yaml` | Wallets, card programs, reference tables, CNAE × wallets, MCC × wallets, terminal models, response codes |
 | `validation_rules.yaml` | Validation order, error codes, MCC × brands, not-found codes |
 | `business_rules.yaml` | Valid statuses per entity, product and network descriptions |
 | `simulation_config.yaml` | Volumes, status weights, date ranges, usage patterns |
