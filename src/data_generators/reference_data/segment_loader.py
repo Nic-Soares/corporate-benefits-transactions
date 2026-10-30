@@ -1,5 +1,6 @@
+from typing import TypedDict
+
 import polars as pl
-from typing_extensions import TypedDict
 
 
 class SegmentTypes(TypedDict):

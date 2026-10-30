@@ -17,20 +17,20 @@ def save_df_to_csv(
     null_value: str = "",
 ) -> None:
     """
-    Salva um DataFrame Polars em formato CSV seguindo padrões ISO.
+    Save a Polars DataFrame as CSV with ISO formats.
 
     Args:
-        df: DataFrame Polars para salvar
-        file_path: Caminho do arquivo
-        separator: Separador de campos (padrão ISO: vírgula)
-        include_header: Incluir cabeçalho
-        quote_char: Caractere de aspas
-        batch_size: Tamanho do batch para escrita
-        datetime_format: Formato ISO 8601 para datetime
-        date_format: Formato ISO 8601 para date
-        time_format: Formato ISO 8601 para time
-        float_precision: Precisão para números decimais
-        null_value: Valor para representar NULL
+        df: DataFrame to save
+        file_path: Destination file; parent folders are created
+        separator: Field separator (comma by default)
+        include_header: Write the header row
+        quote_char: Quote character
+        batch_size: Rows written per batch
+        datetime_format: ISO 8601 format for datetimes
+        date_format: ISO 8601 format for dates
+        time_format: ISO 8601 format for times
+        float_precision: Decimal places for floats
+        null_value: How NULL is written
     """
     file_path = Path(file_path)
     file_path.parent.mkdir(parents=True, exist_ok=True)

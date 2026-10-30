@@ -5,12 +5,7 @@ URL = "https://servicodados.ibge.gov.br/api/v1/localidades/municipios"
 
 
 def fetch_municipios() -> pl.DataFrame:
-    """
-    Busca dados de municípios da API do IBGE.
-
-    Returns:
-        pl.DataFrame: DataFrame com dados expandidos dos municípios
-    """
+    """Every Brazilian municipality from the IBGE API, with its regions and UF flattened."""
     response = requests.get(URL, timeout=60)
     response.raise_for_status()
 
