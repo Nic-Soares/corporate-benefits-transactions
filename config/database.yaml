@@ -12,9 +12,7 @@ olap_duck:
   read_only: false
   schema:
     dimensions: ./database/olap_duck/01_dimensions.sql
-    entities: ./database/olap_duck/02_entities.sql
-    facts: ./database/olap_duck/03_facts.sql
-    # views: ./database/olap_duck/04_views.sql
+    facts: ./database/olap_duck/02_facts.sql
 
 performance:
   memory_limit: 8GB
