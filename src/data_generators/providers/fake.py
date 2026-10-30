@@ -42,10 +42,15 @@ def sha256(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
 
+def weighted_choice(setting: str) -> str:
+    """A key of `generation_settings.<setting>`, drawn with its value as weight."""
+    distribution = SETTINGS[setting]
+    return random.choices(list(distribution), weights=list(distribution.values()))[0]
+
+
 def status(entity: str) -> str:
     """A status drawn from `generation_settings.<entity>_status_distribution`."""
-    distribution = SETTINGS[f"{entity}_status_distribution"]
-    return random.choices(list(distribution), weights=list(distribution.values()))[0]
+    return weighted_choice(f"{entity}_status_distribution")
 
 
 def relative_date(spec: str) -> date:
@@ -55,6 +60,12 @@ def relative_date(spec: str) -> date:
     amount, unit = int(spec[1:-1]), spec[-1]
     days = amount * 365 if unit == "y" else amount
     return reference_date - timedelta(days=days)
+
+
+def amount_between(setting: str) -> float:
+    """A value in `generation_settings.<setting>` ({min, max}), rounded to cents."""
+    bounds = SETTINGS[setting]
+    return round(random.uniform(bounds["min"], bounds["max"]), 2)
 
 
 def date_between(start: date, end: date) -> date:
