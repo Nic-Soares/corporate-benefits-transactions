@@ -313,26 +313,26 @@ What the project models today against how the market works. Priority: **must** (
 | # | Topic | Today | In the market | Priority |
 |---|---|---|---|---|
 | 1 | **Products vs. wallets** | Six "products" (`VA, VR, VC, VF, VM, PR`) on a card; `VM` Multibenefícios is one of them | A card belongs to a **program** and holds one or more **wallets** (*carteiras*). Mono-product programs (Food, Meal) have one wallet; the multi-benefit program has several (Food, Meal, Mobility, Health & wellness, Home office, Education, Gift). Multi-benefit is a card, not a wallet | must |
-| 2 | **Network per program** | Each card draws `OWN`, Visa, Mastercard or Elo at random | The network is a property of the program: most programs run on the issuer's own network (3-party); a multi-benefit program may run on one market brand (4-party). A card never "picks" a brand | must |
+| 2 | **Network per program** | Each card draws `OWN`, Visa, Mastercard or Elo at random | The network is a property of the program: most programs run on the issuer's own network (3-party); a multi-benefit program may run on a market brand — Visa, Mastercard or Elo (4-party). A card never "picks" a brand | must |
 | 3 | **Wallet chosen at purchase** | The transaction samples a random card product | 3-party: the cardholder chooses the wallet on the terminal (food / meal / other). 4-party: the issuer picks it from the MCC, in a priority order (meal → food → other closed wallets → gift), skipping paused or empty wallets | must |
-| 4 | **Balance lifecycle** | `current_balance` drawn at random | Balance comes from the employer's **credit orders** (usually monthly, on a scheduled day) and goes down with each purchase. Credits can expire or be blocked after a period with no new credit; unspent balance is breakage. `balance_history` should hold credits, purchases, reversals, transfers and expiries | must |
+| 4 | **Balance lifecycle** | `current_balance` drawn at random | Balance comes from the employer's **credit orders** (usually monthly, on a scheduled day) and goes down with each purchase. Credits can expire or be blocked after a period with no new credit; unspent balance is breakage. `balance_history` should hold credits, purchases, reversals and expiries | must |
 | 5 | **Response codes** | Own numbering; `55`–`58` reused for temporal checks | ISO 8583 codes are the market's language: `51` insufficient funds, `55` wrong PIN, `54` expired card, `57` not permitted to cardholder, `58` not permitted to terminal, `61` amount limit, `65` frequency limit, `14` invalid card, `05` do not honor. Wrong PIN and "establishment registered under another category" are among the most common declines and aren't modeled | must |
 | 6 | **Limits** | Daily and monthly amount per card product | A wallet has a daily amount limit **and a daily transaction count**; monthly credit caps per wallet | should |
-| 7 | **PAT vs. Auxílio** | Not modeled | The employer's regime (public law) changes the rules: Food ↔ Meal transfers only outside the PAT; under the PAT (Decree 12.712/2025) the establishment fee is capped at 3.6% and reimbursement is due within 15 days | should |
-| 8 | **Establishment settlement** | Not modeled | Every approved purchase becomes a reimbursement to the establishment: gross amount, fee (MDR), net amount, payment date | should |
-| 9 | **Transaction types** | Purchase only | Purchase, reversal / cancellation, wallet-to-wallet transfer, credit; in 4-party, cash withdrawal on the gift wallet with a fee and limits. Channels: card present (chip, contactless, wallets), e-commerce, virtual card | should |
+| 9 | **Transaction types** | Purchase only | Purchase, reversal / cancellation, credit; in 4-party, cash withdrawal on the gift wallet with a fee and limits. Channels: card present (chip, contactless, wallets), e-commerce, virtual card | should |
 | 10 | **Usage patterns** | Uniform: any card, any terminal, any time in 30 days | Meal on weekdays around lunch, near work; food in larger tickets after the credit day; fuel spread through the week. `usage_patterns` in the config already describes this and nothing reads it | should |
 | 11 | **Company segments and size** | `Public`, `Corporate`, `Middle`, `SME`, `High SME`; cardholders per company fixed | SME, Middle, Corporate and Public; the segment follows the number of employees, which sets how many cardholders a company has | should |
 | 12 | **Establishment acceptance** | CNAE prefix × product, checked at each purchase | On the proprietary network the issuer **accredits** the establishment for specific wallets (from its CNAE) and curates the network; market acquirers' terminals only capture | could |
 | 13 | **Card formats** | Every card nominal | Non-nominal reusable cards tied to a company credit pool (first day, temporary staff); virtual cards | could |
 | 14 | **Negative balance** | Impossible | Offline or forced transactions can leave a wallet negative; it's written off after a long period without credits | could |
 
+**Out of scope** (Nicolas, 2026-10-30): fees and establishment payments — the PAT/Auxílio rules on fees, reimbursement and transfers (#7) and establishment settlement (#8) are not part of this project.
+
 ### ST-06.2 — Decisions (Nicolas)
 
-- [ ] Product model (#1): adopt **programs + wallets**? Which programs enter the dataset (proposal: Food, Meal, Multi-benefit 3-party, Multi-benefit 4-party, Gift, Premium, Fuel)?
-- [ ] Market brand for 4-party (#2): one brand (Elo, as most issuers' multi-benefit) or keep Visa / Mastercard too (other issuers use them)?
-- [ ] Response codes (#5): move to ISO 8583, keeping the not-found codes in the `9x` range?
-- [ ] Scope: all "must" now and "should" in `EP-08`, or all "should" here too?
+- [x] Product model (#1): **programs + wallets** — agreed. Programs: Food, Meal, Multi-benefit 3-party, Multi-benefit 4-party, Gift, Premium, Fuel
+- [x] Market brands for 4-party (#2): **keep Visa, Mastercard and Elo**
+- [x] Response codes (#5): **ISO 8583**, the card industry standard; not-found codes stay in the `9x` range
+- [ ] Scope: the five "must" items here, and the "should" items (#6, #9, #10, #11) here too or in the simulator (`EP-08`)?
 
 ### ST-06.3 — Model changes (after the decisions)
 
