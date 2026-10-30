@@ -10,7 +10,7 @@
 | Epic | Status | Where the work lives |
 |---|---|---|
 | `EP-01` Baseline and toolchain | ✅ Done — merged into `develop` 2026-10-30 | code (`pyproject.toml`, `docker-compose.yaml`) |
-| `EP-02` Safety net (tests + CI) | Not started | code (`tests/`, `.github/`) |
+| `EP-02` Safety net (tests + CI) | ✅ Done — merged into `develop` 2026-10-30; CI runs after the first push | code (`tests/`, `.github/`) |
 | `EP-03` Clean up existing code | Not started | code (`src/`) |
 | `EP-04` Config and model consistency | Not started | `config/`, `database/` |
 | `EP-05` Documentation | Not started | `README.md`, `docs/` |
@@ -144,21 +144,25 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 
 ### ST-02.1 — Existing tests running
 
-- [ ] Configure `pytest` in `pyproject.toml`
-- [ ] Mark tests that need the network (`test_ibge_api.py`) or Docker (`test_pg_connection.py`) with markers (`network`, `db`) and leave them out of the default run
-- [ ] Make `test_company_generator.py` pass
-- [ ] Fill in or delete `test_cardholder_generator.py`
+- [x] Configure `pytest` in `pyproject.toml` (dev dependency)
+- [x] Mark tests that need the network (`test_ibge_api.py`) or Docker (`test_pg_connection.py`) with markers (`network`, `db`); the default run leaves them out. Run them with `uv run pytest -m network` / `-m db`
+- [x] `test_company_generator.py`, `test_ibge_api.py`, `test_pg_connection.py` rewritten from print-scripts into assertions (the IBGE one used to `pip install pyarrow` on import; the Postgres one imported `src.common`)
+- [x] `test_cardholder_generator.py` filled in
+- [x] `tests/conftest.py`: an offline `municipios_df` fixture, so the generator tests don't call the IBGE API
 
 ### ST-02.2 — Minimum coverage before the cleanup
 
-- [ ] One test per validator in `src/validators/` (one approved case + one declined case) — locks the behavior before `EP-03`
-- [ ] One smoke test per entity generator (generates N rows, expected columns, no nulls where they aren't allowed)
+- [x] One smoke test per entity generator (company, cardholder, card, card product, establishment, terminal)
+- [x] `tests/test_brazil_provider.py`: CPF/CNPJ check digits over 1,000 values each
+- [x] `tests/test_imports.py`: every module in `src/` (outside `notebooks/`) imports; the known-broken ones are strict `xfail`, so fixing one in `EP-03` fails the run until its entry is removed
+- Moved to `EP-03`: tests for `src/validators/`. They can't lock today's behavior because none of it runs — `status_validators.py` reads an undefined `validation_rules`, the others use pandas syntax or fail on import. Each validator gets its tests when it is fixed (`ST-03.1`)
+- Result: 46 passed, 7 xfailed (known bugs, each pointing to its `EP-03` story); `-m network` 1 passed + 1 xfailed; `-m db` 1 passed against Postgres 18
 
 ### ST-02.3 — CI
 
-- [ ] GitHub Actions: `ruff format --check`, `pytest` (without the `network`/`db` markers), using `astral-sh/setup-uv`
+- [x] `.github/workflows/ci.yml`: `uv sync --locked`, `ruff format --check`, `pytest` (without `network`/`db`), on push to `main`/`develop` and on pull requests. Runs on GitHub after the first push
 - [ ] `ruff check` joins CI when `EP-03` brings the findings to zero (115 left after `ST-01.5`)
-- [ ] Dependabot for `uv` and GitHub Actions (weekly, minor/patch grouped)
+- [x] Dependabot (`.github/dependabot.yml`): `uv`, GitHub Actions, and the Postgres image in `docker-compose.yaml`, weekly, minor/patch grouped
 
 ---
 
@@ -168,12 +172,17 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 
 ### ST-03.1 — Validators
 
+- [ ] `status_validators.py` reads `validation_rules`, which is never defined or loaded — every function raises `NameError` when called
+- [ ] Tests for each validator as it is fixed (approved + declined case), moved here from `ST-02.2`
 - [ ] `business_rules_validators.py`: keep one definition of each function, remove loose module-level code
 - [ ] Migrate `src/validators/*.py` from pandas syntax to polars
 - [ ] Standardize the return value (`{'passed', 'error_code'}`) and align error codes with `pre_populated_data.yaml → response_codes`
 
 ### ST-03.2 — Generators
 
+- [ ] `card_generator.py`: `Card` calls `_generate_card_hash`, which doesn't exist — no card can be generated (`test_cards` is xfail)
+- [ ] `cardholder_generator.py`: the CPF is generated but `to_dict()` leaves it out
+- [ ] Statuses differ between generators: establishments use `ATIVA/INATIVA/SUSPENSA/BAIXADA`, the rest `active/inactive/…` — align with `business_rules.yaml → status_options`
 - [ ] Choose between `simple_*_generator` and `*_generator`; delete the other
 - [ ] Use `mimesis` everywhere (drop `faker` from `transaction_generator.py`)
 - [ ] Configurable seed for every generator (reproducible dataset)
@@ -189,7 +198,8 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 
 - [ ] `mcc_and_cnae_loader.py` imports `src.extractors.mastercard_mcc_api` — point it to `src.extractors.mcc_extractor` or restore the module
 - [ ] `schema_creator.py` and `tests/test_pg_connection.py` import `src.common.*` — point them to `src.infrastructure.database.*`
-- [ ] Every module in `src/` imports cleanly (test in `EP-02` style)
+- [ ] `ibge_municipalities.py`: the UF comes from the microrregião, which the API leaves null for Boa Esperança do Norte (MT, 2024) — take it from the região imediata instead (`test_every_municipio_has_a_uf` is xfail)
+- [ ] `tests/test_imports.py` has no `KNOWN_BROKEN` entries left
 
 ---
 
