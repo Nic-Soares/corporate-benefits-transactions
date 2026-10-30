@@ -13,9 +13,10 @@ from src.data_generators.entities.establishment_generator import generate_establ
 from src.data_generators.entities.terminal_generator import generate_terminals
 from src.data_generators.entities.transaction_generator import generate_single_transaction
 from src.data_generators.providers import fake
-from src.utils.read_yamls import load_business_rules
+from src.utils.read_yamls import load_business_rules, load_pre_populated_data
 
 STATUS_OPTIONS = load_business_rules()["status_options"]
+REFERENCE = load_pre_populated_data()
 
 
 def _schema_columns(table: str) -> list[str]:
@@ -38,27 +39,22 @@ def _chain(municipios_df):
         companies, cardholders_per_company=5
     )
     cards = CardGenerator(cardholders).generate_cards_as_dataframe(80)
-    products = pl.DataFrame({"id": ["VA", "VR", "VC"]})
+    products = pl.DataFrame({"id": [p["id"] for p in REFERENCE["products"]]})
     card_products = generate_card_products(cards, products)
     establishments = generate_establishments(
         40,
-        df_cnae=pl.DataFrame({"subclasse_id": ["5611201", "4711302", "4731800", "9999999"]}),
+        df_cnae=pl.DataFrame(
+            {"subclasse_id": ["5611201", "4711302", "4731800", "4771701", "9999999"]}
+        ),
         df_mcc=pl.DataFrame({"mcc_code": ["5812", "5411"]}),
         municipios_df=municipios_df,
-        cnae_products_mapping={
-            "5611": ["VR", "GF"],
-            "5611201": ["VR"],
-            "4711": ["VA"],
-            "4731": ["VC"],
-        },
+        cnae_products_mapping=REFERENCE["cnae_products"],
     )
     terminals = generate_terminals(
         60,
         establishments,
-        acquirers_df=pl.DataFrame({"id": ["CIE", "RED"], "name": ["Cielo", "Rede"]}),
-        business_data={
-            "terminal_models_by_acquirer": {"Cielo": ["POS Cielo LIO"], "Rede": ["TEF Rede"]}
-        },
+        acquirers_df=pl.DataFrame({"id": [a["id"] for a in REFERENCE["acquirers"]]}),
+        business_data=REFERENCE,
     )
     return {
         "companies": companies,
@@ -138,22 +134,25 @@ def test_card_products_are_distinct_per_card(tables):
 def test_establishments(tables):
     establishments = tables["establishments"]
     # 85% (34 of 40) take a CNAE that accepts a product
-    assert establishments.head(34)["main_cnae"].is_in(["5611201", "4711302", "4731800"]).all()
+    accepting = ["5611201", "4711302", "4731800", "4771701"]
+    assert establishments.head(34)["main_cnae"].is_in(accepting).all()
     category = dict(establishments.select("main_cnae", "category").unique().iter_rows())
     assert category["5611201"] == "restaurant"
     assert category["4711302"] == "supermarket"
     assert category["4731800"] == "gas_station"
+    assert category["4771701"] == "pharmacy"
 
 
 def test_terminals(tables):
-    model_by_acquirer = dict(
-        tables["terminals"].select("acquirer_id", "model").unique().iter_rows()
-    )
-    assert model_by_acquirer == {"CIE": "POS Cielo LIO", "RED": "TEF Rede"}
-    assert dict(tables["terminals"].select("model", "type").unique().iter_rows()) == {
-        "POS Cielo LIO": "POS",
-        "TEF Rede": "TEF",
+    """Model and type come from the acquirer's list in pre_populated_data.yaml."""
+    allowed = {
+        (acquirer, model["model"], model["type"])
+        for acquirer, models in REFERENCE["terminal_models_by_acquirer"].items()
+        for model in models
     }
+    used = set(tables["terminals"].select("acquirer_id", "model", "type").iter_rows())
+    assert used <= allowed
+    assert len({acquirer for acquirer, _, _ in used}) > 1
 
 
 def test_transaction(tables):

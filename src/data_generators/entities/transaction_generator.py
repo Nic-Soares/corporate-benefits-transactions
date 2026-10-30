@@ -4,8 +4,9 @@ from datetime import datetime, timedelta
 import polars as pl
 
 from src.data_generators.providers import fake
+from src.utils.read_yamls import load_pre_populated_data
 
-CAPTURE_TYPES = ["chip", "magnetic_stripe", "contactless", "nfc"]
+CAPTURE_TYPES = [t["code"] for t in load_pre_populated_data()["transaction_technologies"]]
 
 
 def transaction_amount(max_amount: float = 1000, scale: float = 250) -> float:
