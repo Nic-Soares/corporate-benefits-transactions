@@ -15,15 +15,6 @@ SUPPORTED_CAPTURES = {
 DEFAULT_CAPTURES = {"chip", "magnetic_stripe"}
 
 
-def validate_terminal_acquirer_match(
-    transaction: dict[str, Any], terminals_df: pl.DataFrame
-) -> dict[str, Any]:
-    """Only checks the terminal exists: there is no terminal × modality compatibility data yet."""
-    if find_one(terminals_df, id=transaction["terminal_id"]) is None:
-        return fail(NOT_FOUND["terminal"])
-    return PASS
-
-
 def validate_capture_type_support(
     transaction: dict[str, Any], terminals_df: pl.DataFrame
 ) -> dict[str, Any]:
