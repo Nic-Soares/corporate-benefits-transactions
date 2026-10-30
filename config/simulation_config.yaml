@@ -3,7 +3,7 @@
 # Parameters of the data generation and the transaction simulation
 # =====================================
 
-# Volumes to generate — Not read by the code yet (EP-06)
+# Volumes to generate — Not read by the code yet (EP-07)
 data_volumes:
   companies: 15
   cardholders: 1200
@@ -14,7 +14,7 @@ data_volumes:
   transactions: 100
 
 
-# Target approval rates — Not read by the code yet (EP-07)
+# Target approval rates — Not read by the code yet (EP-08)
 approval_rates:
   overall: 0.92                  # 92% approved overall
   by_network:
@@ -93,7 +93,7 @@ generation_settings:
     max: 5
 
 
-# Usage patterns — Not read by the code yet (EP-07)
+# Usage patterns — Not read by the code yet (EP-08)
 usage_patterns:
   # Peak hours per establishment category
   peak_hours_by_category:

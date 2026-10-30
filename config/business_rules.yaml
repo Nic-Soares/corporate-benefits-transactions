@@ -81,7 +81,7 @@ product_acceptance_rules:
 # =====================================
 # Commission (MDR) per modality
 # =====================================
-# Not read by the code yet (EP-07).
+# Not read by the code yet (EP-08).
 commission_rules:
   OWN:
     commission_rate: 0.0
@@ -133,7 +133,7 @@ status_options:
 # =====================================
 # Capture technologies: which need a physical card
 # =====================================
-# Not read by the code yet (EP-07).
+# Not read by the code yet (EP-08).
 transaction_technology_rules:
   CHIP:
     requires_physical_card: true

@@ -4,7 +4,7 @@ A synthetic dataset of Brazilian corporate benefits card transactions — meal, 
 
 The goal is a public dataset on Kaggle for studying approval rates, decline reasons and spending patterns in the Brazilian benefits market.
 
-> **Status:** the existing code was refined and made consistent (roadmap `EP-01`–`EP-05`). The setup pipeline and the transaction simulator are next (`EP-06`, `EP-07`). See the [roadmap](docs/planning/ROADMAP.md).
+> **Status:** the existing code was refined and made consistent (roadmap `EP-01`–`EP-05`). Next: a review of the transaction core against how benefits issuers really work (`EP-06`), then the setup pipeline and the transaction simulator (`EP-07`, `EP-08`). See the [roadmap](docs/planning/ROADMAP.md).
 
 ## Business context
 
@@ -89,7 +89,7 @@ uv run python -m src.infrastructure.schema.schema_creator
 
 Step by step, with troubleshooting: [`docs/runbooks/local-setup.md`](docs/runbooks/local-setup.md).
 
-There is no single entrypoint yet: `src/main.py` (`setup`, `simulate`, `export`) is planned in `EP-06`.
+There is no single entrypoint yet: `src/main.py` (`setup`, `simulate`, `export`) is planned in `EP-07`.
 
 ## Development workflow
 

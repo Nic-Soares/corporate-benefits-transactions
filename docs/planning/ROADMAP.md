@@ -14,11 +14,12 @@
 | `EP-03` Clean up existing code | ✅ Done — merged into `develop` 2026-10-30 | code (`src/`) |
 | `EP-04` Config and model consistency | ✅ Done — merged into `develop` 2026-10-30 | `config/`, `database/` |
 | `EP-05` Documentation | ✅ Done — merged into `develop` 2026-10-30 | `README.md`, `docs/` |
-| `EP-06` Setup pipeline (reference data + entities) | Not started | code (`src/main.py`, `src/processors/`) |
-| `EP-07` Transaction simulator | Not started | code (`src/processors/transaction_simulator.py`) |
-| `EP-08` OLAP: Postgres → DuckDB | Not started | code + `database/olap_duck/` |
-| `EP-09` Dataset export and quality | Not started | code + `data/final_datasets/` |
-| `EP-10` Kaggle release | Not started | Kaggle |
+| `EP-06` Transaction core review | 🟡 Assessment done 2026-10-30 — waiting on Nicolas's decisions (§EP-06) | `docs/`, then `config/`, `database/`, `src/` |
+| `EP-07` Setup pipeline (reference data + entities) | Not started — after `EP-06`, which changes the model | code (`src/main.py`, `src/processors/`) |
+| `EP-08` Transaction simulator | Not started | code (`src/processors/transaction_simulator.py`) |
+| `EP-09` OLAP: Postgres → DuckDB | Not started | code + `database/olap_duck/` |
+| `EP-10` Dataset export and quality | Not started | code + `data/final_datasets/` |
+| `EP-11` Kaggle release | Not started | Kaggle |
 
 ### Git workflow
 
@@ -30,7 +31,7 @@
 
 ## 1. Assumptions
 
-1. **Nothing new until the roadmap is settled.** `EP-01` to `EP-05` only refine what already exists (upgrade, clean up, align, document). New code starts in `EP-06`.
+1. **Nothing new until the roadmap is settled.** `EP-01` to `EP-05` only refine what already exists (upgrade, clean up, align, document). New code starts in `EP-07`.
 2. **Epic order is execution order.** `EP-01` and `EP-02` are prerequisites for everything else: without a pinned toolchain and running tests, the `EP-03` cleanup has no safety net.
 3. **Polars is the DataFrame library.** Code still written with pandas syntax (`.empty`, `.iloc`) is migrated, not the other way around (`EP-03`).
 4. **`config/*.yaml` is the source of truth for business rules.** Where `docs/` disagrees with the YAML, the docs change (`EP-04`).
@@ -42,7 +43,7 @@
 - **Language:** everything in English — code, comments, docs, README. Applied in `ST-03.3` (code) and `EP-05` (docs).
 - **Package manager:** `uv` + `pyproject.toml` + `uv.lock`. `requirements.txt` goes away (`ST-01.2`).
 - **Python:** `>=3.14`.
-- **dbt:** removed from the dependencies in `ST-01.2`; whether to adopt it is decided again in `EP-08`.
+- **dbt:** removed from the dependencies in `ST-01.2`; whether to adopt it is decided again in `EP-09`.
 - **Products:** `VA, VR, VC, VF, VM, PR` (the `simulation_config.yaml` list). `GF` leaves `pre_populated_data.yaml` and the docs in `ST-04.1`.
 
 ---
@@ -93,8 +94,10 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
                                                                                   │
                     ┌─────────────────────────────────────────────────────────────┘
                     ▼
-              EP-06 Setup ──► EP-07 Simulator ──► EP-08 OLAP ──► EP-09 Export ──► EP-10 Kaggle
+              EP-06 Core review ──► EP-07 Setup ──► EP-08 Simulator ──► EP-09 OLAP ──► EP-10 Export ──► EP-11 Kaggle
 ```
+
+`EP-06` goes before the setup pipeline because what it changes — products, networks, balances — shapes the tables `EP-07` loads.
 
 `EP-05` can run alongside `EP-03`/`EP-04`, but closes only after them (the README describes the final state).
 
@@ -199,11 +202,11 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 - [x] One source of randomness: `src/data_generators/providers/fake.py` (`random` + shared mimesis providers). `fake.seed(n, today=…)` reproduces a whole run, transactions included, across processes. `faker`, `numpy` and `python-ulid` removed from the dependencies
 - [x] Polars `unique()` and `sample()` made deterministic (row order and seed) — a seeded run differed without it
 - [x] Tests: `tests/test_entity_generators.py` chains the generators as the setup will (schema columns, statuses, unique ids, date order, reproducibility)
-- Not done here, noted for realism (`EP-07`): the MCC is drawn independently of the CNAE, and mimesis' pt-BR `Finance.company()` returns US company names
+- Not done here, noted for realism (`EP-08`): the MCC is drawn independently of the CNAE, and mimesis' pt-BR `Finance.company()` returns US company names
 
 ### ST-03.3 — Structure
 
-- [x] `src/notebooks/` deleted: scratch scripts with hard-coded Linux paths. `test_reference_data.py` became `tests/test_reference_loaders.py`; the pipeline sketch in `postgres_manipulation.py` is already in `docs/data-strategy.md` (and is `EP-06`)
+- [x] `src/notebooks/` deleted: scratch scripts with hard-coded Linux paths. `test_reference_data.py` became `tests/test_reference_loaders.py`; the pipeline sketch in `postgres_manipulation.py` is already in `docs/data-strategy.md` (and is `EP-07`)
 - [x] Dead code deleted: `src/utils/data_queries.py` (queried tables that don't exist, e.g. `dim_municipios`), `municipality_data_importer.py` + `read_data_files.py` (a second, unused municipality source from a shapefile — the project uses the IBGE API). `geopandas` and its native stack (`pandas`, `numpy`, `shapely`, `pyproj`, `pyogrio`) left the dependencies
 - [x] Portuguese functions, variables, comments, docstrings and messages in `src/` translated to English (the functions were renamed in `ST-03.1`/`ST-03.2`). Business data values (product names, response descriptions) stay in Portuguese — they're Brazilian-market terms
 - [x] `typing_extensions` → `typing` (`TypedDict`); `typing-extensions` left the dependencies
@@ -216,7 +219,7 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 - [x] `tests/test_pg_connection.py` → fixed in `EP-02`
 - [x] `load_and_save_reference_data.py` ran (network calls included) on import → `main()`
 - [x] `config/database.yaml` pointed DuckDB to `02_entities.sql` and `03_facts.sql`, which don't exist → `01_dimensions.sql` + `02_facts.sql` (was `ST-04.1`); `postgres_manager.py` read the config relative to the working directory
-- [x] `src/adapters/` deleted: `mcc_modality_adapter.py` used pandas without importing it, `cnae_product_adapter.py` was empty, and nothing called them. Loading `mcc_modalities` from `mcc_acceptance_rules` is `EP-06`
+- [x] `src/adapters/` deleted: `mcc_modality_adapter.py` used pandas without importing it, `cnae_product_adapter.py` was empty, and nothing called them. Loading `mcc_modalities` from `mcc_acceptance_rules` is `EP-07`
 - [x] `ibge_municipalities.py`: the UF falls back to the região imediata when the microrregião is null — all 5,571 municipalities now have one of the 27 UFs
 - [x] `tests/test_imports.py` has no `KNOWN_BROKEN` entries left: every module in `src/` imports
 
@@ -248,7 +251,7 @@ Found while fixing the validators (`ST-03.1`); settled 2026-10-30 (Nicolas confi
 - [x] Statuses in English everywhere, listed in `business_rules.yaml → status_options` (now also `card_product` and `terminal`); `canceled` → `cancelled`; terminal `maintenance` declines as `22`; card product `suspended`/`cancelled` → `23`
 - [x] Proprietary network = modality `OWN` (type `proprietary_network` in `pre_populated_data.yaml`), not a null `modality_id`. Matches the business: the 3-party model (issuer's own network, authorized by the establishment's CNAE) vs. the 4-party model (acquirer → brand, authorized by MCC)
 - [x] CNAE rule: the longest prefix wins — confirmed
-- [x] `terminal_acquirer_match` (code `31`) removed: it checked nothing. The real rule (an acquirer only takes the proprietary network once integrated with it) needs acquirer × network data → idea for `EP-07`
+- [x] `terminal_acquirer_match` (code `31`) removed: it checked nothing. The real rule (an acquirer only takes the proprietary network once integrated with it) needs acquirer × network data → idea for `EP-08`
 - [x] `tests/test_validators.py::test_codes_are_documented`: every code a validator can return has a description
 - Generators still emit the old statuses (`ATIVA`…, cardholder `suspended`) → `ST-03.2`
 
@@ -259,7 +262,7 @@ Found while fixing the validators (`ST-03.1`); settled 2026-10-30 (Nicolas confi
 - [x] `cnae_products.cnae_description` optional: the 4-digit prefixes (`4711`) aren't codes in the CNAE dataset, so they have no description to load
 - [x] `tests/test_schema.py`: the OLTP schema on in-memory DuckDB takes the config's reference data and every generated table, with the foreign keys enforced (and a dangling reference is rejected); the OLAP schema takes the reference dimensions; a `db` test applies the OLTP schema to Postgres 18
 - [x] `pyarrow` added: DuckDB needs it to read Polars DataFrames (`duckdb_manager.insert_dataframe` too)
-- For `EP-06`: `companies.parent_id` references `companies`, so holdings load before their branches
+- For `EP-07`: `companies.parent_id` references `companies`, so holdings load before their branches
 
 ---
 
@@ -297,44 +300,90 @@ Found while fixing the validators (`ST-03.1`); settled 2026-10-30 (Nicolas confi
 
 ---
 
-## EP-06 — Setup pipeline
+## EP-06 — Transaction core review
+
+**Goal:** the transaction core — who issues, what the card holds, where it's accepted, how the balance moves, why a purchase is declined — behaves like a real Brazilian benefits issuer, not only a consistent one. **Dependencies:** `EP-05`. **Size:** L (~1–2 weeks, depending on the decisions below).
+
+**Method:** compare the model with the business reference of an issuer (an internal knowledge base, **kept out of this repository**). Only market-wide concepts and public rules enter the repo — the 3-party / 4-party models, wallets, the PAT law. No issuer names, internal systems, parameters or limits: every number in `config/` stays synthetic.
+
+### ST-06.1 — Assessment (2026-10-30)
+
+What the project models today against how the market works. Priority: **must** (the dataset would be wrong without it), **should** (clearly more realistic), **could** (nice to have).
+
+| # | Topic | Today | In the market | Priority |
+|---|---|---|---|---|
+| 1 | **Products vs. wallets** | Six "products" (`VA, VR, VC, VF, VM, PR`) on a card; `VM` Multibenefícios is one of them | A card belongs to a **program** and holds one or more **wallets** (*carteiras*). Mono-product programs (Food, Meal) have one wallet; the multi-benefit program has several (Food, Meal, Mobility, Health & wellness, Home office, Education, Gift). Multi-benefit is a card, not a wallet | must |
+| 2 | **Network per program** | Each card draws `OWN`, Visa, Mastercard or Elo at random | The network is a property of the program: most programs run on the issuer's own network (3-party); a multi-benefit program may run on one market brand (4-party). A card never "picks" a brand | must |
+| 3 | **Wallet chosen at purchase** | The transaction samples a random card product | 3-party: the cardholder chooses the wallet on the terminal (food / meal / other). 4-party: the issuer picks it from the MCC, in a priority order (meal → food → other closed wallets → gift), skipping paused or empty wallets | must |
+| 4 | **Balance lifecycle** | `current_balance` drawn at random | Balance comes from the employer's **credit orders** (usually monthly, on a scheduled day) and goes down with each purchase. Credits can expire or be blocked after a period with no new credit; unspent balance is breakage. `balance_history` should hold credits, purchases, reversals, transfers and expiries | must |
+| 5 | **Response codes** | Own numbering; `55`–`58` reused for temporal checks | ISO 8583 codes are the market's language: `51` insufficient funds, `55` wrong PIN, `54` expired card, `57` not permitted to cardholder, `58` not permitted to terminal, `61` amount limit, `65` frequency limit, `14` invalid card, `05` do not honor. Wrong PIN and "establishment registered under another category" are among the most common declines and aren't modeled | must |
+| 6 | **Limits** | Daily and monthly amount per card product | A wallet has a daily amount limit **and a daily transaction count**; monthly credit caps per wallet | should |
+| 7 | **PAT vs. Auxílio** | Not modeled | The employer's regime (public law) changes the rules: Food ↔ Meal transfers only outside the PAT; under the PAT (Decree 12.712/2025) the establishment fee is capped at 3.6% and reimbursement is due within 15 days | should |
+| 8 | **Establishment settlement** | Not modeled | Every approved purchase becomes a reimbursement to the establishment: gross amount, fee (MDR), net amount, payment date | should |
+| 9 | **Transaction types** | Purchase only | Purchase, reversal / cancellation, wallet-to-wallet transfer, credit; in 4-party, cash withdrawal on the gift wallet with a fee and limits. Channels: card present (chip, contactless, wallets), e-commerce, virtual card | should |
+| 10 | **Usage patterns** | Uniform: any card, any terminal, any time in 30 days | Meal on weekdays around lunch, near work; food in larger tickets after the credit day; fuel spread through the week. `usage_patterns` in the config already describes this and nothing reads it | should |
+| 11 | **Company segments and size** | `Public`, `Corporate`, `Middle`, `SME`, `High SME`; cardholders per company fixed | SME, Middle, Corporate and Public; the segment follows the number of employees, which sets how many cardholders a company has | should |
+| 12 | **Establishment acceptance** | CNAE prefix × product, checked at each purchase | On the proprietary network the issuer **accredits** the establishment for specific wallets (from its CNAE) and curates the network; market acquirers' terminals only capture | could |
+| 13 | **Card formats** | Every card nominal | Non-nominal reusable cards tied to a company credit pool (first day, temporary staff); virtual cards | could |
+| 14 | **Negative balance** | Impossible | Offline or forced transactions can leave a wallet negative; it's written off after a long period without credits | could |
+
+### ST-06.2 — Decisions (Nicolas)
+
+- [ ] Product model (#1): adopt **programs + wallets**? Which programs enter the dataset (proposal: Food, Meal, Multi-benefit 3-party, Multi-benefit 4-party, Gift, Premium, Fuel)?
+- [ ] Market brand for 4-party (#2): one brand (Elo, as most issuers' multi-benefit) or keep Visa / Mastercard too (other issuers use them)?
+- [ ] Response codes (#5): move to ISO 8583, keeping the not-found codes in the `9x` range?
+- [ ] Scope: all "must" now and "should" in `EP-08`, or all "should" here too?
+
+### ST-06.3 — Model changes (after the decisions)
+
+- [ ] `products` → wallets; new `card_programs` (wallets, network, regime rules); `cards.program_id`; `card_products` → `card_wallets`
+- [ ] Network from the program; validators route by the program's network type (ADR-003 updated)
+- [ ] Wallet selection: chosen by the cardholder (3-party) or by MCC priority (4-party)
+- [ ] Balances from credit orders; `balance_history` operation types; credit expiry
+- [ ] ISO 8583 response codes; PIN and category declines
+- [ ] Schema, DBML, config, generators, validators and tests updated together (ADR-006)
+- [ ] ADR-007 — the transaction core model
+
+---
+
+## EP-07 — Setup pipeline
 
 **Dependencies:** `EP-05`. **Size:** M (~2–3 days).
 
-### ST-06.1 — Reference data
+### ST-07.1 — Reference data
 
 - [ ] `src/processors/load_and_save_reference_data.py` loads every pre-populated table into Postgres
 - [ ] Idempotent: running it twice doesn't duplicate rows
 
-### ST-06.2 — Entities
+### ST-07.2 — Entities
 
 - [ ] Generate companies → cardholders → cards → card products → establishments → terminals, at the volumes in `simulation_config.yaml → data_volumes`
 - [ ] Write to Postgres respecting the foreign keys — parents first, and holdings before branches (`companies.parent_id`)
 - [ ] Load `mcc_modalities` from `validation_rules.yaml → mcc_acceptance_rules` and `cnae_products` from `pre_populated_data.yaml → cnae_products` (description from the CNAE dataset when the code is a full class or subclass)
 
-### ST-06.3 — Entrypoint
+### ST-07.3 — Entrypoint
 
 - [ ] `src/main.py` with subcommands: `setup`, `simulate`, `export`
 - [ ] Progress logging and row counts per table
 
 ---
 
-## EP-07 — Transaction simulator
+## EP-08 — Transaction simulator
 
-**Dependencies:** `EP-06`. **Size:** L (~1 week).
+**Dependencies:** `EP-07`. **Size:** L (~1 week).
 
-### ST-07.1 — Authorization flow
+### ST-08.1 — Authorization flow
 
 - [ ] `transaction_simulator.py`: transaction → validations in `validation_order` → authorization → `balance_history` when approved
 - [ ] Branded network checks MCC; proprietary network checks CNAE
 
-### ST-07.2 — Realism
+### ST-08.2 — Realism
 
 - [ ] Approval rates calibrated from `approval_rates` (overall, per network, per product)
 - [ ] Usage patterns from `usage_patterns` (hour, weekday, average ticket per product)
 - [ ] Balance and daily/monthly limits respected over time
 
-### ST-07.3 — Fraud scenarios
+### ST-08.3 — Fraud scenarios
 
 - [ ] Define the scenarios (e.g. rapid repeated attempts, use outside the usual region)
 - [ ] From `ST-03.2`: draw the MCC from the CNAE (a restaurant CNAE can get a gas-station MCC today); Brazilian company names (mimesis pt-BR returns US ones)
@@ -343,9 +392,9 @@ Found while fixing the validators (`ST-03.1`); settled 2026-10-30 (Nicolas confi
 
 ---
 
-## EP-08 — OLAP: Postgres → DuckDB
+## EP-09 — OLAP: Postgres → DuckDB
 
-**Dependencies:** `EP-07`. **Size:** M (~2–3 days).
+**Dependencies:** `EP-08`. **Size:** M (~2–3 days).
 
 - [ ] Decide dbt × plain SQL (ADR)
 - [ ] ETL from OLTP into `dim_*` and `fact_transactions`
@@ -353,9 +402,9 @@ Found while fixing the validators (`ST-03.1`); settled 2026-10-30 (Nicolas confi
 
 ---
 
-## EP-09 — Dataset export and quality
+## EP-10 — Dataset export and quality
 
-**Dependencies:** `EP-08`. **Size:** S (~1 day).
+**Dependencies:** `EP-09`. **Size:** S (~1 day).
 
 - [ ] Export dimensions and facts to `data/final_datasets/*.parquet`
 - [ ] Quality checks: foreign keys, nulls, approval rates vs. config
@@ -363,9 +412,9 @@ Found while fixing the validators (`ST-03.1`); settled 2026-10-30 (Nicolas confi
 
 ---
 
-## EP-10 — Kaggle release
+## EP-11 — Kaggle release
 
-**Dependencies:** `EP-09`. **Size:** S (~1 day).
+**Dependencies:** `EP-10`. **Size:** S (~1 day).
 
 - [ ] Dataset page (description, benefits-market context, license)
 - [ ] Example notebook
