@@ -2,7 +2,7 @@ import polars as pl
 import pytest
 
 from src.data_generators.entities.card_generator import CardGenerator
-from src.data_generators.entities.card_product_generator import generate_card_products
+from src.data_generators.entities.card_wallet_generator import generate_card_wallets
 from src.data_generators.entities.cardholder_generator import CardholderGenerator
 from src.data_generators.entities.company_generator import CompanyGenerator
 from src.data_generators.entities.establishment_generator import generate_establishments
@@ -33,8 +33,7 @@ def build_tables(municipios_df):
             companies, cardholders_per_company=5
         )
         cards = CardGenerator(cardholders).generate_cards_as_dataframe(80)
-        products = pl.DataFrame({"id": [p["id"] for p in REFERENCE["products"]]})
-        card_products = generate_card_products(cards, products)
+        card_wallets = generate_card_wallets(cards)
         establishments = generate_establishments(
             40,
             df_cnae=pl.DataFrame(
@@ -42,7 +41,7 @@ def build_tables(municipios_df):
             ),
             df_mcc=pl.DataFrame({"mcc_code": ["5812", "5411"]}),
             municipios_df=municipios_df,
-            cnae_products_mapping=REFERENCE["cnae_products"],
+            cnae_wallets_mapping=REFERENCE["cnae_wallets"],
         )
         terminals = generate_terminals(
             60,
@@ -54,7 +53,7 @@ def build_tables(municipios_df):
             "companies": companies,
             "cardholders": cardholders,
             "cards": cards,
-            "card_products": card_products,
+            "card_wallets": card_wallets,
             "establishments": establishments,
             "terminals": terminals,
         }

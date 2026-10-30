@@ -3,33 +3,85 @@
 # Fixed reference data loaded into the database
 # =====================================
 
+# Wallets: the balances a card can hold
 # =====================================
-# Products
-# =====================================
-products:
-  - id: "VA"
-    name: "Vale Alimentação"
+wallets:
+  - id: "FOOD"
+    name: "Alimentação"
     category: "Beneficio"
 
-  - id: "VR"
-    name: "Vale Refeição"
+  - id: "MEAL"
+    name: "Refeição"
     category: "Beneficio"
 
-  - id: "VC"
-    name: "Vale Combustível"
+  - id: "MOBILITY"
+    name: "Mobilidade"
     category: "Beneficio"
 
-  - id: "VF"
-    name: "Vale Farmácia"
+  - id: "HEALTH"
+    name: "Saúde e Bem-estar"
     category: "Beneficio"
 
-  - id: "VM"
-    name: "Multibenefícios"
+  - id: "HOME_OFFICE"
+    name: "Home Office"
     category: "Beneficio"
 
-  - id: "PR"
+  - id: "EDUCATION"
+    name: "Educação"
+    category: "Beneficio"
+
+  - id: "GIFT"
+    name: "Presente"
+    category: "Incentivo"
+
+  - id: "PREMIUM"
     name: "Premiação"
     category: "Incentivo"
+
+# =====================================
+# Card programs: what a card is. The program fixes the wallets on the card
+# and the network it runs on:
+#   proprietary_network — 3-party: the issuer's own network authorizes by
+#     CNAE, and the cardholder picks the wallet on the terminal
+#   brand — 4-party: acquirer → brand → issuer; the issuer picks the wallet
+#     from the MCC (wallet_priority in validation_rules.yaml)
+# =====================================
+card_programs:
+  - id: "FOOD"
+    name: "Alimentação"
+    network_type: "proprietary_network"
+    wallets: ["FOOD"]
+
+  - id: "MEAL"
+    name: "Refeição"
+    network_type: "proprietary_network"
+    wallets: ["MEAL"]
+
+  - id: "MULTI_3P"
+    name: "Multibenefícios (rede própria)"
+    network_type: "proprietary_network"
+    wallets: ["FOOD", "MEAL", "MOBILITY", "HEALTH", "HOME_OFFICE", "EDUCATION", "GIFT"]
+
+  - id: "MULTI_4P"
+    name: "Multibenefícios (bandeirado)"
+    network_type: "brand"
+    brands: ["VISA", "MASTERCARD", "ELO"]
+    wallets: ["FOOD", "MEAL", "MOBILITY", "HEALTH", "HOME_OFFICE", "EDUCATION", "GIFT"]
+
+  - id: "GIFT"
+    name: "Presente"
+    network_type: "proprietary_network"
+    wallets: ["GIFT"]
+
+  - id: "PREMIUM"
+    name: "Premiação"
+    network_type: "proprietary_network"
+    wallets: ["PREMIUM"]
+
+  - id: "FUEL"
+    name: "Combustível"
+    network_type: "proprietary_network"
+    wallets: ["MOBILITY"]
 
 # =====================================
 # Transaction modalities: the proprietary network and the brands
@@ -125,73 +177,72 @@ terminal_models_by_acquirer:
     - model: "Safra TEF"
       type: "TEF"
 
+# CNAE × wallets: what the proprietary network accepts at each establishment
 # =====================================
-# CNAE × products: what the proprietary network authorizes
-# =====================================
-cnae_products:
-  # Longest prefix wins: a 7-digit subclass entry overrides its 4-digit class.
-  # VM (multi-benefit) is accepted wherever VA, VR or VF is; PR (incentive) at
-  # supermarkets, restaurants and general retail.
+cnae_wallets:
+  # Longest prefix wins: a 7-digit subclass entry overrides its 4-digit class,
+  # so each entry lists every wallet accepted at that level.
 
   # Supermarkets and hypermarkets
-  "4711": ["VA", "VM", "PR"]
-  "47113": ["VA", "VM", "PR"]
-  "4711301": ["VA", "VM", "PR"]
-  "4711302": ["VA", "VM", "PR"]
+  "4711": ["FOOD", "GIFT", "PREMIUM"]
 
   # Food retail
-  "4721": ["VA", "VM"]        # bakeries, dairy, cold cuts
-  "4722": ["VA", "VM"]        # butchers, fishmongers
-  "4723": ["VA", "VM"]        # beverages
-  "4724": ["VA", "VM"]        # fruit and vegetables
-  "4729": ["VA", "VM"]        # other food
-  "4729602": ["VA", "VM", "PR"]
-  "4729699": ["VA", "VM"]
+  "4721": ["FOOD", "GIFT"]       # bakeries, dairy, cold cuts
+  "4722": ["FOOD", "GIFT"]       # butchers, fishmongers
+  "4723": ["FOOD", "GIFT"]       # beverages
+  "4724": ["FOOD", "GIFT"]       # fruit and vegetables
+  "4729": ["FOOD", "GIFT"]       # other food
 
   # Restaurants and food services
-  "5611": ["VR", "VM", "PR"]
-  "56112": ["VR", "VM"]
-  "5611201": ["VR", "VM"]     # restaurants
-  "5611203": ["VR", "VM"]     # snack bars
-  "5611204": ["VR", "VM"]     # bars
-  "5611205": ["VR", "VM"]     # bars with entertainment
-  "5612": ["VR", "VM"]
-  "5612100": ["VR", "VM"]     # street food
-  "5620": ["VR", "VM"]
-  "56201": ["VR", "VM"]
-  "5620101": ["VR", "VM"]     # catering for companies
-  "5620102": ["VR", "VM"]     # catering for events
-  "5620103": ["VR", "VM"]     # canteens
-  "5620104": ["VR", "VM"]     # home delivery
+  "5611": ["MEAL", "GIFT"]       # restaurants, snack bars, bars
+  "5612": ["MEAL"]               # street food
+  "5620": ["MEAL"]               # catering and canteens
 
-  # Fuel stations
-  "4731": ["VC"]
-  "47318": ["VC"]
-  "4731800": ["VC"]
+  # Mobility
+  "4731": ["MOBILITY"]           # fuel stations
+  "4520": ["MOBILITY"]           # vehicle repair and car wash
+  "4530": ["MOBILITY"]           # vehicle parts
+  "5223": ["MOBILITY"]           # parking
 
-  # Pharmacies
-  "4771": ["VF", "VM", "PR"]
-  "4771701": ["VF", "VM", "PR"]  # without compounding
-  "4771702": ["VF", "VM", "PR"]  # with compounding
-  "4771703": ["VF", "VM", "PR"]  # homeopathic
+  # Health and wellness
+  "4771": ["HEALTH", "GIFT", "PREMIUM"]  # pharmacies
+  "4773": ["HEALTH"]             # medical and orthopedic items
+  "4774": ["HEALTH", "PREMIUM"]  # optical goods
+  "8630": ["HEALTH"]             # outpatient care
+  "9313": ["HEALTH"]             # gyms
+
+  # Home office
+  "4751": ["HOME_OFFICE", "GIFT", "PREMIUM"]  # IT equipment
+  "4752": ["HOME_OFFICE", "GIFT", "PREMIUM"]  # telecom equipment
+  "4753": ["HOME_OFFICE", "GIFT", "PREMIUM"]  # home appliances
+  "4754": ["HOME_OFFICE", "GIFT", "PREMIUM"]  # furniture and lighting
+
+  # Education
+  "4761": ["EDUCATION", "GIFT", "PREMIUM"]    # books, stationery
+  "8599": ["EDUCATION"]          # courses and training
 
   # General retail
-  "4751": ["PR"]              # IT equipment
-  "4752": ["PR"]              # telecom equipment
-  "4753": ["PR"]              # home appliances
-  "4754": ["PR"]              # furniture and lighting
-  "4755": ["PR"]              # textiles and household linen
-  "4756": ["PR"]              # musical instruments
-  "4757": ["PR"]              # parts for home appliances
-  "4761": ["PR"]              # books, newspapers, stationery
-  "4762": ["PR"]              # music and video recordings
-  "4763": ["PR"]              # toys, sports, recreation
-  "4772": ["PR"]              # cosmetics and perfume
-  "4773": ["PR"]              # medical and orthopedic items
-  "4774": ["PR"]              # optical goods
-  "4781": ["PR"]              # clothing and accessories
-  "4782": ["PR"]              # footwear and leather goods
-  "4789": ["PR"]              # other new goods
+  "4755": ["GIFT", "PREMIUM"]    # textiles and household linen
+  "4756": ["GIFT", "PREMIUM"]    # musical instruments
+  "4762": ["GIFT", "PREMIUM"]    # music and video recordings
+  "4763": ["GIFT", "PREMIUM"]    # toys, sports, recreation
+  "4772": ["GIFT", "PREMIUM"]    # cosmetics and perfume
+  "4781": ["GIFT", "PREMIUM"]    # clothing and accessories
+  "4782": ["GIFT", "PREMIUM"]    # footwear and leather goods
+  "4789": ["GIFT", "PREMIUM"]    # other new goods
+
+# =====================================
+# MCC × wallets: on a brand (4-party) card the issuer picks the wallet from
+# the establishment's MCC. GIFT is open: it takes any MCC the brand accepts.
+# =====================================
+mcc_wallets:
+  FOOD: ["5411", "5422", "5441", "5451", "5462", "5499"]
+  MEAL: ["5811", "5812", "5814"]
+  MOBILITY: ["5541", "5542", "5531", "5532", "5533", "7523", "7542", "7531", "7538", "4111", "4121", "4131"]
+  HEALTH: ["5912", "5976", "8011", "8021", "8031", "8041", "8042", "8043", "8049", "8050", "8062", "8071", "8099", "7997"]
+  HOME_OFFICE: ["5712", "5722", "5732", "5734", "5045", "4814", "4816"]
+  EDUCATION: ["5942", "5943", "8211", "8220", "8241", "8244", "8249", "8299"]
+  GIFT: "any"
 
 # =====================================
 # Industry segments
@@ -273,59 +324,24 @@ transaction_technologies:
     category: digital
     name: Google Pay
 
-# =====================================
-# Response codes (descriptions are shown to Brazilian users, so they stay in Portuguese)
+# Response codes: ISO 8583, the card industry's standard. Descriptions are
+# shown to Brazilian users, so they stay in Portuguese. The specific reason
+# of a decline is in transactions.decline_reason.
 # =====================================
 response_codes:
-  # Approved
   "00": "Transação aprovada"
-  
-  # Card / cardholder
-  "13": "Cartão inativo"
-  "14": "Cartão bloqueado"
-  "15": "Cartão cancelado"
-  "16": "Portador inativo"
-  "17": "Portador desligado"
-  "54": "Cartão vencido"
-  "55": "Produto ainda não ativado"
-  "56": "Transação antes da admissão do portador"
-  
-  # Establishment
-  "18": "Empresa inativa"
-  "19": "Estabelecimento inativo"
-  "20": "Estabelecimento suspenso"
-  "21": "Estabelecimento baixado"
-  "57": "Estabelecimento ainda não credenciado"
-  
-  # Terminal / infrastructure
-  "22": "Terminal inativo"
-  "32": "Tipo de captura não suportado"
-  "58": "Terminal ainda não instalado"
-  
-  # Product / configuration
-  "23": "Produto do cartão inativo"
-  "24": "Produto desativado"
-  "25": "Modalidade desativada"
-  "26": "Adquirente desativado"
-  "27": "MCC não aceito pela modalidade"
-  "28": "CNAE não aceita o produto"
-  "29": "Regra MCC desativada"
-  "30": "Regra CNAE desativada"
-  
-  # Balance / limits
+  "03": "Estabelecimento inválido"
+  "14": "Cartão inválido"
+  "15": "Emissor inexistente"
+  "46": "Conta encerrada"
   "51": "Saldo insuficiente"
-  "61": "Limite diário excedido"
-  "62": "Limite mensal excedido"
-  
-  # Record not found
-  "92": "Cartão não encontrado"
-  "93": "Produto não habilitado no cartão"
-  "94": "Portador não encontrado"
-  "95": "Modalidade não encontrada"
-  "97": "Estabelecimento não encontrado"
-  "98": "Terminal não encontrado"
-  "99": "Adquirente não encontrado"
-
-  # System errors
-  "91": "Sistema indisponível"
+  "54": "Cartão vencido"
+  "55": "Senha incorreta"
+  "57": "Transação não permitida ao portador"
+  "58": "Transação não permitida no terminal"
+  "61": "Limite de valor excedido"
+  "62": "Cartão restrito"
+  "65": "Limite de quantidade excedido"
+  "78": "Cartão não desbloqueado"
+  "92": "Rota de autorização não encontrada"
   "96": "Erro no sistema"

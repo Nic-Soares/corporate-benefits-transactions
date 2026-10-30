@@ -9,45 +9,51 @@ config:
 flowchart TD
     Start(["main.py setup / simulate / export"]) --> Phase1{"1. Setup"}
 
-    Phase1 --> Schema["schema_creator.py<br>oltp_schema.sql → PostgreSQL (14 tables)<br>01_dimensions + 02_facts → DuckDB"]
-    Schema --> RefLoad["Load reference tables from config/<br>products, transaction_modalities, acquirers,<br>mcc_modalities, cnae_products"]
+    Phase1 --> Schema["schema_creator.py<br>oltp_schema.sql → PostgreSQL (17 tables)<br>01_dimensions + 02_facts → DuckDB"]
+    Schema --> RefLoad["Load reference tables from config/<br>wallets, card_programs, card_program_wallets,<br>transaction_modalities, acquirers,<br>cnae_wallets, mcc_wallets, mcc_modalities"]
 
     RefLoad --> Phase2{"2. Entities"}
     Phase2 --> Seed["fake.seed(n, today)"]
     Seed --> GenCompanies["Companies<br>holdings, then branches"]
     GenCompanies --> GenCardholders["Cardholders<br>admission ≥ registration"]
-    GenCardholders --> GenCards["Cards<br>modality OWN or a brand"]
-    GenCards --> GenCardProducts["Card products<br>VA, VR, VC, VF, VM, PR"]
+    GenCardholders --> GenCards["Cards<br>program by weight → network<br>OWN or Visa / Mastercard / Elo"]
+    GenCards --> GenWallets["Card wallets<br>every wallet of the program<br>starting balance + limits"]
     Seed --> GenEstab["Establishments<br>CNAE, MCC, category"]
     GenEstab --> GenTerminals["Terminals<br>model and type per acquirer"]
-    GenCardProducts --> EntitiesReady["Entities in OLTP"]
+    GenWallets --> EntitiesReady["Entities in OLTP"]
     GenTerminals --> EntitiesReady
 
     EntitiesReady --> Phase3{"3. Simulation"}
-    Phase3 --> TransGen["generate_single_transaction<br>card product + terminal + amount + capture type"]
-    TransGen --> ValStatus["Status<br>card, cardholder, establishment, terminal,<br>card product, product, modality, acquirer"]
-    ValStatus --> ValTemporal["Temporal<br>expiration, admission,<br>accreditation, installation"]
-    ValTemporal --> ValBusiness["Business rules<br>OWN: CNAE × product (longest prefix)<br>brands: MCC × brand"]
-    ValBusiness --> ValBalance["Balance and limits<br>balance, daily, monthly"]
-    ValBalance --> ValInfra["Infrastructure<br>capture technology × terminal type"]
+    Phase3 --> TransGen["generate_single_transaction<br>card + terminal + amount + capture + PIN"]
+    TransGen --> Network{"Card network?"}
+    Network -- "OWN (3-party)" --> Chosen["Cardholder picks a wallet<br>on the terminal"]
+    Network -- "brand (4-party)" --> Unrouted["Wallet empty:<br>the issuer will route it"]
+    Chosen --> ValStatus
+    Unrouted --> ValStatus
+    ValStatus["Status<br>card, cardholder, establishment, terminal,<br>wallet, modality, acquirer"] --> ValTemporal["Temporal<br>expiry, admission,<br>accreditation, installation"]
+    ValTemporal --> ValPin["Security<br>PIN (chip, stripe)"]
+    ValPin --> ValBusiness{"Business rules"}
+    ValBusiness -- OWN --> Cnae["CNAE × chosen wallet<br>(longest prefix)"]
+    ValBusiness -- brand --> Mcc["Brand × MCC<br>then route_wallet by MCC:<br>MEAL → FOOD → … → GIFT"]
+    Cnae --> ValBalance["Balance and limits<br>on that wallet"]
+    Mcc --> ValBalance
+    ValBalance --> ValInfra["Infrastructure<br>capture × terminal type"]
     ValInfra --> Decision{"All passed?"}
-    Decision -- Yes --> Approved["00 - approved"]
-    Decision -- No --> Declined["First failing code<br>13–62, 92–99"]
-    Approved --> InsertTrans["INSERT transactions + authorizations"]
+    Decision -- Yes --> Approved["00 approved"]
+    Decision -- No --> Declined["First failure:<br>ISO 8583 code + decline_reason"]
+    Approved --> Debit["balance.debit<br>wallet balance − amount<br>balance_history row"]
+    Debit --> InsertTrans["INSERT transactions + authorizations"]
     Declined --> InsertTrans
-    InsertTrans --> IsApproved{"Approved?"}
-    IsApproved -- Yes --> DeductBalance["UPDATE card_products balance<br>INSERT balance_history"]
-    IsApproved -- No --> CheckVolume
-    DeductBalance --> CheckVolume{"Target volume reached?"}
+    InsertTrans --> CheckVolume{"Target volume reached?"}
     CheckVolume -- No --> TransGen
     CheckVolume -- Yes --> Phase4{"4. Analytics"}
 
-    Phase4 --> ETL["ETL PostgreSQL → DuckDB<br>8 dimensions + fact_transactions"]
+    Phase4 --> ETL["ETL PostgreSQL → DuckDB<br>9 dimensions + fact_transactions"]
     ETL --> Export["Export Parquet"]
     Export --> End(["Kaggle dataset"])
 
     classDef planned stroke-dasharray: 5 5
-    class Start,RefLoad,EntitiesReady,TransGen,Decision,Approved,Declined,InsertTrans,IsApproved,DeductBalance,CheckVolume,ETL,Export,End planned
+    class Start,RefLoad,EntitiesReady,Decision,Approved,Declined,InsertTrans,CheckVolume,ETL,Export,End planned
     style Phase1 fill:#e3f2fd
     style Phase2 fill:#f3e5f5
     style Phase3 fill:#fce4ec

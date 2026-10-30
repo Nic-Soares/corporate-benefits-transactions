@@ -18,13 +18,13 @@
 ```
 config/*.yaml ─► reference loaders ─┐
 IBGE / MCC / CNAE ─► extractors ────┤
-                                    ├─► PostgreSQL (OLTP, 14 tables)
+                                    ├─► PostgreSQL (OLTP, 17 tables)
 seeded generators ─► entities ──────┤
                                     │
 simulator ─► validators ────────────┘
                      │
                      ▼
-        DuckDB (8 dimensions + fact_transactions) ─► Parquet ─► Kaggle
+        DuckDB (9 dimensions + fact_transactions) ─► Parquet ─► Kaggle
 ```
 
 Exists today: config, extractors, loaders, generators, validators, both schemas and the schema creator. Planned: the setup pipeline (`EP-07`), the simulator (`EP-08`), the ETL (`EP-09`), the export (`EP-10`).
@@ -33,15 +33,17 @@ Exists today: config, extractors, loaders, generators, validators, both schemas 
 
 - `database/model/*.dbml` document both models; they match the SQL column for column (checked in `ST-04.3`).
 - OLTP (`database/oltp_postgres/oltp_schema.sql`): normalized, `id` primary keys, `*_id` foreign keys, audit columns filled by the database.
-- OLAP (`database/olap_duck/`): `dim_products`, `dim_transaction_modalities`, `dim_acquirers`, `dim_cards`, `dim_cardholders`, `dim_companies`, `dim_establishments`, `dim_terminals` and `fact_transactions`.
+- OLAP (`database/olap_duck/`): `dim_wallets`, `dim_card_programs`, `dim_transaction_modalities`, `dim_acquirers`, `dim_cards`, `dim_cardholders`, `dim_companies`, `dim_establishments`, `dim_terminals` and `fact_transactions`.
 
 ## Key dependencies between tables
 
 ```
-companies → cardholders → cards → card_products
+card_programs + wallets → card_program_wallets
+companies → cardholders → cards (program, modality) → card_wallets
 establishments → terminals
-products + transaction_modalities → mcc_modalities
-products + CNAE prefixes → cnae_products
+transaction_modalities + MCC → mcc_modalities
+wallets + CNAE prefixes → cnae_wallets
+wallets + MCC → mcc_wallets
 ```
 
 ## Testing

@@ -1,56 +1,105 @@
 # Business Rules
 
-How a transaction is authorized. The rules live in `config/`; this page explains them. Codes are the response codes in `config/pre_populated_data.yaml → response_codes`.
+How a transaction is authorized. The rules live in `config/`; this page explains them. Response codes follow ISO 8583 (`config/pre_populated_data.yaml → response_codes`); every decline also records a specific `decline_reason`.
 
-## Products
+## Programs and wallets
 
-| Code | Product | Category | Accepted at (CNAE) |
+A card belongs to a **program**. The program fixes which **wallets** (*carteiras*) the card holds and which **network** it runs on. Each wallet has its own balance and limits.
+
+| Program | Name | Network | Wallets |
 |---|---|---|---|
-| `VA` | Vale Alimentação | Benefit | Supermarkets (`4711`), food retail (`4721`–`4729`) |
-| `VR` | Vale Refeição | Benefit | Restaurants and bars (`5611`), street food (`5612`), catering and canteens (`5620`) |
-| `VC` | Vale Combustível | Benefit | Fuel stations (`4731`) |
-| `VF` | Vale Farmácia | Benefit | Pharmacies (`4771`) |
-| `VM` | Multibenefícios | Benefit | Wherever VA, VR or VF is accepted |
-| `PR` | Premiação | Incentive | Supermarkets, restaurants, pharmacies and general retail (`4751`–`4789`) |
+| `FOOD` | Alimentação | Proprietary (3-party) | FOOD |
+| `MEAL` | Refeição | Proprietary (3-party) | MEAL |
+| `MULTI_3P` | Multibenefícios (rede própria) | Proprietary (3-party) | FOOD, MEAL, MOBILITY, HEALTH, HOME_OFFICE, EDUCATION, GIFT |
+| `MULTI_4P` | Multibenefícios (bandeirado) | Brand (4-party): Visa, Mastercard or Elo | FOOD, MEAL, MOBILITY, HEALTH, HOME_OFFICE, EDUCATION, GIFT |
+| `GIFT` | Presente | Proprietary (3-party) | GIFT |
+| `PREMIUM` | Premiação | Proprietary (3-party) | PREMIUM |
+| `FUEL` | Combustível | Proprietary (3-party) | MOBILITY |
 
-Source: `config/pre_populated_data.yaml → products` and `cnae_products`.
+```mermaid
+flowchart LR
+    CARD["Card"] -->|belongs to| PROGRAM["Program<br/>MULTI_3P, MULTI_4P, FOOD…"]
+    PROGRAM -->|fixes| NETWORK{"Network"}
+    PROGRAM -->|fixes| WALLETS["Wallets<br/>FOOD, MEAL, MOBILITY,<br/>HEALTH, HOME_OFFICE,<br/>EDUCATION, GIFT, PREMIUM"]
+    NETWORK -->|3-party| OWN["OWN<br/>issuer's own network"]
+    NETWORK -->|4-party| BRAND["Visa / Mastercard / Elo"]
+    CARD -->|holds one balance per| WALLETS
+```
 
-## Networks
+Source: `config/pre_populated_data.yaml → wallets`, `card_programs`.
 
-Every card has a modality (`config/pre_populated_data.yaml → transaction_modalities`):
+## The two networks
 
-| Modality | Type | Model | Authorized by |
-|---|---|---|---|
-| `OWN` | `proprietary_network` | 3-party: the issuer runs its own acceptance network | Establishment's **CNAE** × product |
-| `VISA`, `MASTERCARD`, `ELO` | `brand` | 4-party: acquirer → brand → issuer | Establishment's **MCC** × brand |
+| | Proprietary network (`OWN`, 3-party) | Brand network (Visa, Mastercard, Elo — 4-party) |
+|---|---|---|
+| Chain | Terminal → issuer | Terminal → acquirer → brand → issuer |
+| Who picks the wallet | The cardholder, on the terminal | The issuer, from the establishment's **MCC** |
+| What authorizes the place | The establishment's **CNAE** accepts that wallet | The brand accepts the MCC |
+| Rule data | `cnae_wallets` | `mcc_modalities` (MCC × brand) + `mcc_wallets` (MCC × wallet) |
 
 ### CNAE rule (proprietary network)
 
-`cnae_products` lists CNAE prefixes at several levels — a 4-digit class (`5611`), a 5-digit class with check digit (`56112`), a 7-digit subclass (`5611201`). **The longest prefix of the establishment's CNAE decides.** Example: `5611` accepts VR, VM and PR, but `5611201` (restaurants) lists only VR and VM, so PR is declined at a `5611201` restaurant.
+`cnae_wallets` lists CNAE prefixes at several levels. **The longest prefix of the establishment's CNAE decides**, so a subclass entry replaces its class's list. Example: `5611` (restaurants and bars) accepts MEAL and GIFT, but `5611201` (restaurants) lists only MEAL, so GIFT is declined at a `5611201` restaurant.
 
-- No rule for the product → `28` (CNAE doesn't accept the product)
-- Rule exists but inactive → `30`
+- The chosen wallet isn't accepted → `57`, `wallet_not_accepted_at_cnae`
+- Rule exists but inactive → `57`, `cnae_rule_inactive`
 
-### MCC rule (brands)
+### MCC rules (brand network)
 
-`validation_rules.yaml → mcc_acceptance_rules` lists, for each MCC, the brands that accept it (`E` Elo, `M` Mastercard, `V` Visa).
+1. The brand must accept the MCC (`validation_rules.yaml → mcc_acceptance_rules`, `E` Elo, `M` Mastercard, `V` Visa). Otherwise `57`, `mcc_not_accepted_by_brand`.
+2. The issuer **routes the wallet**: it walks `wallet_priority` (MEAL → FOOD → MOBILITY → HEALTH → HOME_OFFICE → EDUCATION → GIFT) and takes the first wallet that the card holds, is active, accepts the MCC (`mcc_wallets`; GIFT accepts any MCC) and has enough balance.
+   - No wallet accepts the MCC → `57`, `no_wallet_for_mcc`
+   - Some do, none with enough balance → `51`, `insufficient_balance`
 
-- No rule for the MCC × brand → `27`
-- Rule exists but inactive → `29`
+Example: a Visa multi-benefit card at a restaurant (MCC `5812`) with MEAL 20.00 and GIFT 1,000.00 buys 50.00 → MEAL can't pay, FOOD doesn't take `5812`, GIFT pays.
 
-Each rule passes the cards of the other network, so both can run on every transaction.
+## Authorization
 
-## Validation order
+`config/validation_rules.yaml → validation_order`; the first failure declines.
 
-`config/validation_rules.yaml → validation_order`. Every validator returns `{"passed", "error_code"}`.
+```mermaid
+flowchart TD
+    TX["Purchase attempt<br/>card, terminal, amount, capture, PIN"] --> S["1. Status<br/>card, cardholder, establishment,<br/>terminal, wallet, modality, acquirer"]
+    S --> T["2. Temporal<br/>expiry, admission,<br/>accreditation, installation"]
+    T --> P["3. Security<br/>PIN"]
+    P --> NET{"Network?"}
+    NET -->|OWN| CNAE["4. CNAE × chosen wallet"]
+    NET -->|brand| MCC["4. Brand × MCC,<br/>then route the wallet by MCC"]
+    CNAE --> B["5. Balance and limits<br/>on that wallet"]
+    MCC --> B
+    B --> I["6. Infrastructure<br/>capture × terminal type"]
+    I --> OK(["00 approved<br/>wallet debited"])
+    S -. fail .-> NO(["Declined<br/>ISO code + decline_reason"])
+    T -. fail .-> NO
+    P -. fail .-> NO
+    CNAE -. fail .-> NO
+    MCC -. fail .-> NO
+    B -. fail .-> NO
+    I -. fail .-> NO
+```
 
-1. **Status** — card, cardholder, establishment, terminal, card product must be active; product, modality and acquirer must be enabled. Codes `13`–`26`.
-2. **Temporal** — card not expired (`54`); transaction after the cardholder's admission (`56`), the establishment's accreditation (`57`) and the terminal's installation (`58`).
-3. **Business rules** — CNAE or MCC, above.
-4. **Balance and limits** — enough balance (`51`), daily (`61`) and monthly (`62`) limits; a limit of 0 means no limit.
-5. **Infrastructure** — the terminal type supports the capture technology (`32`): POS takes chip, stripe, contactless and wallets; TEF only chip and stripe.
+| Group | Check | ISO code | `decline_reason` |
+|---|---|---|---|
+| Status | Card inactive / blocked / cancelled | `78` / `62` / `46` | `card_inactive`, `card_blocked`, `card_cancelled` |
+| | Cardholder inactive or terminated | `62` | `cardholder_inactive`, `cardholder_terminated` |
+| | Establishment not active | `03` | `establishment_<status>` |
+| | Terminal inactive or in maintenance | `58` | `terminal_<status>` |
+| | Wallet on the card suspended or cancelled | `57` | `card_wallet_<status>` |
+| | Wallet, modality disabled / acquirer disabled | `57` / `58` | `wallet_disabled`, `modality_disabled` / `acquirer_disabled` |
+| Temporal | Card expired | `54` | `card_expired` |
+| | Before the cardholder's admission | `62` | `before_admission` |
+| | Before accreditation / installation | `03` / `58` | `before_accreditation` / `before_installation` |
+| Security | Wrong PIN (chip and stripe ask for it) | `55` | `wrong_pin` |
+| Business rules | See the networks above | `57`, `51` | |
+| Balance and limits | Balance below the amount | `51` | `insufficient_balance` |
+| | Daily / monthly limit (0 = no limit) | `61` | `daily_limit_exceeded`, `monthly_limit_exceeded` |
+| Infrastructure | TEF terminals take only chip and stripe | `58` | `capture_not_supported` |
 
-A referenced record that doesn't exist declines with its own code (`92`–`99`); a status missing from a rule's list declines with `96`.
+A referenced record that doesn't exist declines with the ISO code for that party (`14` card or cardholder, `57` wallet not on the card, `15` modality, `03` establishment, `58` terminal, `92` acquirer) and `<entity>_not_found`. A status missing from a rule's list declines with `96`.
+
+## Balance
+
+Each wallet starts the simulation with a balance (`simulation_config.yaml → generation_settings.wallet_starting_balance`). An approved purchase debits the charged wallet and writes a `balance_history` row (`src/processors/balance.py`), so a later purchase on the same wallet can be declined with `51`. Where the balance comes from (employer credit orders) is out of scope.
 
 ## Statuses
 
@@ -59,7 +108,11 @@ Valid statuses per entity are in `config/business_rules.yaml → status_options`
 | Entity | Statuses |
 |---|---|
 | Card | `active`, `inactive`, `blocked`, `cancelled` |
-| Card product | `active`, `suspended`, `cancelled` |
+| Card wallet | `active`, `suspended`, `cancelled` |
 | Cardholder | `active`, `inactive`, `terminated` |
 | Establishment | `active`, `inactive`, `suspended`, `terminated` |
 | Terminal | `active`, `inactive`, `maintenance` |
+
+## Out of scope
+
+Fees and establishment payments (MDR, reimbursement, settlement), the employer side (credit orders, credit expiry) and wallet-to-wallet transfers.
