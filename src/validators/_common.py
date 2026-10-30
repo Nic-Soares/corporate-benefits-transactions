@@ -11,21 +11,19 @@ from typing import Any
 
 import polars as pl
 
-from src.utils.read_yamls import load_validation_rules
+from src.utils.read_yamls import load_pre_populated_data, load_validation_rules
 
 RULES = load_validation_rules()
 
-# Referenced record missing. Not in validation_rules.yaml yet (EP-04).
-NOT_FOUND = {
-    "card": "99",
-    "card_product": "99",
-    "cardholder": "98",
-    "modality": "98",
-    "establishment": "97",
-    "terminal": "96",
-    "acquirer": "96",
+NOT_FOUND: dict[str, str] = RULES["not_found"]
+UNKNOWN_STATUS: str = RULES["unknown_status"]
+
+# Proprietary network (3-party, authorized by CNAE) vs. brands (4-party, by MCC)
+PROPRIETARY_MODALITIES = {
+    modality["id"]
+    for modality in load_pre_populated_data()["transaction_modalities"]
+    if modality["type"] == "proprietary_network"
 }
-UNKNOWN_STATUS = "99"
 
 PASS: dict[str, Any] = {"passed": True, "error_code": None}
 

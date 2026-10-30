@@ -9,11 +9,11 @@ from src.validators._common import NOT_FOUND, PASS, RULES, UNKNOWN_STATUS, fail,
 STATUS_RULES = RULES["status_validations"]
 
 
-def _check_status(value: str, rule_name: str, default: str = UNKNOWN_STATUS) -> dict[str, Any]:
+def _check_status(value: str, rule_name: str) -> dict[str, Any]:
     rule = STATUS_RULES[rule_name]
     if value == rule["required_value"]:
         return PASS
-    return fail(rule["error_codes"].get(value, default))
+    return fail(rule["error_codes"].get(value, UNKNOWN_STATUS))
 
 
 def _check_active(record: dict[str, Any], rule_name: str) -> dict[str, Any]:
@@ -65,9 +65,7 @@ def validate_card_product_status(
     )
     if card_product is None:
         return fail(NOT_FOUND["card_product"])
-    # Any status other than active (suspended, cancelled…) declines as inactive
-    inactive = STATUS_RULES["card_product_status"]["error_codes"]["inactive"]
-    return _check_status(card_product["status"], "card_product_status", default=inactive)
+    return _check_status(card_product["status"], "card_product_status")
 
 
 def validate_product_active(
@@ -85,8 +83,6 @@ def validate_modality_active(
     card = find_one(cards_df, id=transaction["card_id"])
     if card is None:
         return fail(NOT_FOUND["card"])
-    if card["modality_id"] is None:
-        return PASS  # proprietary-network card: no modality to check
     modality = find_one(modalities_df, id=card["modality_id"])
     if modality is None:
         return fail(NOT_FOUND["modality"])

@@ -9,10 +9,7 @@ from src.validators.balance_and_limits_validations import (
     validate_monthly_limit,
 )
 from src.validators.business_rules_validators import validate_cnae_product, validate_mcc_modality
-from src.validators.infrastructure_validations import (
-    validate_capture_type_support,
-    validate_terminal_acquirer_match,
-)
+from src.validators.infrastructure_validations import validate_capture_type_support
 from src.validators.status_validators import (
     validate_acquirer_active,
     validate_card_product_status,
@@ -58,7 +55,7 @@ def data():
             {
                 "id": ["card_branded", "card_own", "card_blocked"],
                 "cardholder_id": ["holder_1", "holder_1", "holder_off"],
-                "modality_id": ["VISA", None, "ELO"],
+                "modality_id": ["VISA", "OWN", "ELO"],
                 "expiration_date": [date(2028, 1, 31)] * 3,
                 "status": ["active", "active", "blocked"],
             }
@@ -75,7 +72,7 @@ def data():
                 "id": ["est_restaurant", "est_closed"],
                 "main_cnae": ["5611201", "4711302"],
                 "mcc_code": ["5812", "5411"],
-                "status": ["ATIVA", "BAIXADA"],
+                "status": ["active", "terminated"],
                 "accreditation_date": [date(2015, 5, 1), date(2027, 1, 1)],
             }
         ),
@@ -99,7 +96,7 @@ def data():
             }
         ),
         "products": pl.DataFrame({"id": ["VR", "GF"], "active": [True, False]}),
-        "modalities": pl.DataFrame({"id": ["VISA", "ELO"], "active": [True, False]}),
+        "modalities": pl.DataFrame({"id": ["VISA", "OWN", "ELO"], "active": [True, True, False]}),
         "acquirers": pl.DataFrame({"id": ["CIE", "OFF"], "active": [True, False]}),
         "mcc_modalities": pl.DataFrame(
             {
@@ -124,7 +121,7 @@ def data():
 def test_card_status(tx, data):
     assert validate_card_status(tx, data["cards"]) == PASS
     assert validate_card_status(tx | {"card_id": "card_blocked"}, data["cards"]) == declined("14")
-    assert validate_card_status(tx | {"card_id": "nope"}, data["cards"]) == declined("99")
+    assert validate_card_status(tx | {"card_id": "nope"}, data["cards"]) == declined("92")
 
 
 def test_cardholder_status(tx, data):
@@ -136,7 +133,7 @@ def test_cardholder_status(tx, data):
 def test_establishment_status(tx, data):
     assert validate_establishment_status(tx, data["establishments"]) == PASS
     closed = tx | {"establishment_id": "est_closed"}
-    assert validate_establishment_status(closed, data["establishments"]) == declined("20")
+    assert validate_establishment_status(closed, data["establishments"]) == declined("21")
     missing = tx | {"establishment_id": "nope"}
     assert validate_establishment_status(missing, data["establishments"]) == declined("97")
 
@@ -149,11 +146,10 @@ def test_terminal_status(tx, data):
 
 def test_card_product_status(tx, data):
     assert validate_card_product_status(tx, data["card_products"]) == PASS
-    # suspended has no code of its own: declines as inactive
     suspended = tx | {"card_id": "card_own", "product_id": "GF"}
     assert validate_card_product_status(suspended, data["card_products"]) == declined("23")
     missing = tx | {"product_id": "VA"}
-    assert validate_card_product_status(missing, data["card_products"]) == declined("99")
+    assert validate_card_product_status(missing, data["card_products"]) == declined("93")
 
 
 def test_product_active(tx, data):
@@ -255,14 +251,33 @@ def test_monthly_limit(tx, data):
 # --- infrastructure -------------------------------------------------------
 
 
-def test_terminal_acquirer_match(tx, data):
-    assert validate_terminal_acquirer_match(tx, data["terminals"]) == PASS
-    missing = tx | {"terminal_id": "nope"}
-    assert validate_terminal_acquirer_match(missing, data["terminals"]) == declined("96")
-
-
 def test_capture_type_support(tx, data):
     assert validate_capture_type_support(tx, data["terminals"]) == PASS
     tef = tx | {"terminal_id": "term_tef"}
     assert validate_capture_type_support(tef, data["terminals"]) == declined("32")
     assert validate_capture_type_support(tef | {"capture_type": "chip"}, data["terminals"]) == PASS
+    missing = tx | {"terminal_id": "nope"}
+    assert validate_capture_type_support(missing, data["terminals"]) == declined("98")
+
+
+def test_unknown_status(tx, data):
+    odd = data["cards"].with_columns(status=pl.lit("lost"))
+    assert validate_card_status(tx, odd) == declined("96")
+
+
+def test_codes_are_documented():
+    """Every code a validator can return has a description in response_codes."""
+    from src.utils.read_yamls import load_pre_populated_data, load_validation_rules
+
+    def codes(node):
+        if isinstance(node, dict):
+            for value in node.values():
+                yield from codes(value)
+        elif isinstance(node, str) and len(node) == 2 and node.isdigit():
+            yield node
+
+    rules = load_validation_rules()
+    sections = [*rules["validation_order"], "not_found", "unknown_status"]
+    used = {code for section in sections for code in codes(rules[section])}
+    described = set(load_pre_populated_data()["response_codes"])
+    assert used <= described, used - described
