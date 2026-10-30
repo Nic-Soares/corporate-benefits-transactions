@@ -4,10 +4,17 @@
 -- No timestamps: read-only, append-only system
 -- ============================================================================
 
-CREATE TABLE IF NOT EXISTS dim_products (
+CREATE TABLE IF NOT EXISTS dim_wallets (
   id VARCHAR PRIMARY KEY,
   name VARCHAR NOT NULL,
   category VARCHAR NOT NULL,
+  active BOOLEAN DEFAULT true
+);
+
+CREATE TABLE IF NOT EXISTS dim_card_programs (
+  id VARCHAR PRIMARY KEY,
+  name VARCHAR NOT NULL,
+  network_type VARCHAR NOT NULL,
   active BOOLEAN DEFAULT true
 );
 
@@ -27,7 +34,8 @@ CREATE TABLE IF NOT EXISTS dim_acquirers (
 CREATE TABLE IF NOT EXISTS dim_cards (
   id VARCHAR PRIMARY KEY,
   cardholder_id VARCHAR NOT NULL,
-  modality_id VARCHAR,
+  program_id VARCHAR NOT NULL,
+  modality_id VARCHAR NOT NULL,
   card_type VARCHAR NOT NULL,
   expiration_date DATE NOT NULL,
   issue_date DATE NOT NULL,
