@@ -218,3 +218,9 @@ __marimo__/
 *.patch
 .vscode
 .idea
+
+# Data files (downloaded or generated); keep the folder skeleton
+/data/raw/**/*
+!/data/raw/**/
+/data/final_datasets/*
+!/data/**/.gitkeep
