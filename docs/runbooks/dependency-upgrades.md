@@ -53,9 +53,8 @@ grep the code for every removed or renamed API.
 1. Change `.python-version` and `requires-python` in `pyproject.toml`.
 2. `uv sync` — `uv` downloads the interpreter if it isn't installed.
 3. If a package has no wheel for the new version, `uv sync` falls back to a
-   source build and fails without the native toolchain (`geopandas` →
-   `pyogrio`/`pyproj`/`shapely`, `psycopg[binary]`). Wait for the wheel or
-   stay on the previous version.
+   source build and fails without the native toolchain (`psycopg[binary]`,
+   `duckdb`, `polars`). Wait for the wheel or stay on the previous version.
 
 ## 6. Commit
 

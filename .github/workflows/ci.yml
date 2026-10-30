@@ -18,9 +18,11 @@ jobs:
       # Python version comes from .python-version
       - run: uv sync --locked
 
+      - name: Lint
+        run: uv run ruff check
+
       - name: Format
         run: uv run ruff format --check
 
-      # `ruff check` joins once EP-03 brings the findings to zero
       - name: Tests
         run: uv run pytest

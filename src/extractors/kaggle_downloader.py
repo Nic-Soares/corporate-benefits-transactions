@@ -22,13 +22,13 @@ def download_kaggle_dataset(dataset: str, dest_dir: str = None) -> None:
     temp_path = kagglehub.dataset_download(dataset)
     print("Path to dataset files:", temp_path)
 
-    # Copiar arquivos somente se não existirem
+    # Copy only the files that aren't there yet
     for filename in os.listdir(temp_path):
         src_file = os.path.join(temp_path, filename)
         dest_file = os.path.join(dest_dir, filename)
 
         if os.path.exists(dest_file):
-            print(f"Arquivo já existe, pulando: {dest_file}")
+            print(f"Already exists, skipping: {dest_file}")
         else:
             shutil.copy2(src_file, dest_file)
-            print(f"Arquivo copiado para: {dest_file}")
+            print(f"Copied to: {dest_file}")

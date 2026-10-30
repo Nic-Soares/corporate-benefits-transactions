@@ -4,7 +4,7 @@ import polars as pl
 
 
 def load_products(pre_populate_reference: dict[str, Any]) -> pl.DataFrame:
-    """Carrega DataFrame de produtos a partir do dicionário business_rules."""
+    """Products from `pre_populated_data.yaml`."""
     products = [
         {
             "id": product["id"],

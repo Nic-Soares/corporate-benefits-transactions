@@ -7,11 +7,11 @@ from src.data_generators.providers import fake
 
 # Business segments for companies
 COMPANY_SEGMENTS = [
-    "Public",  # Setor Público
-    "Corporate",  # Grande Empresa / Corporativo
-    "Middle",  # Média Empresa
-    "SME",  # Pequena/Média Empresa
-    "High SME",  # PME de Alto Crescimento
+    "Public",
+    "Corporate",
+    "Middle",
+    "SME",
+    "High SME",
 ]
 
 

@@ -32,33 +32,30 @@ def extract_cnae_data() -> pl.DataFrame:
 
 def extract_mcc_data() -> pl.DataFrame:
     """
-    Extrai e processa dados de MCC da API.
+    MCCs from the public list, with the brands that accept each one.
 
     Returns:
-        pl.DataFrame: DataFrame com colunas mcc_code, description, valid_payment_brands
+        pl.DataFrame: columns mcc_code, description, valid_payment_brands
+            (from `validation_rules.yaml → mcc_acceptance_rules`)
     """
     from src.utils.read_yamls import load_validation_rules
 
-    # Buscar dados da API
     df = fetch_mcc_codes()
 
-    # Carregar regras de aceitação do YAML
     validation_rules = load_validation_rules()
     mcc_acceptance_rules = validation_rules.get("mcc_acceptance_rules", {})
 
-    # Selecionar apenas as colunas necessárias e renomear
     df_processed = df.select(
         [pl.col("mcc").alias("mcc_code"), pl.col("irs_description").alias("description")]
     )
 
-    # Remover duplicadas, mantendo o menor MCC
+    # One MCC per description: the lowest
     df_processed = (
-        df_processed.sort("mcc_code").unique(  # Ordenar por MCC crescente
+        df_processed.sort("mcc_code").unique(
             subset=["description"], keep="first", maintain_order=True
-        )  # Manter primeira ocorrência (menor MCC)
+        )  # keep the lowest MCC per description
     )
 
-    # Adicionar coluna valid_payment_brands usando o dicionário do YAML
     df_processed = df_processed.with_columns(
         [
             pl.col("mcc_code")
@@ -67,7 +64,6 @@ def extract_mcc_data() -> pl.DataFrame:
         ]
     )
 
-    # Aplicar tipagem
     df_processed = df_processed.with_columns(
         [
             pl.col("mcc_code").cast(pl.Utf8),

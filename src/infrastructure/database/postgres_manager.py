@@ -12,10 +12,10 @@ db_password = os.environ.get("DB_PASSWORD")
 
 
 def connect_pg_db():
-    """Conecta ao banco de dados PostgreSQL."""
+    """Connect to the PostgreSQL database (credentials from .env)."""
     pg_config = load_database()["oltp_postgres"]
     if not pg_config:
-        print("❌ Configurações do PostgreSQL não carregadas. Não é possível conectar.")
+        print("❌ PostgreSQL settings not loaded; cannot connect.")
         return None
     try:
         conn = psycopg.connect(
@@ -25,17 +25,17 @@ def connect_pg_db():
             user=db_user,
             password=db_password,
         )
-        print("✅ Conectado ao PostgreSQL com sucesso!")
+        print("✅ Connected to PostgreSQL.")
         return conn
     except Exception as e:
-        print(f"❌ Erro ao conectar ao PostgreSQL: {e}")
+        print(f"❌ Failed to connect to PostgreSQL: {e}")
         return None
 
 
 def execute_pg_query(conn, query, params=None):
-    """Executa uma query SQL no PostgreSQL."""
+    """Run a SQL query on PostgreSQL."""
     if not conn:
-        print("❌ Conexão PostgreSQL não estabelecida.")
+        print("❌ No PostgreSQL connection.")
         return None
 
     try:
@@ -45,56 +45,56 @@ def execute_pg_query(conn, query, params=None):
                 return cur.fetchall()
             else:
                 conn.commit()
-                print("✅ Query executada com sucesso.")
+                print("✅ Query executed.")
                 return True
     except Exception as e:
         conn.rollback()
-        print(f"❌ Erro ao executar query no PostgreSQL: {e}")
+        print(f"❌ Query failed on PostgreSQL: {e}")
         return False
 
 
 def execute_pg_sql_file(conn, file_path):
-    """Executa um arquivo SQL no PostgreSQL."""
+    """Run a SQL file on PostgreSQL."""
     if not conn:
-        print("❌ Conexão PostgreSQL não estabelecida.")
+        print("❌ No PostgreSQL connection.")
         return False
     if not os.path.exists(file_path):
-        print(f"❌ Arquivo SQL não encontrado: {file_path}")
+        print(f"❌ SQL file not found: {file_path}")
         return False
 
-    print(f"📄 Executando arquivo SQL PostgreSQL: {file_path}")
+    print(f"📄 Running SQL file on PostgreSQL: {file_path}")
     try:
         with open(file_path) as file:
             sql_content = file.read()
             # psycop.connect() automatically commits DDL statements, but DML needs explicit commit
             # execute_pg_query handles commit for DML
             execute_pg_query(conn, sql_content)
-        print(f"✅ Concluído: {file_path}")
+        print(f"✅ Done: {file_path}")
         return True
     except Exception as e:
-        print(f"❌ Erro ao executar arquivo SQL PostgreSQL: {e}")
+        print(f"❌ SQL file failed on PostgreSQL: {e}")
         return False
 
 
 def import_csv_to_pg(conn, csv_file_path, table_name, columns=None):
     """
-    Importa dados de um arquivo CSV para uma tabela no PostgreSQL usando COPY.
+    Import a CSV file into a PostgreSQL table with COPY.
 
     Args:
-        conn: Objeto de conexão com o PostgreSQL.
-        csv_file_path: Caminho para o arquivo CSV a ser importado.
-        table_name: Nome da tabela no PostgreSQL para onde os dados serão importados.
-        columns: Lista de nomes de colunas no PostgreSQL, se diferente da ordem no CSV.
+        conn: PostgreSQL connection.
+        csv_file_path: CSV file to import.
+        table_name: Destination table.
+        columns: Destination columns, when they differ from the CSV order.
                  Se None, assume a ordem das colunas no CSV.
     """
     if not conn:
-        print("❌ Conexão PostgreSQL não estabelecida.")
+        print("❌ No PostgreSQL connection.")
         return False
     if not os.path.exists(csv_file_path):
-        print(f"❌ Arquivo CSV não encontrado: {csv_file_path}")
+        print(f"❌ CSV file not found: {csv_file_path}")
         return False
 
-    print(f"📥 Importando {csv_file_path} para a tabela {table_name} no PostgreSQL...")
+    print(f"📥 Importing {csv_file_path} into {table_name}...")
     try:
         with conn.cursor() as cur:
             # Construindo o comando COPY
@@ -106,11 +106,11 @@ def import_csv_to_pg(conn, csv_file_path, table_name, columns=None):
             with open(csv_file_path) as f:
                 cur.copy_expert(copy_command, f)
             conn.commit()
-            print(f"✅ Dados de {csv_file_path} importados com sucesso para {table_name}.")
+            print(f"✅ Imported {csv_file_path} into {table_name}.")
             return True
     except Exception as e:
         conn.rollback()  # Rollback in case of error during copy
-        print(f"❌ Erro ao importar CSV para PostgreSQL: {e}")
+        print(f"❌ CSV import into PostgreSQL failed: {e}")
         return False
 
 
