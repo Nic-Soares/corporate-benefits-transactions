@@ -3,8 +3,9 @@ import os
 import psycopg
 from dotenv import load_dotenv
 
-load_dotenv()
 from src.utils.read_yamls import load_database
+
+load_dotenv()
 
 db_user = os.environ.get("DB_USER")
 db_password = os.environ.get("DB_PASSWORD")
@@ -12,7 +13,7 @@ db_password = os.environ.get("DB_PASSWORD")
 
 def connect_pg_db():
     """Conecta ao banco de dados PostgreSQL."""
-    pg_config = load_database("config/database.yaml")["oltp_postgres"]
+    pg_config = load_database()["oltp_postgres"]
     if not pg_config:
         print("❌ Configurações do PostgreSQL não carregadas. Não é possível conectar.")
         return None

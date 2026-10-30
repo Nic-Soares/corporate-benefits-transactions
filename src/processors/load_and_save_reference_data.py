@@ -9,21 +9,27 @@ from src.data_generators.reference_data.product_loader import load_products
 from src.data_generators.reference_data.response_codes_loader import load_response_codes
 from src.data_generators.reference_data.segment_loader import load_segments
 from src.utils.parquet_utils import save_multiple_dfs_to_parquet
-from src.utils.read_yamls import load_pre_populated_data
+from src.utils.read_yamls import CONFIG_DIR, load_pre_populated_data
 
-# Carregar dados de configuração
-pre_populated_data = load_pre_populated_data()
 
-# Dicionário com todos os loaders
-dfs = {
-    "products": load_products(pre_populated_data),
-    "acquirers": load_acquirers(pre_populated_data),
-    "response_codes": load_response_codes(pre_populated_data),
-    "capture_technologies": load_capture_technologies(pre_populated_data),
-    "modalities": load_transaction_modalities(pre_populated_data),
-    "segments": load_segments(pre_populated_data),
-    "mcc": extract_mcc_data(),
-    "cnae": extract_cnae_data(),
-}
+def main() -> None:
+    pre_populated_data = load_pre_populated_data()
 
-save_multiple_dfs_to_parquet(dfs, "data/reference_data/", compression="zstd")
+    dfs = {
+        "products": load_products(pre_populated_data),
+        "acquirers": load_acquirers(pre_populated_data),
+        "response_codes": load_response_codes(pre_populated_data),
+        "capture_technologies": load_capture_technologies(pre_populated_data),
+        "modalities": load_transaction_modalities(pre_populated_data),
+        "segments": load_segments(pre_populated_data),
+        "mcc": extract_mcc_data(),
+        "cnae": extract_cnae_data(),
+    }
+
+    save_multiple_dfs_to_parquet(
+        dfs, str(CONFIG_DIR.parent / "data/reference_data"), compression="zstd"
+    )
+
+
+if __name__ == "__main__":
+    main()
