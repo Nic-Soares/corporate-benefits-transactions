@@ -3,14 +3,13 @@ import os
 import sys
 
 # Muda para o diretório raiz do projeto
-project_root = '/home/nicolas/Projects/Personal/corporate-benefits-transactions'
+project_root = "/home/nicolas/Projects/Personal/corporate-benefits-transactions"
 os.chdir(project_root)
 sys.path.insert(0, project_root)
 
 # Agora as importações funcionam normalmente
-import polars as pl
-from src.utils.read_yamls import load_database
 from src.infrastructure.database.postgres_manager import connect_pg_db, execute_pg_sql_file
+from src.utils.read_yamls import load_database
 
 database = load_database()
 schema_path = database["oltp_postgres"]["schema"]
@@ -21,22 +20,27 @@ pg_conn = connect_pg_db()
 # %% Criar tabelas
 execute_pg_sql_file(pg_conn, schema_path)
 
+
 # %% Alimentar tabelas Pré Populadas
 def populate_products():
-  pass
+    pass
 
 
 def populate_modalities():
-  pass
+    pass
+
 
 def populate_acquirers():
-  pass
+    pass
+
 
 def populate_mcc_modalities():
-  pass
+    pass
+
 
 def populate_cnae_products():
-  pass
+    pass
+
 
 # %% Transação e criação ON DEMAND
 def generate_transaction():

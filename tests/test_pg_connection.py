@@ -1,5 +1,6 @@
 from src.common.postgres_manager import connect_pg_db
 
+
 def test_pg_connection():
     """
     Testa a função connect_pg_db e imprime o status da conexão.
@@ -25,6 +26,7 @@ def test_pg_connection():
         if conn:
             conn.close()
             print("Conexão ao PostgreSQL fechada.")
+
 
 if __name__ == "__main__":
     test_pg_connection()

@@ -1,11 +1,11 @@
-import polars as pl
 from pathlib import Path
-from typing import Union
+
+import polars as pl
 
 
 def save_df_to_csv(
     df: pl.DataFrame,
-    file_path: Union[str, Path],
+    file_path: str | Path,
     separator: str = ",",
     include_header: bool = True,
     quote_char: str = '"',
@@ -14,11 +14,11 @@ def save_df_to_csv(
     date_format: str = "%Y-%m-%d",
     time_format: str = "%H:%M:%S",
     float_precision: int = 6,
-    null_value: str = ""
+    null_value: str = "",
 ) -> None:
     """
     Salva um DataFrame Polars em formato CSV seguindo padrões ISO.
-    
+
     Args:
         df: DataFrame Polars para salvar
         file_path: Caminho do arquivo
@@ -34,7 +34,7 @@ def save_df_to_csv(
     """
     file_path = Path(file_path)
     file_path.parent.mkdir(parents=True, exist_ok=True)
-    
+
     df.write_csv(
         file_path,
         separator=separator,
@@ -45,5 +45,5 @@ def save_df_to_csv(
         date_format=date_format,
         time_format=time_format,
         float_precision=float_precision,
-        null_value=null_value
+        null_value=null_value,
     )

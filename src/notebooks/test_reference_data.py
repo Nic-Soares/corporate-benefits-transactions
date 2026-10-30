@@ -1,18 +1,18 @@
 # %% Cell 1
 import os
 import sys
+
 # Define o caminho da raiz do projeto diretamente
-project_root = '/home/nicolas/Projects/Personal/corporate-benefits-transactions'
+project_root = "/home/nicolas/Projects/Personal/corporate-benefits-transactions"
 os.chdir(project_root)
 
 # Adiciona o diretório raiz ao path do Python para imports
 if project_root not in sys.path:
     sys.path.insert(0, project_root)
 
-import polars as pl
-from src.data_generators.reference_data.product_loader import load_products
 from src.data_generators.reference_data.acquirer_loader import load_acquirers
 from src.data_generators.reference_data.capture_technologies_loader import load_capture_technologies
+from src.data_generators.reference_data.product_loader import load_products
 from src.utils.read_yamls import load_pre_populated_data
 
 # Carregar dados de configuração
@@ -26,15 +26,15 @@ print(f"Dados carregados do YAML: {list(pre_populated_data.keys())}")
 # Testar o loader
 df_products = load_products(pre_populated_data)
 
-print(f"\n📊 DataFrame de Produtos:")
+print("\n📊 DataFrame de Produtos:")
 print(f"   Linhas: {len(df_products)}")
 print(f"   Colunas: {df_products.columns}")
 print(f"   Tipos: {df_products.dtypes}")
 
-print(f"\n📋 Dados:")
+print("\n📋 Dados:")
 print(df_products)
 
-print(f"\n✅ Teste concluído!")
+print("\n✅ Teste concluído!")
 
 # %% Cell 3 - Teste do acquirer_loader
 print("=== Testando Acquirer Loader ===")
