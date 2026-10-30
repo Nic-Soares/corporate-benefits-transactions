@@ -11,7 +11,7 @@
 |---|---|---|
 | `EP-01` Baseline and toolchain | ✅ Done — merged into `develop` 2026-10-30 | code (`pyproject.toml`, `docker-compose.yaml`) |
 | `EP-02` Safety net (tests + CI) | ✅ Done — merged into `develop` 2026-10-30; CI runs after the first push | code (`tests/`, `.github/`) |
-| `EP-03` Clean up existing code | Not started | code (`src/`) |
+| `EP-03` Clean up existing code | 🟡 In progress — `ST-03.1` merged into `develop` | code (`src/`) |
 | `EP-04` Config and model consistency | Not started | `config/`, `database/` |
 | `EP-05` Documentation | Not started | `README.md`, `docs/` |
 | `EP-06` Setup pipeline (reference data + entities) | Not started | code (`src/main.py`, `src/processors/`) |
@@ -35,6 +35,7 @@
 3. **Polars is the DataFrame library.** Code still written with pandas syntax (`.empty`, `.iloc`) is migrated, not the other way around (`EP-03`).
 4. **`config/*.yaml` is the source of truth for business rules.** Where `docs/` disagrees with the YAML, the docs change (`EP-04`).
 5. **The final dataset is synthetic.** No real customer, card, or merchant data enters the repository.
+6. **The OLTP schema (`database/oltp_postgres/oltp_schema.sql`) is the column contract.** Generators, validators and the OLAP model use its table and column names (`id`, not `card_id`, inside `cards`). Settled 2026-10-30 in `ST-03.1`, when three different naming sets turned up.
 
 ### Decisions (settled 2026-10-30)
 
@@ -172,11 +173,17 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 
 ### ST-03.1 — Validators
 
-- [ ] `status_validators.py` reads `validation_rules`, which is never defined or loaded — every function raises `NameError` when called
-- [ ] Tests for each validator as it is fixed (approved + declined case), moved here from `ST-02.2`
-- [ ] `business_rules_validators.py`: keep one definition of each function, remove loose module-level code
-- [ ] Migrate `src/validators/*.py` from pandas syntax to polars
-- [ ] Standardize the return value (`{'passed', 'error_code'}`) and align error codes with `pre_populated_data.yaml → response_codes`
+- [x] One definition per function, no module-level code; `business_rules_validators.py` went from 3 copies of each function to 2 functions
+- [x] Polars instead of pandas syntax; shared helpers in `src/validators/_common.py`
+- [x] Error codes read from `config/validation_rules.yaml` (`status_validations` used an undefined `validation_rules` — every call raised `NameError`)
+- [x] Column names from the OLTP schema (assumption 6): `id`, `status`, `main_cnae`, `accreditation_date`, `type` — the validators read `card_id`, `registration_status`, `main_cnae_id`, `opening_date`, `terminal_type`
+- [x] Consistent names: `validate_<what>` (was a mix of `validate_*` and `*_validation`); `validate_product_active` took no arguments and read undefined globals
+- [x] Network routing inside the business rules: the MCC rule passes proprietary-network cards and the CNAE rule passes branded cards, so a caller can run both
+- [x] CNAE rule matches by the longest prefix (`cnae_products` lists `5611` and `5611201`); it compared the 7-digit CNAE to the prefix with `==`, so it never matched
+- [x] `modality_active` and `acquirer_active` check the `active` column, as the config describes (they always passed)
+- [x] `config/` loaded relative to the repo, not the working directory (`src/utils/read_yamls.py`)
+- [x] Tests: `tests/test_validators.py`, approved + declined case for each of the 18 validators
+- [x] Standardized return value `{"passed", "error_code"}`; aligning the codes themselves with `response_codes` is a set of decisions → `ST-04.2`
 
 ### ST-03.2 — Generators
 
@@ -198,6 +205,7 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 
 - [ ] `mcc_and_cnae_loader.py` imports `src.extractors.mastercard_mcc_api` — point it to `src.extractors.mcc_extractor` or restore the module
 - [ ] `schema_creator.py` and `tests/test_pg_connection.py` import `src.common.*` — point them to `src.infrastructure.database.*`
+- [ ] `src/adapters/`: `mcc_modality_adapter.py` uses pandas without importing it and builds `mcc_modalities` one transaction at a time; `cnae_product_adapter.py` is empty. Both are superseded by loading `mcc_modalities` from `validation_rules.yaml → mcc_acceptance_rules` (`EP-06`) — delete
 - [ ] `ibge_municipalities.py`: the UF comes from the microrregião, which the API leaves null for Boa Esperança do Norte (MT, 2024) — take it from the região imediata instead (`test_every_municipio_has_a_uf` is xfail)
 - [ ] `tests/test_imports.py` has no `KNOWN_BROKEN` entries left
 
@@ -214,7 +222,20 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 - [ ] `validation_rules.yaml → validation_order` matches the functions that exist in `src/validators/`
 - [ ] YAML comments and keys in English
 
-### ST-04.2 — Data model
+### ST-04.2 — Response codes and statuses (decisions for Nicolas)
+
+Found while fixing the validators (`ST-03.1`). The validators follow `validation_rules.yaml` today; each item needs a decision before the config is aligned.
+
+- [ ] Establishment codes: `validation_rules.yaml` has `INATIVA 18 / SUSPENSA 19 / BAIXADA 20`; `response_codes` has `18 Empresa inativa / 19 inativo / 20 suspenso / 21 baixado`
+- [ ] Duplicate meanings in `response_codes`: `27`/`59` (MCC × modality) and `28`/`60` (CNAE × product). The validators use `27`/`28` (from `validation_rules.yaml`)
+- [ ] "Record not found" codes (`NOT_FOUND` in `src/validators/_common.py`) aren't in `response_codes`: `97`/`98`/`99` have no description, `96` means "Erro no sistema", and one code covers two entities (`99` card and card product, `98` cardholder and modality, `96` terminal and acquirer)
+- [ ] Establishment statuses: Portuguese in `validation_rules.yaml` and the generator (`ATIVA`…), English in `business_rules.yaml → status_options` (`active`…)
+- [ ] Statuses the generators emit with no code: card `inactive` vs `canceled`/`cancelled`, cardholder `suspended`, terminal `maintenance` → fall back to `99`
+- [ ] Proprietary network: `validation_rules.yaml` says `cards.modality_id IS NULL`, but `pre_populated_data.yaml` has an `OWN` (Rede Própria) modality. The validators follow the null rule
+- [ ] CNAE rule: confirm "longest prefix wins" (`5611` → VR, GF but `5611201` → VR only means GF is declined at a `5611201` restaurant)
+- [ ] `terminal_acquirer_match` (code `31`) only checks the terminal exists: the transaction has no acquirer and there is no terminal × modality data. Drop the rule or define the data
+
+### ST-04.3 — Data model
 
 - [ ] DBML × SQL: same tables, columns, and types (OLTP and OLAP)
 - [ ] Test that creates the OLTP schema on a clean Postgres and the OLAP schema on an in-memory DuckDB

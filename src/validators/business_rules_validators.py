@@ -1,343 +1,81 @@
-def validate_mcc_modality(single_transaction, mcc_modalities_df, establishments_df, cards_df):
-    """Valida se MCC aceita modalidade do cartão da transação"""
-    # Pega MCC do estabelecimento
-    est = establishments_df[
-        establishments_df["establishment_id"] == single_transaction["establishment_id"]
-    ]
-    if est.empty:
-        return {"passed": False, "error_code": "97"}
+"""Business-rule validations: where each card may be used.
 
-    mcc_code = est["mcc_code"].iloc[0]
+Branded cards (`cards.modality_id` set) are authorized by the establishment's
+MCC; proprietary-network cards (`modality_id` null) by its CNAE. Each
+validator passes the cards the other network rule applies to.
+"""
 
-    # Pega modalidade do cartão
-    card = cards_df[cards_df["card_id"] == single_transaction["card_id"]]
-    if card.empty:
-        return {"passed": False, "error_code": "99"}
+from typing import Any
 
-    modality_id = card["modality_id"].iloc[0]
+import polars as pl
 
-    # Verifica se existe o mapeamento
-    exists = mcc_modalities_df[
-        (mcc_modalities_df["mcc_code"] == mcc_code)
-        & (mcc_modalities_df["modality_id"] == modality_id)
-        & (mcc_modalities_df["active"] == True)
-    ]
+from src.validators._common import NOT_FOUND, PASS, RULES, fail, find_one
 
-    return {"passed": not exists.empty, "error_code": "59" if exists.empty else None}
+BUSINESS_RULES = RULES["business_rules_validations"]
 
 
-# Exemplo de uso: alimentar estrutura com a transação atual
-mcc_modalities_df = structure_mcc_modalities_from_transaction(
-    single_transaction, mcc_df, transaction_modalities_df, establishments_df
-)
+def _card_and_establishment(
+    transaction: dict[str, Any], cards_df: pl.DataFrame, establishments_df: pl.DataFrame
+) -> tuple[dict[str, Any] | None, dict[str, Any] | None, dict[str, Any] | None]:
+    """(card, establishment, failure) — failure is set when a record is missing."""
+    card = find_one(cards_df, id=transaction["card_id"])
+    if card is None:
+        return None, None, fail(NOT_FOUND["card"])
+    establishment = find_one(establishments_df, id=transaction["establishment_id"])
+    if establishment is None:
+        return card, None, fail(NOT_FOUND["establishment"])
+    return card, establishment, None
 
-# Validar a transação
-result = validate_mcc_modality(single_transaction, mcc_modalities_df, establishments_df, cards_df)
+
+def validate_mcc_modality(
+    transaction: dict[str, Any],
+    cards_df: pl.DataFrame,
+    establishments_df: pl.DataFrame,
+    mcc_modalities_df: pl.DataFrame,
+) -> dict[str, Any]:
+    """`mcc_modality_mapping` (rule missing) and `mcc_modality_rules_active` (rule inactive)."""
+    card, establishment, failure = _card_and_establishment(transaction, cards_df, establishments_df)
+    if failure:
+        return failure
+    if card["modality_id"] is None:
+        return PASS  # proprietary network: the CNAE rule applies
+
+    rule = find_one(
+        mcc_modalities_df, mcc_code=establishment["mcc_code"], modality_id=card["modality_id"]
+    )
+    if rule is None:
+        return fail(BUSINESS_RULES["mcc_modality_mapping"]["error_code"])
+    if not rule["active"]:
+        return fail(BUSINESS_RULES["mcc_modality_rules_active"]["error_code"])
+    return PASS
 
 
-def validate_mcc_modality_rules_active(
-    single_transaction, mcc_modalities_df, establishments_df, cards_df
-):
+def validate_cnae_product(
+    transaction: dict[str, Any],
+    cards_df: pl.DataFrame,
+    establishments_df: pl.DataFrame,
+    cnae_products_df: pl.DataFrame,
+) -> dict[str, Any]:
+    """`cnae_product_mapping` (rule missing) and `cnae_product_rules_active` (rule inactive).
+
+    `cnae_products.cnae_code` holds CNAE prefixes at several levels (e.g. `5611`,
+    `5611201`); the longest prefix of the establishment's CNAE decides.
     """
-    Valida se a regra MCC x Modalidade está ativa
-    """
-    # Pega MCC do estabelecimento
-    est = establishments_df[
-        establishments_df["establishment_id"] == single_transaction["establishment_id"]
-    ]
-    if est.empty:
-        return {"passed": False, "error_code": "97"}
-
-    mcc_code = est["mcc_code"].iloc[0]
-
-    # Pega modalidade do cartão
-    card = cards_df[cards_df["card_id"] == single_transaction["card_id"]]
-    if card.empty:
-        return {"passed": False, "error_code": "99"}
-
-    modality_id = card["modality_id"].iloc[0]
-
-    # Verifica se existe o mapeamento e se está ativo
-    rule = mcc_modalities_df[
-        (mcc_modalities_df["mcc_code"] == mcc_code)
-        & (mcc_modalities_df["modality_id"] == modality_id)
-    ]
-
-    if rule.empty:
-        return {"passed": False, "error_code": "59"}  # Regra não existe
-
-    # Verifica se a regra está ativa
-    if not rule["active"].iloc[0]:
-        return {"passed": False, "error_code": "29"}  # Regra MCC desativada
-
-    return {"passed": True, "error_code": None}
-
-
-def validate_cnae_product_rules_active(single_transaction, cnae_products_df, establishments_df):
-    """
-    Valida se a regra CNAE x Produto está ativa
-    """
-    # Pega CNAE do estabelecimento
-    est = establishments_df[
-        establishments_df["establishment_id"] == single_transaction["establishment_id"]
-    ]
-    if est.empty:
-        return {"passed": False, "error_code": "97"}
-
-    cnae_code = est["main_cnae_id"].iloc[0]
-    product_id = single_transaction["product_id"]
-
-    # Verifica se existe o mapeamento
-    rule = cnae_products_df[
-        (cnae_products_df["cnae_code"] == cnae_code)
-        & (cnae_products_df["product_id"] == product_id)
-    ]
-
-    if rule.empty:
-        return {"passed": False, "error_code": "60"}  # Regra não existe
-
-    # Verifica se a regra está ativa
-    if not rule["active"].iloc[0]:
-        return {"passed": False, "error_code": "30"}  # Regra CNAE desativada
-
-    return {"passed": True, "error_code": None}
-
-
-# Teste das novas validações
-result_mcc_active = validate_mcc_modality_rules_active(
-    single_transaction, mcc_modalities_df, establishments_df, cards_df
-)
-result_cnae_active = validate_cnae_product_rules_active(
-    single_transaction, cnae_products_df, establishments_df
-)
-
-print(f"MCC x Modalidade ativa: {result_mcc_active}")
-print(f"CNAE x Produto ativo: {result_cnae_active}")
-
-
-def validate_mcc_modality(single_transaction, mcc_modalities_df, establishments_df, cards_df):
-    """Valida se MCC aceita modalidade do cartão da transação"""
-    # Pega MCC do estabelecimento
-    est = establishments_df[
-        establishments_df["establishment_id"] == single_transaction["establishment_id"]
-    ]
-    if est.empty:
-        return {"passed": False, "error_code": "97"}
-
-    mcc_code = est["mcc_code"].iloc[0]
-
-    # Pega modalidade do cartão
-    card = cards_df[cards_df["card_id"] == single_transaction["card_id"]]
-    if card.empty:
-        return {"passed": False, "error_code": "99"}
-
-    modality_id = card["modality_id"].iloc[0]
-
-    # Verifica se existe o mapeamento
-    exists = mcc_modalities_df[
-        (mcc_modalities_df["mcc_code"] == mcc_code)
-        & (mcc_modalities_df["modality_id"] == modality_id)
-        & (mcc_modalities_df["active"] == True)
-    ]
-
-    return {"passed": not exists.empty, "error_code": "59" if exists.empty else None}
-
-
-# Exemplo de uso: alimentar estrutura com a transação atual
-mcc_modalities_df = structure_mcc_modalities_from_transaction(
-    single_transaction, mcc_df, transaction_modalities_df, establishments_df
-)
-
-# Validar a transação
-result = validate_mcc_modality(single_transaction, mcc_modalities_df, establishments_df, cards_df)
-
-
-def validate_cnae_product(single_transaction, cnae_products_df, establishments_df):
-    """Valida se CNAE aceita o produto da transação"""
-    # Pega CNAE do estabelecimento
-    est = establishments_df[
-        establishments_df["establishment_id"] == single_transaction["establishment_id"]
-    ]
-    if est.empty:
-        return {"passed": False, "error_code": "97"}
-
-    cnae_code = est["main_cnae_id"].iloc[0]
-    product_id = single_transaction["product_id"]
-
-    # Verifica se existe o mapeamento
-    exists = cnae_products_df[
-        (cnae_products_df["cnae_code"] == cnae_code)
-        & (cnae_products_df["product_id"] == product_id)
-        & (cnae_products_df["active"] == True)
-    ]
-
-    return {"passed": not exists.empty, "error_code": "60" if exists.empty else None}
-
-
-# Exemplo de uso: alimentar estrutura com a transação atual
-cnae_products_df = structure_cnae_products_from_transaction(
-    single_transaction, cnaes_df, products_df, business_data, establishments_df
-)
-
-# Validar a transação
-result_cnae = validate_cnae_product(single_transaction, cnae_products_df, establishments_df)
-
-
-def validate_mcc_modality_rules_active(
-    single_transaction, mcc_modalities_df, establishments_df, cards_df
-):
-    """
-    Valida se a regra MCC x Modalidade está ativa
-    """
-    # Pega MCC do estabelecimento
-    est = establishments_df[
-        establishments_df["establishment_id"] == single_transaction["establishment_id"]
-    ]
-    if est.empty:
-        return {"passed": False, "error_code": "97"}
-
-    mcc_code = est["mcc_code"].iloc[0]
-
-    # Pega modalidade do cartão
-    card = cards_df[cards_df["card_id"] == single_transaction["card_id"]]
-    if card.empty:
-        return {"passed": False, "error_code": "99"}
-
-    modality_id = card["modality_id"].iloc[0]
-
-    # Verifica se existe o mapeamento e se está ativo
-    rule = mcc_modalities_df[
-        (mcc_modalities_df["mcc_code"] == mcc_code)
-        & (mcc_modalities_df["modality_id"] == modality_id)
-    ]
-
-    if rule.empty:
-        return {"passed": False, "error_code": "59"}  # Regra não existe
-
-    # Verifica se a regra está ativa
-    if not rule["active"].iloc[0]:
-        return {"passed": False, "error_code": "29"}  # Regra MCC desativada
-
-    return {"passed": True, "error_code": None}
-
-
-def validate_cnae_product_rules_active(single_transaction, cnae_products_df, establishments_df):
-    """
-    Valida se a regra CNAE x Produto está ativa
-    """
-    # Pega CNAE do estabelecimento
-    est = establishments_df[
-        establishments_df["establishment_id"] == single_transaction["establishment_id"]
-    ]
-    if est.empty:
-        return {"passed": False, "error_code": "97"}
-
-    cnae_code = est["main_cnae_id"].iloc[0]
-    product_id = single_transaction["product_id"]
-
-    # Verifica se existe o mapeamento
-    rule = cnae_products_df[
-        (cnae_products_df["cnae_code"] == cnae_code)
-        & (cnae_products_df["product_id"] == product_id)
-    ]
-
-    if rule.empty:
-        return {"passed": False, "error_code": "60"}  # Regra não existe
-
-    # Verifica se a regra está ativa
-    if not rule["active"].iloc[0]:
-        return {"passed": False, "error_code": "30"}  # Regra CNAE desativada
-
-    return {"passed": True, "error_code": None}
-
-
-# Teste das novas validações
-result_mcc_active = validate_mcc_modality_rules_active(
-    single_transaction, mcc_modalities_df, establishments_df, cards_df
-)
-result_cnae_active = validate_cnae_product_rules_active(
-    single_transaction, cnae_products_df, establishments_df
-)
-
-print(f"MCC x Modalidade ativa: {result_mcc_active}")
-print(f"CNAE x Produto ativo: {result_cnae_active}")
-
-
-def validate_mcc_modality_rules_active(
-    single_transaction, mcc_modalities_df, establishments_df, cards_df
-):
-    """
-    Valida se a regra MCC x Modalidade está ativa
-    """
-    # Pega MCC do estabelecimento
-    est = establishments_df[
-        establishments_df["establishment_id"] == single_transaction["establishment_id"]
-    ]
-    if est.empty:
-        return {"passed": False, "error_code": "97"}
-
-    mcc_code = est["mcc_code"].iloc[0]
-
-    # Pega modalidade do cartão
-    card = cards_df[cards_df["card_id"] == single_transaction["card_id"]]
-    if card.empty:
-        return {"passed": False, "error_code": "99"}
-
-    modality_id = card["modality_id"].iloc[0]
-
-    # Verifica se existe o mapeamento e se está ativo
-    rule = mcc_modalities_df[
-        (mcc_modalities_df["mcc_code"] == mcc_code)
-        & (mcc_modalities_df["modality_id"] == modality_id)
-    ]
-
-    if rule.empty:
-        return {"passed": False, "error_code": "59"}  # Regra não existe
-
-    # Verifica se a regra está ativa
-    if not rule["active"].iloc[0]:
-        return {"passed": False, "error_code": "29"}  # Regra MCC desativada
-
-    return {"passed": True, "error_code": None}
-
-
-def validate_cnae_product_rules_active(single_transaction, cnae_products_df, establishments_df):
-    """
-    Valida se a regra CNAE x Produto está ativa
-    """
-    # Pega CNAE do estabelecimento
-    est = establishments_df[
-        establishments_df["establishment_id"] == single_transaction["establishment_id"]
-    ]
-    if est.empty:
-        return {"passed": False, "error_code": "97"}
-
-    cnae_code = est["main_cnae_id"].iloc[0]
-    product_id = single_transaction["product_id"]
-
-    # Verifica se existe o mapeamento
-    rule = cnae_products_df[
-        (cnae_products_df["cnae_code"] == cnae_code)
-        & (cnae_products_df["product_id"] == product_id)
-    ]
-
-    if rule.empty:
-        return {"passed": False, "error_code": "60"}  # Regra não existe
-
-    # Verifica se a regra está ativa
-    if not rule["active"].iloc[0]:
-        return {"passed": False, "error_code": "30"}  # Regra CNAE desativada
-
-    return {"passed": True, "error_code": None}
-
-
-# Teste das novas validações
-result_mcc_active = validate_mcc_modality_rules_active(
-    single_transaction, mcc_modalities_df, establishments_df, cards_df
-)
-result_cnae_active = validate_cnae_product_rules_active(
-    single_transaction, cnae_products_df, establishments_df
-)
-
-print(f"MCC x Modalidade ativa: {result_mcc_active}")
-print(f"CNAE x Produto ativo: {result_cnae_active}")
+    card, establishment, failure = _card_and_establishment(transaction, cards_df, establishments_df)
+    if failure:
+        return failure
+    if card["modality_id"] is not None:
+        return PASS  # branded card: the MCC rule applies
+
+    prefix_len = pl.col("cnae_code").str.len_chars()
+    matching = cnae_products_df.filter(
+        pl.lit(establishment["main_cnae"]).str.starts_with(pl.col("cnae_code"))
+    )
+    most_specific = matching.filter(prefix_len == prefix_len.max())
+
+    rule = find_one(most_specific, product_id=transaction["product_id"])
+    if rule is None:
+        return fail(BUSINESS_RULES["cnae_product_mapping"]["error_code"])
+    if not rule["active"]:
+        return fail(BUSINESS_RULES["cnae_product_rules_active"]["error_code"])
+    return PASS
