@@ -44,7 +44,7 @@ def tx():
         "terminal_id": "term_pos",
         "amount": 50.0,
         "date": datetime(2026, 6, 15, 12, 30),
-        "capture_type": "contactless",
+        "capture_type": "CONTACTLESS",
     }
 
 
@@ -88,14 +88,14 @@ def data():
         "card_products": pl.DataFrame(
             {
                 "card_id": ["card_branded", "card_own", "card_own"],
-                "product_id": ["VR", "VR", "GF"],
+                "product_id": ["VR", "VR", "PR"],
                 "current_balance": [500.0, 500.0, 500.0],
                 "daily_limit": [100.0, 0.0, 0.0],
                 "monthly_limit": [1000.0, 0.0, 0.0],
                 "status": ["active", "active", "suspended"],
             }
         ),
-        "products": pl.DataFrame({"id": ["VR", "GF"], "active": [True, False]}),
+        "products": pl.DataFrame({"id": ["VR", "PR"], "active": [True, False]}),
         "modalities": pl.DataFrame({"id": ["VISA", "OWN", "ELO"], "active": [True, True, False]}),
         "acquirers": pl.DataFrame({"id": ["CIE", "OFF"], "active": [True, False]}),
         "mcc_modalities": pl.DataFrame(
@@ -108,7 +108,7 @@ def data():
         "cnae_products": pl.DataFrame(
             {
                 "cnae_code": ["5611", "5611", "5611201", "4711"],
-                "product_id": ["VR", "GF", "VR", "VA"],
+                "product_id": ["VR", "PR", "VR", "VA"],
                 "active": [True, True, True, False],
             }
         ),
@@ -146,7 +146,7 @@ def test_terminal_status(tx, data):
 
 def test_card_product_status(tx, data):
     assert validate_card_product_status(tx, data["card_products"]) == PASS
-    suspended = tx | {"card_id": "card_own", "product_id": "GF"}
+    suspended = tx | {"card_id": "card_own", "product_id": "PR"}
     assert validate_card_product_status(suspended, data["card_products"]) == declined("23")
     missing = tx | {"product_id": "VA"}
     assert validate_card_product_status(missing, data["card_products"]) == declined("93")
@@ -154,7 +154,7 @@ def test_card_product_status(tx, data):
 
 def test_product_active(tx, data):
     assert validate_product_active(tx, data["products"]) == PASS
-    assert validate_product_active(tx | {"product_id": "GF"}, data["products"]) == declined("24")
+    assert validate_product_active(tx | {"product_id": "PR"}, data["products"]) == declined("24")
 
 
 def test_modality_active(tx, data):
@@ -220,8 +220,8 @@ def test_cnae_product(tx, data):
     assert validate_cnae_product(own, *args) == PASS
     # branded card: not a CNAE decision
     assert validate_cnae_product(tx | {"product_id": "VA"}, *args) == PASS
-    # 5611 accepts GF, but the more specific 5611201 only lists VR
-    assert validate_cnae_product(own | {"product_id": "GF"}, *args) == declined("28")
+    # 5611 accepts PR, but the more specific 5611201 only lists VR
+    assert validate_cnae_product(own | {"product_id": "PR"}, *args) == declined("28")
     inactive_rule = own | {"establishment_id": "est_closed", "product_id": "VA"}
     assert validate_cnae_product(inactive_rule, *args) == declined("30")
 
@@ -255,7 +255,7 @@ def test_capture_type_support(tx, data):
     assert validate_capture_type_support(tx, data["terminals"]) == PASS
     tef = tx | {"terminal_id": "term_tef"}
     assert validate_capture_type_support(tef, data["terminals"]) == declined("32")
-    assert validate_capture_type_support(tef | {"capture_type": "chip"}, data["terminals"]) == PASS
+    assert validate_capture_type_support(tef | {"capture_type": "CHIP"}, data["terminals"]) == PASS
     missing = tx | {"terminal_id": "nope"}
     assert validate_capture_type_support(missing, data["terminals"]) == declined("98")
 

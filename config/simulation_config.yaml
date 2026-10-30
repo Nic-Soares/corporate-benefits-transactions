@@ -1,9 +1,9 @@
 # =====================================
-# transaction_simulation.yaml
-# Configurações e parâmetros para simulação transacional
+# simulation_config.yaml
+# Parameters of the data generation and the transaction simulation
 # =====================================
 
-# VOLUMES DE DADOS A GERAR
+# Volumes to generate — Not read by the code yet (EP-06)
 data_volumes:
   companies: 15
   cardholders: 1200
@@ -14,27 +14,25 @@ data_volumes:
   transactions: 100
 
 
-# DISTRIBUIÇÕES DE APROVAÇÃO
+# Target approval rates — Not read by the code yet (EP-07)
 approval_rates:
-  overall: 0.92                  # 92% de aprovação geral
+  overall: 0.92                  # 92% approved overall
   by_network:
-    proprietary_network: 0.95    # 95% rede própria
-    branded_network: 0.88        # 88% rede bandeirada
+    proprietary_network: 0.95    # proprietary network
+    branded_network: 0.88        # branded networks
   by_product:
-    VA: 0.94                     # Vale alimentação
-    VR: 0.93                     # Vale refeição
-    VC: 0.89                     # Vale combustível
-    VF: 0.96                     # Vale farmácia
-    VM: 0.90                     # Vale múltiplo
-    PR: 0.91                     # Premium
+    VA: 0.94                     # Vale Alimentação
+    VR: 0.93                     # Vale Refeição
+    VC: 0.89                     # Vale Combustível
+    VF: 0.96                     # Vale Farmácia
+    VM: 0.90                     # Multibenefícios
+    PR: 0.91                     # Premiação
 
-# CONFIGURAÇÕES DE GERAÇÃO
+# Data generation (read by src/data_generators/providers/fake.py)
 generation_settings:
-  # Distribuição de CNAEs com produtos válidos
-  cnae_with_products_ratio: 0.85  # 85% dos estabelecimentos devem ter CNAE que aceita produtos
+  cnae_with_products_ratio: 0.85  # share of establishments whose CNAE accepts some product
   
-  # Distribuição de status
-  # (os status válidos estão em business_rules.yaml → status_options)
+  # Status weights (valid statuses: business_rules.yaml → status_options)
   company_status_distribution:
     active: 0.90
     inactive: 0.07
@@ -67,13 +65,13 @@ generation_settings:
     inactive: 0.05
     maintenance: 0.05
 
-  # Produtos por cartão
+  # Products per card
   products_per_card:
     min: 1
     max: 3
     avg: 1.8
 
-  # Datas
+  # Dates
   date_ranges:
     card_issuance:
       start: "-2y"
@@ -95,16 +93,16 @@ generation_settings:
     max: 5
 
 
-# PADRÕES DE USO
+# Usage patterns — Not read by the code yet (EP-07)
 usage_patterns:
-  # Horários mais comuns por tipo de estabelecimento
+  # Peak hours per establishment category
   peak_hours_by_category:
     restaurant: [12, 13, 18, 19, 20]
     supermarket: [10, 11, 17, 18, 19]
     gas_station: [7, 8, 17, 18, 19]
     pharmacy: [9, 10, 11, 15, 16, 17]
 
-  # Valores médios por produto
+  # Transaction amounts per product
   average_amounts:
     VA:
       min: 15.00
