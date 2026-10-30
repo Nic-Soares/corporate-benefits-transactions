@@ -1,11 +1,3 @@
-import sys
-import os
-
-# Adicionar o diretório raiz ao path
-project_root = os.path.abspath(os.path.join(os.path.dirname(__file__), '../..'))
-if project_root not in sys.path:
-    sys.path.insert(0, project_root)
-
 from src.data_generators.reference_data.product_loader import load_products
 from src.data_generators.reference_data.acquirer_loader import load_acquirers
 from src.data_generators.reference_data.response_codes_loader import load_response_codes
