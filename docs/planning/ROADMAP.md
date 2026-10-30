@@ -11,7 +11,7 @@
 |---|---|---|
 | `EP-01` Baseline and toolchain | ✅ Done — merged into `develop` 2026-10-30 | code (`pyproject.toml`, `docker-compose.yaml`) |
 | `EP-02` Safety net (tests + CI) | ✅ Done — merged into `develop` 2026-10-30; CI runs after the first push | code (`tests/`, `.github/`) |
-| `EP-03` Clean up existing code | 🟡 In progress — `ST-03.1`, `ST-03.2` merged into `develop` | code (`src/`) |
+| `EP-03` Clean up existing code | 🟡 In progress — `ST-03.1`, `ST-03.2`, `ST-03.4` merged into `develop` | code (`src/`) |
 | `EP-04` Config and model consistency | 🟡 `ST-04.2` merged into `develop` (pulled ahead of `ST-03.2`) | `config/`, `database/` |
 | `EP-05` Documentation | Not started | `README.md`, `docs/` |
 | `EP-06` Setup pipeline (reference data + entities) | Not started | code (`src/main.py`, `src/processors/`) |
@@ -210,11 +210,14 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 
 ### ST-03.4 — Broken imports
 
-- [ ] `mcc_and_cnae_loader.py` imports `src.extractors.mastercard_mcc_api` — point it to `src.extractors.mcc_extractor` or restore the module
-- [ ] `schema_creator.py` and `tests/test_pg_connection.py` import `src.common.*` — point them to `src.infrastructure.database.*`
-- [ ] `src/adapters/`: `mcc_modality_adapter.py` uses pandas without importing it and builds `mcc_modalities` one transaction at a time; `cnae_product_adapter.py` is empty. Both are superseded by loading `mcc_modalities` from `validation_rules.yaml → mcc_acceptance_rules` (`EP-06`) — delete
-- [ ] `ibge_municipalities.py`: the UF comes from the microrregião, which the API leaves null for Boa Esperança do Norte (MT, 2024) — take it from the região imediata instead (`test_every_municipio_has_a_uf` is xfail)
-- [ ] `tests/test_imports.py` has no `KNOWN_BROKEN` entries left
+- [x] `mcc_and_cnae_loader.py` imported `src.extractors.mastercard_mcc_api` → `src.extractors.mcc_extractor`. Checked against the public source: 286 MCCs, all with brands. Output column renamed `mcc` → `mcc_code` (the schema's and the generator's name); dedup made deterministic; CNAE CSV path no longer depends on the working directory
+- [x] `schema_creator.py` imported `src.common.*` and a missing `src.utils.load_db_config` → `src.infrastructure.database.*` and `read_yamls.load_database`. Checked: creates the 14 OLTP tables in Postgres 18 and the 9 OLAP tables in DuckDB
+- [x] `tests/test_pg_connection.py` → fixed in `EP-02`
+- [x] `load_and_save_reference_data.py` ran (network calls included) on import → `main()`
+- [x] `config/database.yaml` pointed DuckDB to `02_entities.sql` and `03_facts.sql`, which don't exist → `01_dimensions.sql` + `02_facts.sql` (was `ST-04.1`); `postgres_manager.py` read the config relative to the working directory
+- [x] `src/adapters/` deleted: `mcc_modality_adapter.py` used pandas without importing it, `cnae_product_adapter.py` was empty, and nothing called them. Loading `mcc_modalities` from `mcc_acceptance_rules` is `EP-06`
+- [x] `ibge_municipalities.py`: the UF falls back to the região imediata when the microrregião is null — all 5,571 municipalities now have one of the 27 UFs
+- [x] `tests/test_imports.py` has no `KNOWN_BROKEN` entries left: every module in `src/` imports
 
 ---
 
@@ -224,7 +227,7 @@ EP-01 Baseline ──► EP-02 Tests/CI ──► EP-03 Cleanup ──► EP-04 
 
 ### ST-04.1 — Configs
 
-- [ ] `config/database.yaml`: fix the DuckDB SQL paths
+- [x] `config/database.yaml`: fix the DuckDB SQL paths — done in `ST-03.4`
 - [ ] Products `VA, VR, VC, VF, VM, PR` in every YAML: add `VF`, `VM`, `PR` to `pre_populated_data.yaml`, remove `GF`, update `cnae_products` and `product_acceptance_rules` to match
 - [ ] `validation_rules.yaml → validation_order` matches the functions that exist in `src/validators/`
 - [ ] YAML comments and keys in English

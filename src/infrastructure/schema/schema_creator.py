@@ -1,26 +1,27 @@
-from src.common.duckdb_manager import connect_database, execute_sql_file
-from src.common.postgres_manager import connect_pg_db, execute_pg_sql_file
-from src.utils.load_db_config import load_db_config
+from src.infrastructure.database.duckdb_manager import connect_database, execute_sql_file
+from src.infrastructure.database.postgres_manager import connect_pg_db, execute_pg_sql_file
+from src.utils.read_yamls import CONFIG_DIR, load_database
+
+# Paths in config/database.yaml are relative to the repository root
+ROOT = CONFIG_DIR.parent
 
 
 def create_schema_postgres():
     conn = connect_pg_db()
     if conn:
-        config = load_db_config("oltp_postgres")
-        sql_file_path = config["schema"]["tables"]
-        if sql_file_path:
-            execute_pg_sql_file(conn, sql_file_path)
+        config = load_database()["oltp_postgres"]
+        execute_pg_sql_file(conn, ROOT / config["schema"])
         conn.close()
 
 
 def create_schema_duckdb():
-    config = load_db_config("olap_duck")
-    conn = connect_database({"olap_duck": config}, "olap_duck")
+    config = load_database()["olap_duck"]
+    conn = connect_database(
+        {"olap_duck": config | {"file_path": str(ROOT / config["file_path"])}}, "olap_duck"
+    )
 
-    schema_files = config.get("schema", {})
-    for schema_type, file_path in schema_files.items():
-        if file_path:
-            execute_sql_file(conn, file_path)
+    for file_path in config["schema"].values():
+        execute_sql_file(conn, ROOT / file_path)
 
     conn.close()
 
