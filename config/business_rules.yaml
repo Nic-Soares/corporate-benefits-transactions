@@ -90,8 +90,19 @@ status_options:
 
   card:
     - "active"
+    - "inactive"
     - "blocked"
     - "cancelled"
+
+  card_product:
+    - "active"
+    - "suspended"
+    - "cancelled"
+
+  terminal:
+    - "active"
+    - "inactive"
+    - "maintenance"
 
   establishment:
     - "active"

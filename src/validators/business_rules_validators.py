@@ -1,15 +1,22 @@
 """Business-rule validations: where each card may be used.
 
-Branded cards (`cards.modality_id` set) are authorized by the establishment's
-MCC; proprietary-network cards (`modality_id` null) by its CNAE. Each
-validator passes the cards the other network rule applies to.
+Branded cards (Visa, Mastercard, Elo: the 4-party model) are authorized by the
+establishment's MCC; proprietary-network cards (`OWN`: the 3-party model) by
+its CNAE. Each validator passes the cards the other network rule applies to.
 """
 
 from typing import Any
 
 import polars as pl
 
-from src.validators._common import NOT_FOUND, PASS, RULES, fail, find_one
+from src.validators._common import (
+    NOT_FOUND,
+    PASS,
+    PROPRIETARY_MODALITIES,
+    RULES,
+    fail,
+    find_one,
+)
 
 BUSINESS_RULES = RULES["business_rules_validations"]
 
@@ -37,7 +44,7 @@ def validate_mcc_modality(
     card, establishment, failure = _card_and_establishment(transaction, cards_df, establishments_df)
     if failure:
         return failure
-    if card["modality_id"] is None:
+    if card["modality_id"] in PROPRIETARY_MODALITIES:
         return PASS  # proprietary network: the CNAE rule applies
 
     rule = find_one(
@@ -64,7 +71,7 @@ def validate_cnae_product(
     card, establishment, failure = _card_and_establishment(transaction, cards_df, establishments_df)
     if failure:
         return failure
-    if card["modality_id"] is not None:
+    if card["modality_id"] not in PROPRIETARY_MODALITIES:
         return PASS  # branded card: the MCC rule applies
 
     prefix_len = pl.col("cnae_code").str.len_chars()

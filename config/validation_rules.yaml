@@ -23,10 +23,9 @@ status_validations:
     field: "status"
     required_value: "active"
     error_codes:
+      inactive: "13"    # Cartão inativo
       blocked: "14"     # Cartão bloqueado
       cancelled: "15"   # Cartão cancelado
-      canceled: "15"    # Cartão cancelado (variação)
-      inactive: "13"    # Cartão inativo
 
   cardholder_status:
     description: "Portador deve estar ativo"
@@ -41,11 +40,11 @@ status_validations:
     description: "Estabelecimento deve estar ativo"
     table: "establishments"
     field: "status"
-    required_value: "ATIVA"
+    required_value: "active"
     error_codes:
-      INATIVA: "18"     # Estabelecimento inativo
-      SUSPENSA: "19"    # Estabelecimento suspenso
-      BAIXADA: "20"     # Estabelecimento baixado
+      inactive: "19"    # Estabelecimento inativo
+      suspended: "20"   # Estabelecimento suspenso
+      terminated: "21"  # Estabelecimento baixado
 
   terminal_status:
     description: "Terminal deve estar ativo"
@@ -54,6 +53,7 @@ status_validations:
     required_value: "active"
     error_codes:
       inactive: "22"    # Terminal inativo
+      maintenance: "22" # Terminal em manutenção (não transaciona)
 
   card_product_status:
     description: "Produto no cartão deve estar ativo"
@@ -61,7 +61,8 @@ status_validations:
     field: "status"
     required_value: "active"
     error_codes:
-      inactive: "23"    # Produto do cartão inativo
+      suspended: "23"   # Produto do cartão inativo
+      cancelled: "23"   # Produto do cartão inativo
 
   product_active:
     description: "Produto deve estar ativo"
@@ -125,7 +126,7 @@ temporal_validations:
 business_rules_validations:
   mcc_modality_mapping:
     description: "MCC deve ser aceito pela modalidade (cartões bandeirados)"
-    applies_to: "branded_cards"  # cards.modality_id IS NOT NULL
+    applies_to: "branded_cards"  # modality type "brand" (Visa, Mastercard, Elo)
     validation:
       - "MCC existe em mcc_modalities para a modalidade"
       - "mcc_modalities.active = true"
@@ -133,7 +134,7 @@ business_rules_validations:
 
   cnae_product_mapping:
     description: "CNAE deve aceitar o produto (rede proprietária)"
-    applies_to: "proprietary_network_cards"  # cards.modality_id IS NULL
+    applies_to: "proprietary_network_cards"  # modality type "proprietary_network" (OWN)
     validation:
       - "CNAE existe em cnae_products para o produto"
       - "cnae_products.active = true"
@@ -184,15 +185,26 @@ balance_and_limits_validations:
 # VALIDAÇÕES DE INFRAESTRUTURA
 # =====================================
 infrastructure_validations:
-  terminal_acquirer_match:
-    description: "Terminal deve pertencer ao adquirente"
-    validation: "terminals.acquirer_id matches transaction acquirer"
-    error_code: "31"    # Terminal/adquirente incompatível
-
   capture_type_support:
     description: "Tipo de captura deve ser suportado"
     validation: "capture_type is supported by terminal/modality"
     error_code: "32"    # Tipo de captura não suportado
+
+# =====================================
+# REGISTRO REFERENCIADO NÃO ENCONTRADO
+# (com as FKs do schema não deve ocorrer; protege contra dado inconsistente)
+# =====================================
+not_found:
+  card: "92"
+  card_product: "93"
+  cardholder: "94"
+  modality: "95"
+  establishment: "97"
+  terminal: "98"
+  acquirer: "99"
+
+# Status fora da lista de error_codes
+unknown_status: "96"
 
 # =====================================
 # CONFIGURAÇÕES DE VALIDAÇÃO

@@ -297,7 +297,6 @@ response_codes:
   
   # PROBLEMAS DE TERMINAL/INFRAESTRUTURA
   "22": "Terminal inativo"
-  "31": "Terminal/adquirente incompatível"
   "32": "Tipo de captura não suportado"
   "58": "Terminal ainda não instalado"
   
@@ -311,15 +310,20 @@ response_codes:
   "29": "Regra MCC desativada"
   "30": "Regra CNAE desativada"
   
-  # PROBLEMAS DE REGRAS DE NEGÓCIO
-  "59": "MCC não aceita modalidade"
-  "60": "CNAE não aceita produto"
-  
   # PROBLEMAS DE SALDO/LIMITES
   "51": "Saldo insuficiente"
   "61": "Limite diário excedido"
   "62": "Limite mensal excedido"
   
+  # REGISTRO NÃO ENCONTRADO
+  "92": "Cartão não encontrado"
+  "93": "Produto não habilitado no cartão"
+  "94": "Portador não encontrado"
+  "95": "Modalidade não encontrada"
+  "97": "Estabelecimento não encontrado"
+  "98": "Terminal não encontrado"
+  "99": "Adquirente não encontrado"
+
   # ERROS DE SISTEMA
-  "96": "Erro no sistema"
   "91": "Sistema indisponível"
+  "96": "Erro no sistema"
