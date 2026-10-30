@@ -14,7 +14,7 @@
 | `EP-03` Clean up existing code | ✅ Done — merged into `develop` 2026-10-30 | code (`src/`) |
 | `EP-04` Config and model consistency | ✅ Done — merged into `develop` 2026-10-30 | `config/`, `database/` |
 | `EP-05` Documentation | ✅ Done — merged into `develop` 2026-10-30 | `README.md`, `docs/` |
-| `EP-06` Transaction core review | 🟡 Assessment done 2026-10-30 — waiting on Nicolas's decisions (§EP-06) | `docs/`, then `config/`, `database/`, `src/` |
+| `EP-06` Transaction core review | 🟡 Decisions settled 2026-10-30 — model changes (`ST-06.3`) next | `docs/`, then `config/`, `database/`, `src/` |
 | `EP-07` Setup pipeline (reference data + entities) | Not started — after `EP-06`, which changes the model | code (`src/main.py`, `src/processors/`) |
 | `EP-08` Transaction simulator | Not started | code (`src/processors/transaction_simulator.py`) |
 | `EP-09` OLAP: Postgres → DuckDB | Not started | code + `database/olap_duck/` |
@@ -302,7 +302,7 @@ Found while fixing the validators (`ST-03.1`); settled 2026-10-30 (Nicolas confi
 
 ## EP-06 — Transaction core review
 
-**Goal:** the transaction core — who issues, what the card holds, where it's accepted, how the balance moves, why a purchase is declined — behaves like a real Brazilian benefits issuer, not only a consistent one. **Dependencies:** `EP-05`. **Size:** L (~1–2 weeks, depending on the decisions below).
+**Scope:** findings #1–#5. **Goal:** the transaction core — who issues, what the card holds, where it's accepted, how the balance moves, why a purchase is declined — behaves like a real Brazilian benefits issuer, not only a consistent one. **Dependencies:** `EP-05`. **Size:** M (~1 week).
 
 **Method:** compare the model with the business reference of an issuer (an internal knowledge base, **kept out of this repository**). Only market-wide concepts and public rules enter the repo — the 3-party / 4-party models, wallets, the PAT law. No issuer names, internal systems, parameters or limits: every number in `config/` stays synthetic.
 
@@ -335,7 +335,7 @@ What the project models today against how the market works. Priority: **must** (
 - [x] Market brands for 4-party (#2): **keep Visa, Mastercard and Elo**
 - [x] Response codes (#5): **ISO 8583**, the card industry standard; not-found codes stay in the `9x` range
 - [x] Balance (#4): no employer credit orders — a starting balance that the transactions move
-- [ ] Scope: the five "must" items here, and the "should" items (#6, #9, #10, #11) here too or in the simulator (`EP-08`)?
+- [x] Scope: the five "must" items (#1–#5) here; the "should" items (#6, #9, #10, #11) go to the simulator (`ST-08.2`), where they show; the "could" items (#12–#14) stay ideas
 
 ### ST-06.3 — Model changes (after the decisions)
 
@@ -373,7 +373,7 @@ What the project models today against how the market works. Priority: **must** (
 
 ## EP-08 — Transaction simulator
 
-**Dependencies:** `EP-07`. **Size:** L (~1 week).
+**Dependencies:** `EP-07`. **Size:** L (~1–2 weeks, with the items from `EP-06`).
 
 ### ST-08.1 — Authorization flow
 
@@ -385,6 +385,10 @@ What the project models today against how the market works. Priority: **must** (
 - [ ] Approval rates calibrated from `approval_rates` (overall, per network, per product)
 - [ ] Usage patterns from `usage_patterns` (hour, weekday, average ticket per product)
 - [ ] Balance and daily/monthly limits respected over time
+- [ ] From `EP-06` (#6): daily transaction count per wallet, declined with `65`
+- [ ] From `EP-06` (#9): reversals and cancellations; channels (card present, contactless, wallets, e-commerce, virtual card); cash withdrawal on the 4-party gift wallet
+- [ ] From `EP-06` (#10): meal on weekdays around lunch, food in larger tickets, fuel through the week; cardholders buy near where they live and work
+- [ ] From `EP-06` (#11): segments SME, Middle, Corporate and Public, with the number of cardholders following the company's size
 
 ### ST-08.3 — Fraud scenarios
 
