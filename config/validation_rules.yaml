@@ -211,7 +211,7 @@ unknown_status: "96"
 # =====================================
 # Validation runtime settings
 # =====================================
-# Not read by the code yet (EP-07).
+# Not read by the code yet (EP-08).
 validation_config:
   timeout_ms: 3000
   
@@ -231,7 +231,7 @@ validation_config:
 # =====================================
 # Per-product rules
 # =====================================
-# Not read by the code yet (EP-07); the CNAE rule already restricts each
+# Not read by the code yet (EP-08); the CNAE rule already restricts each
 # product to its establishments.
 product_specific_rules:
   VA:  # Vale Alimentação
