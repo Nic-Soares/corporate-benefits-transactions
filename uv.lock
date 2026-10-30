@@ -145,7 +145,7 @@ requires-dist = [
     { name = "faker", specifier = ">=40.44.0" },
     { name = "geopandas", specifier = ">=1.2.0" },
     { name = "kagglehub", specifier = ">=1.0.3" },
-    { name = "mimesis", specifier = ">=18,<19" },
+    { name = "mimesis", specifier = ">=22.2" },
     { name = "numpy", specifier = ">=2.5.4" },
     { name = "polars", specifier = ">=2.1.0" },
     { name = "psycopg", extras = ["binary"], specifier = ">=3.3.6" },
@@ -242,11 +242,11 @@ wheels = [
 
 [[package]]
 name = "mimesis"
-version = "18.0.0"
+version = "22.2.0"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/5d/f1/33fb02aa19271a5a2334d24a597047399744a3f1e8c97be31053887260b4/mimesis-18.0.0.tar.gz", hash = "sha256:7d7c76ecd680ae48afe8dc4413ef1ef1ee7ef20e16f9f9cb42892add642fc1b2", size = 4681287, upload-time = "2024-09-13T22:26:05.273Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/e0/2b/629274dd6e23df1ab470e2c039c77033f674f73f0d48cca3d0c7777fce67/mimesis-22.2.0.tar.gz", hash = "sha256:7cd7d9dadd226129fd8bc6039fb0ff9b58efb2b4001022357f69381208e1df68", size = 18289536, upload-time = "2026-09-23T10:29:30.901Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/b6/c8/0b91996ce5337bb877300d0a0e86df17ab72da573625348dcb6cd92c3c41/mimesis-18.0.0-py3-none-any.whl", hash = "sha256:a51854a5ce63ebf2bd6a98e8841412e04cede38593be7e16d1d712848e6273df", size = 4734674, upload-time = "2024-09-13T22:26:03.283Z" },
+    { url = "https://files.pythonhosted.org/packages/89/a6/1031fb1c0f453abd96589e2126707a42bcc4d19ec1d705886df6188182df/mimesis-22.2.0-py3-none-any.whl", hash = "sha256:037011eb3d5edf0b0b5d9eafd74d9881f6dce25b4f01032da0e13fb2a56f37e9", size = 4463089, upload-time = "2026-09-23T10:29:27.931Z" },
 ]
 
 [[package]]
