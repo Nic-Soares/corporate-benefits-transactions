@@ -333,7 +333,7 @@ What the project models today against how the market works. Priority: **must** (
 
 - [x] Product model (#1): **programs + wallets** — agreed. Programs: Food, Meal, Multi-benefit 3-party, Multi-benefit 4-party, Gift, Premium, Fuel
 - [x] Market brands for 4-party (#2): **keep Visa, Mastercard and Elo**
-- [x] Response codes (#5): **ISO 8583**, the card industry standard; not-found codes stay in the `9x` range
+- [x] Response codes (#5): **ISO 8583**, the card industry standard; a missing record declines with the ISO code for that party (`14`, `15`, `57`, `03`, `58`, `92`)
 - [x] Balance (#4): no employer credit orders — a starting balance that the transactions move
 - [x] Scope: the five "must" items (#1–#5) here; the "should" items (#6, #9, #10, #11) go to the simulator (`ST-08.2`), where they show; the "could" items (#12–#14) stay ideas
 
@@ -348,6 +348,13 @@ What the project models today against how the market works. Priority: **must** (
 - [x] ADR-007 — the transaction core model; ADR-003 refined
 - [x] Docs and diagrams: `README.md`, `docs/business-rule.md` (program, network and authorization diagrams, code table), `docs/data-strategy.md` (ER diagram), `docs/technical-architecture.md`, `docs/transactions_flow_diagram.mmd`
 - [x] Config sections no code read and that described the old products or fees removed (`product_acceptance_rules`, `commission_rules`, `product_specific_rules`, `validation_config`)
+
+### ST-06.4 — Transaction record (2026-10-31, ADR-008)
+
+- [x] `transactions.card_wallet_id` → `card_wallets` (was `wallet_id` → `wallets`): the balance charged, not the wallet type; validators, `route_wallet` and `debit` work on it
+- [x] `response_codes` table (16 ISO codes) referenced by `transactions.response_code`; `response_message` leaves the OLTP (the fact keeps it, denormalized)
+- [x] `authorizations` merged into `transactions` (`nsu`, `authorization_code`); the fact drops `authorization_datetime` and `authorization_status`, which repeated `date` and `response_code`
+- [x] Still 17 OLTP and 10 OLAP tables; DBML matches SQL; the schema test inserts transactions under the new foreign keys
 
 ---
 
