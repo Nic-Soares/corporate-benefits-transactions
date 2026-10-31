@@ -34,7 +34,8 @@ def generate_establishments(
 
     Args:
         df_cnae: CNAE subclasses (`subclasse_id`); categories without any are skipped
-        municipios_df: IBGE municipalities (`municipio_nome`, `uf_sigla`)
+        municipios_df: IBGE municipalities (`municipio_nome`, `uf_sigla`; with
+            `population`, establishments follow where people live)
     """
     all_cnaes = df_cnae["subclasse_id"].to_list()
     cnaes_by_category = {
@@ -44,15 +45,13 @@ def generate_establishments(
     weights = {
         name: category["weight"] for name, category in CATEGORIES.items() if cnaes_by_category[name]
     }
-    municipios = (
-        municipios_df.select("municipio_nome", "uf_sigla").unique(maintain_order=True).to_dicts()
-    )
+    municipios = fake.Municipalities(municipios_df)
 
     establishments = []
     for _ in range(n_establishments):
         category = fake.weighted_key(weights)
         main_cnae = random.choice(cnaes_by_category[category])
-        municipio = random.choice(municipios)
+        municipio = municipios.draw()
         establishments.append(
             {
                 "id": fake.new_id("est"),

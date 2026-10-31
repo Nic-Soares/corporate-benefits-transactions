@@ -9,7 +9,9 @@ import math
 import random
 import uuid
 from datetime import date, timedelta
+from itertools import accumulate
 
+import polars as pl
 from mimesis import Finance, Person
 from mimesis.locales import Locale
 
@@ -68,6 +70,22 @@ def lognormal_amount(median: float, p90: float, cap: float, step: float = 0.01) 
 def status(entity: str) -> str:
     """A status drawn from `generation_settings.<entity>_status_distribution`."""
     return weighted_choice(f"{entity}_status_distribution")
+
+
+class Municipalities:
+    """Municipalities to draw from: by population when `municipios_df` has a
+    `population` column (IBGE estimates), uniformly otherwise."""
+
+    def __init__(self, municipios_df: pl.DataFrame) -> None:
+        df = municipios_df.unique(["municipio_nome", "uf_sigla"], maintain_order=True)
+        self.rows: list[dict[str, str]] = df.select("municipio_nome", "uf_sigla").to_dicts()
+        self.cum_weights: list[int] | None = None
+        if "population" in df.columns:
+            self.cum_weights = list(accumulate(df["population"].fill_null(1).to_list()))
+
+    def draw(self) -> dict[str, str]:
+        """`{municipio_nome, uf_sigla}`"""
+        return random.choices(self.rows, cum_weights=self.cum_weights)[0]
 
 
 def relative_date(spec: str) -> date:

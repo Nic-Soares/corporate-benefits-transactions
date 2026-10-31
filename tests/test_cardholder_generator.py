@@ -23,6 +23,8 @@ def test_cardholders_dataframe(municipios_df):
             "id": ["c1", "c2"],
             "segment": ["SME", "Middle"],
             "registration_date": [date(2020, 1, 1), date(2023, 6, 1)],
+            "city": ["Recife", "São Paulo"],
+            "state": ["PE", "SP"],
         }
     )
 
@@ -37,3 +39,7 @@ def test_cardholders_dataframe(municipios_df):
     # hired after the company was registered
     hired = df.join(companies_df, left_on="company_id", right_on="id")
     assert (hired["admission_date"] >= hired["registration_date"]).all()
+
+    # most live in their company's city
+    same_city = hired.filter(pl.col("city") == pl.col("city_right"))
+    assert len(same_city) / len(hired) > 0.6

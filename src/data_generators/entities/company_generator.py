@@ -50,19 +50,16 @@ class CompanyGenerator:
     """Generates companies located in real IBGE municipalities."""
 
     def __init__(self, municipios_df: pl.DataFrame) -> None:
-        """`municipios_df` needs the columns `municipio_nome` and `uf_sigla`."""
-        self.municipios: list[dict[str, str]] = (
-            municipios_df.select(["municipio_nome", "uf_sigla"])
-            .unique(maintain_order=True)
-            .to_dicts()
-        )
+        """`municipios_df` needs `municipio_nome` and `uf_sigla`; with `population`,
+        companies follow where people live."""
+        self.municipios = fake.Municipalities(municipios_df)
 
     def generate_company(self, parent_id: str | None = None, segment: str | None = None) -> Company:
         """A branch keeps its holding's segment; a holding draws one by weight."""
         weights = {name: s["weight"] for name, s in COMPANY_SEGMENTS.items()}
         return Company(
             segment=segment or fake.weighted_key(weights),
-            municipio_data=random.choice(self.municipios),
+            municipio_data=self.municipios.draw(),
             parent_id=parent_id,
         )
 
