@@ -373,23 +373,24 @@ Second pass against how benefits cards are used in the market. The model held; t
 
 ## EP-07 — Setup pipeline
 
-**Dependencies:** `EP-05`. **Size:** M (~2–3 days).
+**Dependencies:** `EP-06`. **Size:** M (~2–3 days).
 
 ### ST-07.1 — Reference data
 
-- [ ] `src/processors/load_and_save_reference_data.py` loads every pre-populated table into Postgres
+- [ ] Load every reference table from `config/` into Postgres: wallets, programs and their wallets, modalities, acquirers, response codes, `cnae_wallets`, `mcc_wallets`, and `mcc_modalities` from `validation_rules.yaml → mcc_acceptance_rules` (descriptions from the public MCC list and the CNAE dataset)
 - [ ] Idempotent: running it twice doesn't duplicate rows
 
 ### ST-07.2 — Entities
 
-- [ ] Generate companies → cardholders → cards → card wallets → establishments → terminals, at the volumes in `simulation_config.yaml → data_volumes`
+- [ ] Generate companies → cardholders → cards → card wallets → establishments → terminals, at `simulation_config.yaml → data_volumes` (companies, `cardholder_scale`, establishments, terminals)
 - [ ] Write to Postgres respecting the foreign keys — parents first, and holdings before branches (`companies.parent_id`)
-- [ ] Load `mcc_modalities` from `validation_rules.yaml → mcc_acceptance_rules` and `cnae_products` from `pre_populated_data.yaml → cnae_products` (description from the CNAE dataset when the code is a full class or subclass)
+- [ ] The same seed gives the same database
 
 ### ST-07.3 — Entrypoint
 
-- [ ] `src/main.py` with subcommands: `setup`, `simulate`, `export`
+- [ ] `src/main.py` with subcommands: `setup` (schema, reference data, entities), `simulate`, `export` (the last two arrive with `EP-08` and `EP-10`)
 - [ ] Progress logging and row counts per table
+- [ ] Runbook: from an empty Docker to a filled database
 
 ---
 
