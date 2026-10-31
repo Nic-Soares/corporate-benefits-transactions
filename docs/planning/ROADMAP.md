@@ -362,7 +362,7 @@ What the project models today against how the market works. Priority: **must** (
 
 ### ST-07.2 — Entities
 
-- [ ] Generate companies → cardholders → cards → card products → establishments → terminals, at the volumes in `simulation_config.yaml → data_volumes`
+- [ ] Generate companies → cardholders → cards → card wallets → establishments → terminals, at the volumes in `simulation_config.yaml → data_volumes`
 - [ ] Write to Postgres respecting the foreign keys — parents first, and holdings before branches (`companies.parent_id`)
 - [ ] Load `mcc_modalities` from `validation_rules.yaml → mcc_acceptance_rules` and `cnae_products` from `pre_populated_data.yaml → cnae_products` (description from the CNAE dataset when the code is a full class or subclass)
 
