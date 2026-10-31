@@ -1,37 +1,66 @@
 # =====================================
 # simulation_config.yaml
-# Parameters of the data generation and the transaction simulation
+# Parameters of the data generation and the transaction simulation.
+# Every number here is synthetic: shaped like a benefits-card market (lunch
+# and evening peaks, small tickets, a few heavy users), not taken from one.
 # =====================================
 
-# Volumes to generate — Not read by the code yet (EP-07)
+# Volumes — Not read by the code yet (EP-07). Cardholders follow each
+# company's segment and cards follow its program bundle.
 data_volumes:
-  companies: 15
-  cardholders: 1200
-  cards: 2400
-  establishments: 150
-  terminals: 300
-  transactions: 100
+  companies: 30
+  establishments: 300
+  terminals: 450
+  transactions: 5000
 
-# Target approval rates — Not read by the code yet (EP-08)
+# Expected share of approved attempts — checked by the simulator (EP-08)
 approval_rates:
-  overall: 0.92                  # 92% approved overall
-  by_network:
-    proprietary_network: 0.95
-    brand: 0.88
+  overall: 0.85
 
 # Data generation (read by src/data_generators/providers/fake.py)
 generation_settings:
-  cnae_with_wallets_ratio: 0.85  # share of establishments whose CNAE accepts some wallet
+  # Company segment: its weight and how many cardholders it has
+  company_segments:
+    SME:       {weight: 0.60, cardholders: {min: 1,   max: 25}}
+    Middle:    {weight: 0.25, cardholders: {min: 25,  max: 120}}
+    Corporate: {weight: 0.08, cardholders: {min: 120, max: 500}}
+    Public:    {weight: 0.07, cardholders: {min: 50,  max: 300}}
 
-  # Which program a card belongs to (pre_populated_data.yaml → card_programs)
-  card_program_distribution:
-    MULTI_3P: 0.35
-    MULTI_4P: 0.15
-    MEAL: 0.20
-    FOOD: 0.15
-    FUEL: 0.05
-    GIFT: 0.05
-    PREMIUM: 0.05
+  # Programs a company contracts; every cardholder gets one card per program.
+  # The 3-party multi-benefit card replaces the separate Food, Meal and Gift
+  # cards, so it never comes with them.
+  program_bundles:
+    - {programs: ["MULTI_3P"],              weight: 0.30}
+    - {programs: ["FOOD", "MEAL"],          weight: 0.22}
+    - {programs: ["MULTI_4P"],              weight: 0.15}
+    - {programs: ["MEAL"],                  weight: 0.12}
+    - {programs: ["FOOD"],                  weight: 0.08}
+    - {programs: ["MULTI_3P", "FUEL"],      weight: 0.04}
+    - {programs: ["FOOD", "MEAL", "GIFT"],  weight: 0.03}
+    - {programs: ["MULTI_4P", "PREMIUM"],   weight: 0.03}
+    - {programs: ["GIFT"],                  weight: 0.03}
+
+  card_type_distribution:
+    physical: 0.85
+    virtual: 0.15
+
+  # Per wallet: the monthly credit range and the limits (0 = no limit).
+  # Meal has the lowest daily limit; Food and Meal cap the purchases per day.
+  wallets:
+    FOOD:        {monthly_credit: {min: 300.00, max: 1200.00}, daily_limit: 2500.00, monthly_limit: 0, daily_count_limit: 10}
+    MEAL:        {monthly_credit: {min: 400.00, max: 1000.00}, daily_limit: 600.00,  monthly_limit: 0, daily_count_limit: 10}
+    MOBILITY:    {monthly_credit: {min: 200.00, max: 900.00},  daily_limit: 0,       monthly_limit: 0, daily_count_limit: 0}
+    HEALTH:      {monthly_credit: {min: 50.00,  max: 300.00},  daily_limit: 0,       monthly_limit: 0, daily_count_limit: 0}
+    HOME_OFFICE: {monthly_credit: {min: 100.00, max: 500.00},  daily_limit: 0,       monthly_limit: 0, daily_count_limit: 0}
+    EDUCATION:   {monthly_credit: {min: 50.00,  max: 400.00},  daily_limit: 0,       monthly_limit: 0, daily_count_limit: 0}
+    GIFT:        {monthly_credit: {min: 100.00, max: 600.00},  daily_limit: 0,       monthly_limit: 0, daily_count_limit: 0}
+    PREMIUM:     {monthly_credit: {min: 100.00, max: 1000.00}, daily_limit: 0,       monthly_limit: 0, daily_count_limit: 0}
+
+  # Balance at the start of the simulation, as a share of the monthly credit
+  starting_balance_ratio: {min: 0.0, max: 1.0}
+
+  # Day of the month the monthly credit lands (balance_history 'credit')
+  benefit_credit_day: 1
 
   # Status weights (valid statuses: business_rules.yaml → status_options)
   company_status_distribution:
@@ -51,9 +80,9 @@ generation_settings:
     cancelled: 0.05
 
   card_wallet_status_distribution:
-    active: 0.90
-    suspended: 0.05
-    cancelled: 0.05
+    active: 0.96
+    suspended: 0.02
+    cancelled: 0.02
 
   establishment_status_distribution:
     active: 0.90
@@ -66,19 +95,14 @@ generation_settings:
     inactive: 0.05
     maintenance: 0.05
 
-  # Balance each wallet starts the simulation with, and its limits (synthetic)
-  wallet_starting_balance:
-    min: 0.00
-    max: 1500.00
-  wallet_daily_limit:
-    min: 300.00
-    max: 2000.00
-  wallet_monthly_limit:
-    min: 1500.00
-    max: 10000.00
-
-  # Share of PIN-verified captures (CHIP, MAG_STRIPE) where the PIN is wrong
-  wrong_pin_ratio: 0.03
+  # Acquirer of a physical terminal: a few large ones and a tail
+  acquirer_distribution:
+    CIE: 0.28
+    RED: 0.26
+    GET: 0.16
+    STO: 0.14
+    PAG: 0.12
+    SAF: 0.04
 
   # Dates
   date_ranges:
@@ -101,22 +125,65 @@ generation_settings:
     min: 3
     max: 5
 
-# Usage patterns — Not read by the code yet (EP-08)
-usage_patterns:
-  # Peak hours per establishment category
-  peak_hours_by_category:
-    restaurant: [12, 13, 18, 19, 20]
-    supermarket: [10, 11, 17, 18, 19]
-    mobility: [7, 8, 17, 18, 19]
-    health: [9, 10, 11, 15, 16, 17]
+# =====================================
+# Establishments: what kinds exist, how many, and what they sell.
+# cnae: CNAE prefixes of the category (the MCC comes from
+#   pre_populated_data.yaml → cnae_mcc). online: sells through an e-commerce
+#   gateway, no physical terminal. atm: cash withdrawal.
+# amount: a log-normal ticket — median, 90th percentile and cap (R$).
+# =====================================
+establishment_categories:
+  supermarket:      {weight: 0.22, cnae: ["4711", "4691"], amount: {median: 60.00, p90: 280.00, max: 2500.00}}
+  food_retail:      {weight: 0.16, cnae: ["4721", "4722", "4723", "4724", "4729"], amount: {median: 22.00, p90: 80.00, max: 400.00}}
+  restaurant:       {weight: 0.24, cnae: ["5611", "5612", "5620"], amount: {median: 35.00, p90: 85.00, max: 400.00}}
+  fuel:             {weight: 0.10, cnae: ["4731", "4520", "4530", "5223"], amount: {median: 110.00, p90: 250.00, max: 1000.00}}
+  health:           {weight: 0.07, cnae: ["4771", "4773", "4774", "8630", "9313"], amount: {median: 45.00, p90: 180.00, max: 1500.00}}
+  home_office:      {weight: 0.02, cnae: ["4751", "4752", "4753", "4754"], amount: {median: 120.00, p90: 600.00, max: 5000.00}}
+  education:        {weight: 0.02, cnae: ["4761", "8599"], amount: {median: 80.00, p90: 400.00, max: 3000.00}}
+  retail:           {weight: 0.10, cnae: ["4755", "4763", "4772", "4781", "4782", "4789"], amount: {median: 70.00, p90: 300.00, max: 2500.00}}
+  ride_hailing:     {weight: 0.03, cnae: ["4923"], online: true, amount: {median: 18.00, p90: 45.00, max: 250.00}}
+  digital_services: {weight: 0.02, cnae: ["6319"], online: true, amount: {median: 30.00, p90: 80.00, max: 300.00}}
+  atm:              {weight: 0.02, cnae: ["6422"], atm: true, amount: {median: 150.00, p90: 400.00, max: 1500.00, step: 20.00}}
 
-  # Transaction amounts per wallet
-  amounts_by_wallet:
-    FOOD:        {min: 15.00, max: 250.00, avg: 65.00}
-    MEAL:        {min: 8.00,  max: 150.00, avg: 35.00}
-    MOBILITY:    {min: 10.00, max: 400.00, avg: 150.00}
-    HEALTH:      {min: 5.00,  max: 300.00, avg: 60.00}
-    HOME_OFFICE: {min: 20.00, max: 800.00, avg: 180.00}
-    EDUCATION:   {min: 15.00, max: 600.00, avg: 120.00}
-    GIFT:        {min: 10.00, max: 500.00, avg: 90.00}
-    PREMIUM:     {min: 20.00, max: 800.00, avg: 150.00}
+# =====================================
+# Transactions (read by src/data_generators/entities/transaction_generator.py)
+# =====================================
+usage_patterns:
+  # Share of attempts per hour, 0h to 23h: a lunch peak and an evening peak
+  hour_weights: [0.5, 0.3, 0.2, 0.2, 0.2, 0.7, 2.0, 4.0, 5.0, 5.0, 5.5, 7.0,
+                 9.5, 7.5, 5.0, 5.0, 6.0, 8.0, 9.0, 8.0, 5.5, 3.5, 1.5, 1.0]
+  # Categories with their own day
+  hour_weights_by_category:
+    restaurant: [0.2, 0.1, 0.1, 0.1, 0.1, 0.2, 1.0, 2.5, 3.0, 2.5, 3.5, 9.0,
+                 16.0, 12.0, 5.0, 3.0, 3.0, 4.0, 6.5, 8.0, 7.5, 4.0, 1.5, 0.5]
+    fuel:       [0.5, 0.3, 0.2, 0.2, 0.3, 1.5, 4.5, 8.0, 7.0, 5.5, 5.0, 5.0,
+                 5.0, 5.0, 5.0, 5.5, 6.5, 8.5, 8.0, 5.5, 3.5, 2.0, 1.0, 0.7]
+  # Monday to Sunday: Monday busiest, Sunday quietest
+  weekday_weights: [1.25, 1.00, 1.00, 1.00, 1.10, 1.05, 0.95]
+  # Weight of the first and last day of the month: spending follows the credit
+  month_day_weights: {first: 1.4, last: 0.8}
+
+  # Per-card activity is log-normal: most cards buy a few times a month,
+  # a few buy every day
+  card_activity_sigma: 1.0
+  # Popularity of an establishment, the same way
+  establishment_popularity_sigma: 1.0
+  # Weight of a card, cardholder, establishment or terminal that isn't active
+  inactive_usage_factor: 0.05
+
+  # Proprietary network: share of attempts where the cardholder picks the
+  # wrong option on the terminal
+  wrong_option_ratio: 0.04
+  # Share of attempts at a place none of the card's wallets fits
+  off_pattern_ratio: 0.03
+  # Share of PIN-verified captures (CHIP, MAG_STRIPE) where the PIN is wrong
+  wrong_pin_ratio: 0.02
+
+  # Capture per terminal type (codes: pre_populated_data.yaml →
+  # transaction_technologies). A virtual card only uses the captures that
+  # don't need the physical card (business_rules.yaml).
+  capture_by_terminal_type:
+    POS: {CONTACTLESS: 0.50, CHIP: 0.30, GOOGLE_PAY: 0.06, APPLE_PAY: 0.04, MOBILE_NFC: 0.05, MAG_STRIPE: 0.05}
+    TEF: {CHIP: 0.90, MAG_STRIPE: 0.10}
+    ECOMMERCE: {ECOMMERCE: 1.00}
+    ATM: {CHIP: 1.00}

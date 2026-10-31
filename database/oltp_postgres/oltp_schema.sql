@@ -145,8 +145,10 @@ CREATE TABLE IF NOT EXISTS card_wallets (
   card_id VARCHAR NOT NULL,
   wallet_id VARCHAR NOT NULL,
   current_balance DECIMAL(15,2) NOT NULL DEFAULT 0,
+  monthly_credit DECIMAL(15,2) NOT NULL DEFAULT 0,
   daily_limit DECIMAL(15,2) DEFAULT 0,
   monthly_limit DECIMAL(15,2) DEFAULT 0,
+  daily_count_limit INTEGER DEFAULT 0,
   activation_date DATE NOT NULL,
   status VARCHAR NOT NULL DEFAULT 'active',
   created_at TIMESTAMP DEFAULT now(),
@@ -190,6 +192,8 @@ CREATE TABLE IF NOT EXISTS transactions (
   id VARCHAR PRIMARY KEY,
   card_id VARCHAR NOT NULL,
   card_wallet_id VARCHAR,
+  transaction_type VARCHAR NOT NULL,
+  wallet_option VARCHAR,
   establishment_id VARCHAR NOT NULL,
   terminal_id VARCHAR NOT NULL,
   amount DECIMAL(15,2) NOT NULL,
@@ -209,7 +213,11 @@ CREATE TABLE IF NOT EXISTS transactions (
   FOREIGN KEY (response_code) REFERENCES response_codes(id)
 );
 
-COMMENT ON COLUMN transactions.card_wallet_id IS 'Wallet of the card charged: chosen by the cardholder (3-party) or routed by MCC (4-party); NULL when no wallet could be routed';
+COMMENT ON COLUMN card_wallets.monthly_credit IS 'Benefit credited on the credit day each month (synthetic)';
+COMMENT ON COLUMN card_wallets.daily_count_limit IS 'Purchases per day on the wallet; 0 = no limit';
+COMMENT ON COLUMN transactions.card_wallet_id IS 'Wallet of the card charged, routed by the issuer; NULL when no wallet could be routed';
+COMMENT ON COLUMN transactions.transaction_type IS 'purchase or withdrawal';
+COMMENT ON COLUMN transactions.wallet_option IS 'Proprietary network: FOOD, MEAL or OTHERS, picked on the terminal; NULL on brand cards';
 COMMENT ON COLUMN transactions.pin_status IS 'ok, wrong or not_required';
 COMMENT ON COLUMN transactions.decline_reason IS 'Specific cause behind the ISO response code; NULL when approved';
 COMMENT ON COLUMN transactions.nsu IS 'Sequence number the terminal gives the attempt';
