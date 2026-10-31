@@ -55,7 +55,7 @@
 | Area | Files |
 |---|---|
 | Data model | `database/model/*.dbml`, `database/oltp_postgres/oltp_schema.sql` (14 tables), `database/olap_duck/01_dimensions.sql` + `02_facts.sql` |
-| Reference data | `src/data_generators/reference_data/*_loader.py`, `src/extractors/` (IBGE, MCC, Kaggle) |
+| Reference data | `src/data_generators/reference_data/*_loader.py`, `src/extractors/` (IBGE, MCC) |
 | Entity generators | `company_generator`, `cardholder_generator`, `card_generator`, `card_product_generator`, `establishment_generator`, `terminal_generator` |
 | Validators | `src/validators/` — status, temporal, balance/limits, infrastructure, MCC × modality, CNAE × product |
 | Infra | `docker-compose.yaml` (Postgres), `src/infrastructure/database/*_manager.py` |
@@ -394,6 +394,12 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] `postgres_manager` rewritten for psycopg 3 (the COPY helpers used the psycopg 2 API); the unused Parquet export of the reference data removed
 - [x] Tests: the schema test loads the reference tables as the setup builds them; `pytest -m db` runs the whole setup in a scratch schema (counts, refusal, reset, same seed → same data)
 - [x] Runbook: from an empty Docker to a filled database (`docs/runbooks/local-setup.md`)
+
+### ST-07.4 — Data sources (2026-10-31)
+
+- [x] CNAE from the official IBGE API instead of a Kaggle copy; `kagglehub` and the downloader removed
+- [x] Municipalities weighted by the IBGE population estimate (table 6579); 80% of cardholders live in their company's city
+- [x] Sources and what is synthetic listed in the README (`mcc_acceptance_rules` marked synthetic: the brands don't publish their tables)
 
 ---
 

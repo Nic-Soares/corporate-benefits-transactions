@@ -49,7 +49,7 @@ uv run python -m src.main setup --seed 42 # schema + reference tables + entities
 `setup` creates the 17 OLTP tables, upserts the reference tables from
 `config/` and writes the generated entities, then prints the rows per table.
 The first run downloads the public sources into `data/raw/` (CNAE from
-Kaggle, the MCC list from GitHub, municipalities from the IBGE API).
+the IBGE API, the MCC list from GitHub, municipalities and population from the IBGE API).
 
 | Option | Effect |
 |---|---|
@@ -68,9 +68,8 @@ The DuckDB file for the OLAP model (`EP-09`) comes from
 uv run pytest -m network
 ```
 
-Calls the IBGE municipalities API. The CNAE dataset is public on Kaggle
-(`src/extractors/kaggle_downloader.py`); if the download asks for
-credentials, set `~/.kaggle/kaggle.json` or `KAGGLE_USERNAME` / `KAGGLE_KEY`.
+Calls the IBGE CNAE, municipalities and population APIs. No credentials
+needed. To download a source again, delete its file in `data/raw/`.
 
 ## 6. Reset
 

@@ -56,7 +56,7 @@ The issuer takes the first wallet of the option that the card holds, is active, 
 
 ### MCC rules (brand network)
 
-1. The brand must accept the MCC (`validation_rules.yaml → mcc_acceptance_rules`, `E` Elo, `M` Mastercard, `V` Visa). Otherwise `57`, `mcc_not_accepted_by_brand`.
+1. The brand must accept the MCC (`validation_rules.yaml → mcc_acceptance_rules`, `E` Elo, `M` Mastercard, `V` Visa — a synthetic rule set; the brands don't publish theirs). Otherwise `57`, `mcc_not_accepted_by_brand`.
 2. The issuer **routes the wallet**: it walks `wallet_priority` (MEAL → FOOD → MOBILITY → HEALTH → HOME_OFFICE → EDUCATION → GIFT) and takes the first wallet that the card holds, is active, accepts the MCC (`mcc_wallets`; GIFT accepts any MCC) and has enough balance. The declines are those of the proprietary network, with `no_wallet_for_mcc` when no wallet accepts the MCC.
 
 ### Cash withdrawal
