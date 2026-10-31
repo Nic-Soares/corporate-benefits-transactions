@@ -4,7 +4,7 @@
 Accepted (retroactive, recorded 2026-10-30)
 
 ## Context
-Products, modalities, acquirers, CNAE and MCC acceptance, response codes,
+Wallets, programs, modalities, acquirers, CNAE and MCC acceptance, response codes,
 validation rules and generation weights change more often than the code that
 applies them, and should be readable without reading Python.
 
