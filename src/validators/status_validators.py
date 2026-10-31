@@ -64,21 +64,29 @@ def validate_terminal_status(
 def validate_card_wallet_status(
     transaction: dict[str, Any], card_wallets_df: pl.DataFrame
 ) -> dict[str, Any]:
-    """Status of the wallet being charged. Brand cards pass until the wallet is routed."""
-    if transaction["wallet_id"] is None:
+    """Status of the card wallet being charged. Brand cards pass until it is routed."""
+    if transaction["card_wallet_id"] is None:
         return PASS
     card_wallet = find_one(
-        card_wallets_df, card_id=transaction["card_id"], wallet_id=transaction["wallet_id"]
+        card_wallets_df, id=transaction["card_wallet_id"], card_id=transaction["card_id"]
     )
     if card_wallet is None:
         return not_found("card_wallet")
     return _check_status(card_wallet["status"], "card_wallet_status", "card_wallet")
 
 
-def validate_wallet_active(transaction: dict[str, Any], wallets_df: pl.DataFrame) -> dict[str, Any]:
-    if transaction["wallet_id"] is None:
+def validate_wallet_active(
+    transaction: dict[str, Any], card_wallets_df: pl.DataFrame, wallets_df: pl.DataFrame
+) -> dict[str, Any]:
+    """The wallet behind the card wallet being charged is enabled."""
+    if transaction["card_wallet_id"] is None:
         return PASS
-    wallet = find_one(wallets_df, id=transaction["wallet_id"])
+    card_wallet = find_one(
+        card_wallets_df, id=transaction["card_wallet_id"], card_id=transaction["card_id"]
+    )
+    if card_wallet is None:
+        return not_found("card_wallet")
+    wallet = find_one(wallets_df, id=card_wallet["wallet_id"])
     if wallet is None:
         return not_found("card_wallet")
     return _check_active(wallet, "wallet_active", "wallet")
