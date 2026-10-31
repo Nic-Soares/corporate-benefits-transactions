@@ -14,7 +14,7 @@
 | `EP-03` Clean up existing code | ✅ Done — merged into `develop` 2026-10-30 | code (`src/`) |
 | `EP-04` Config and model consistency | ✅ Done — merged into `develop` 2026-10-30 | `config/`, `database/` |
 | `EP-05` Documentation | ✅ Done — merged into `develop` 2026-10-30 | `README.md`, `docs/` |
-| `EP-06` Transaction core review | ✅ Done — merged into `develop` 2026-10-30 (ADR-007) | `docs/`, then `config/`, `database/`, `src/` |
+| `EP-06` Transaction core review | ✅ Done — merged into `develop` 2026-10-31 (ADR-007, 008, 009) | `docs/`, then `config/`, `database/`, `src/` |
 | `EP-07` Setup pipeline (reference data + entities) | Not started — after `EP-06`, which changes the model | code (`src/main.py`, `src/processors/`) |
 | `EP-08` Transaction simulator | Not started | code (`src/processors/transaction_simulator.py`) |
 | `EP-09` OLAP: Postgres → DuckDB | Not started | code + `database/olap_duck/` |
@@ -356,6 +356,19 @@ What the project models today against how the market works. Priority: **must** (
 - [x] `authorizations` merged into `transactions` (`nsu`, `authorization_code`); the fact drops `authorization_datetime` and `authorization_status`, which repeated `date` and `response_code`
 - [x] Still 17 OLTP and 10 OLAP tables; DBML matches SQL; the schema test inserts transactions under the new foreign keys
 
+### ST-06.5 — Market review (2026-10-31, ADR-009)
+
+Second pass against how benefits cards are used in the market. The model held; the gaps were in how the data behaves. Every number in the config stays synthetic.
+
+- [x] Proprietary network: the terminal offers *Food*, *Meal* or *Others* and the issuer routes inside the option (`wallet_routing.proprietary_options`, `transactions.wallet_option`); `route_wallet` serves both networks and folds the card-wallet status, wallet and CNAE checks
+- [x] Monthly credit: `card_wallets.monthly_credit`, `benefit_credit_day`, `balance.credit` (`balance_history` `credit`); the starting balance is a share of the credit
+- [x] Cash withdrawal (from `ST-08.2`, #9): `transactions.transaction_type`, brand cards from GIFT only, at cash machines (MCC `6011`, ATM network and terminals)
+- [x] Limits per wallet from the config, Meal lowest; purchases per day on Food and Meal (from `ST-08.2`, #6): `card_wallets.daily_count_limit`, `validate_daily_count` → `65`
+- [x] Companies by segment, cardholders by the segment's size, cards by the company's program bundle (from `ST-08.2`, #11)
+- [x] Establishments by category → CNAE → the MCC of that CNAE (`cnae_mcc`), so the CNAE and MCC rules describe the same business; e-commerce gateways for online businesses
+- [x] `TransactionGenerator` (from `ST-08.2`, #10): log-normal card activity and shop popularity, inactive records rarely used, hour curves (lunch and evening; restaurant and fuel their own), weekday and day-of-month weights, log-normal tickets per category, captures per terminal type (virtual cards never physical), wrong option and off-pattern attempts, no attempt before the card or terminal exists
+- [x] Calibration run (5,000 attempts, scratch script): 86% approved, most declines `51`; the simulator (`EP-08`) checks it for real
+
 ---
 
 ## EP-07 — Setup pipeline
@@ -391,13 +404,11 @@ What the project models today against how the market works. Priority: **must** (
 
 ### ST-08.2 — Realism
 
-- [ ] Approval rates calibrated from `approval_rates` (overall, per network, per product)
-- [ ] Usage patterns from `usage_patterns` (hour, weekday, average ticket per product)
-- [ ] Balance and daily/monthly limits respected over time
-- [ ] From `EP-06` (#6): daily transaction count per wallet, declined with `65`
-- [ ] From `EP-06` (#9): reversals and cancellations; channels (card present, contactless, wallets, e-commerce, virtual card); cash withdrawal on the 4-party gift wallet
-- [ ] From `EP-06` (#10): meal on weekdays around lunch, food in larger tickets, fuel through the week; cardholders buy near where they live and work
-- [ ] From `EP-06` (#11): segments SME, Middle, Corporate and Public, with the number of cardholders following the company's size
+- [ ] Approval rate near `approval_rates.overall`, declines mostly `51`
+- [ ] Credit on `benefit_credit_day`; daily usage, daily count and monthly usage tracked per wallet over time
+- [ ] Reversals and cancellations (from `EP-06`, #9)
+- [ ] Cardholders buy near where they live and work (from `EP-06`, #10)
+- [x] Moved to `ST-06.5`: daily count (#6), withdrawal and channels (#9), usage patterns (#10), segments and size (#11)
 
 ### ST-08.3 — Fraud scenarios
 
