@@ -1,7 +1,7 @@
 # ADR-007 — The transaction core: programs, wallets, networks and ISO codes
 
 ## Status
-Accepted (2026-10-30; roadmap `EP-06`). Refines [ADR-003](003-network-routing-mcc-cnae.md).
+Accepted (2026-10-30; roadmap `EP-06`). Refines [ADR-003](003-network-routing-mcc-cnae.md). The transaction record is refined by [ADR-008](008-transaction-record.md).
 
 ## Context
 The first model had six "products" (`VA, VR, VC, VF, VM, PR`) on a card, each
