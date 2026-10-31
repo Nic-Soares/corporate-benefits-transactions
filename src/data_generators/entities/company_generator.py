@@ -5,14 +5,8 @@ import polars as pl
 
 from src.data_generators.providers import fake
 
-# Business segments for companies
-COMPANY_SEGMENTS = [
-    "Public",
-    "Corporate",
-    "Middle",
-    "SME",
-    "High SME",
-]
+# Segment → {weight, cardholders: {min, max}} (simulation_config.yaml)
+COMPANY_SEGMENTS: dict[str, dict] = fake.SETTINGS["company_segments"]
 
 
 class Company:
@@ -63,9 +57,11 @@ class CompanyGenerator:
             .to_dicts()
         )
 
-    def generate_company(self, parent_id: str | None = None) -> Company:
+    def generate_company(self, parent_id: str | None = None, segment: str | None = None) -> Company:
+        """A branch keeps its holding's segment; a holding draws one by weight."""
+        weights = {name: s["weight"] for name, s in COMPANY_SEGMENTS.items()}
         return Company(
-            segment=random.choice(COMPANY_SEGMENTS),
+            segment=segment or fake.weighted_key(weights),
             municipio_data=random.choice(self.municipios),
             parent_id=parent_id,
         )
@@ -76,11 +72,10 @@ class CompanyGenerator:
         """Holdings (`holding_ratio` of the total, at least one) and branches under them."""
         n_holdings = max(int(n_companies * holding_ratio), 1)
         holdings = [self.generate_company() for _ in range(n_holdings)]
-        holding_ids = [holding.id for holding in holdings]
-        branches = [
-            self.generate_company(parent_id=random.choice(holding_ids))
-            for _ in range(n_companies - n_holdings)
-        ]
+        branches = []
+        for _ in range(n_companies - n_holdings):
+            holding = random.choice(holdings)
+            branches.append(self.generate_company(holding.id, holding.segment))
         return holdings + branches
 
     def generate_companies_as_dataframe(self, n_companies: int) -> pl.DataFrame:

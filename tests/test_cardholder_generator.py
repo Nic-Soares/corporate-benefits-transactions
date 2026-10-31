@@ -3,6 +3,7 @@ from datetime import date
 import polars as pl
 
 from src.data_generators.entities.cardholder_generator import CardholderGenerator
+from src.data_generators.entities.company_generator import COMPANY_SEGMENTS
 
 
 def test_cardholder_fields(municipios_df):
@@ -18,16 +19,21 @@ def test_cardholder_fields(municipios_df):
 
 def test_cardholders_dataframe(municipios_df):
     companies_df = pl.DataFrame(
-        {"id": ["c1", "c2"], "registration_date": [date(2020, 1, 1), date(2023, 6, 1)]}
+        {
+            "id": ["c1", "c2"],
+            "segment": ["SME", "Corporate"],
+            "registration_date": [date(2020, 1, 1), date(2023, 6, 1)],
+        }
     )
 
-    df = CardholderGenerator(municipios_df).generate_cardholders_as_dataframe(
-        companies_df, cardholders_per_company=10
-    )
+    df = CardholderGenerator(municipios_df).generate_cardholders_as_dataframe(companies_df)
 
-    assert len(df) == 20
-    assert df["id"].n_unique() == 20
-    assert df["company_id"].value_counts()["count"].to_list() == [10, 10]
+    assert df["id"].n_unique() == len(df)
+    # as many as the segment says
+    counts = dict(df["company_id"].value_counts().iter_rows())
+    for company_id, segment in [("c1", "SME"), ("c2", "Corporate")]:
+        size = COMPANY_SEGMENTS[segment]["cardholders"]
+        assert size["min"] <= counts[company_id] <= size["max"]
     # hired after the company was registered
     hired = df.join(companies_df, left_on="company_id", right_on="id")
     assert (hired["admission_date"] >= hired["registration_date"]).all()

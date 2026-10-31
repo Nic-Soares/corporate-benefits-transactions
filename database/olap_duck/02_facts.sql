@@ -11,6 +11,8 @@ CREATE TABLE IF NOT EXISTS fact_transactions (
   cardholder_id VARCHAR NOT NULL,
   program_id VARCHAR NOT NULL,
   wallet_id VARCHAR,
+  transaction_type VARCHAR NOT NULL,
+  wallet_option VARCHAR,
   establishment_id VARCHAR NOT NULL,
   terminal_id VARCHAR NOT NULL,
   amount DECIMAL(15, 2) NOT NULL,

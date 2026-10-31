@@ -125,10 +125,14 @@ acquirers:
   - id: "SAF"
     name: "SafraPay"
 
+  - id: "ATM"
+    name: "ATM network"   # cash machines shared by the banks
+
 # =====================================
 # Terminal models per acquirer (acquirer id → model and type)
 # =====================================
 terminal_models_by_acquirer:
+  # ECOMMERCE: the acquirer's online gateway; ATM: a cash machine
   CIE:
     - model: "LIO V1"
       type: "POS"
@@ -136,6 +140,8 @@ terminal_models_by_acquirer:
       type: "POS"
     - model: "Cielo Flash"
       type: "TEF"
+    - model: "Cielo E-commerce"
+      type: "ECOMMERCE"
 
   RED:
     - model: "Pop"
@@ -144,6 +150,8 @@ terminal_models_by_acquirer:
       type: "POS"
     - model: "TEF Dedicado"
       type: "TEF"
+    - model: "Rede E-commerce"
+      type: "ECOMMERCE"
 
   STO:
     - model: "Ton T1"
@@ -152,6 +160,8 @@ terminal_models_by_acquirer:
       type: "POS"
     - model: "Ton Pro"
       type: "POS"
+    - model: "Stone E-commerce"
+      type: "ECOMMERCE"
 
   GET:
     - model: "Smart"
@@ -160,6 +170,8 @@ terminal_models_by_acquirer:
       type: "POS"
     - model: "TEF GetNet"
       type: "TEF"
+    - model: "GetNet E-commerce"
+      type: "ECOMMERCE"
 
   PAG:
     - model: "Moderninha Plus"
@@ -168,6 +180,8 @@ terminal_models_by_acquirer:
       type: "POS"
     - model: "Moderninha Smart"
       type: "POS"
+    - model: "PagSeguro E-commerce"
+      type: "ECOMMERCE"
 
   SAF:
     - model: "Safra Mobile"
@@ -177,6 +191,10 @@ terminal_models_by_acquirer:
     - model: "Safra TEF"
       type: "TEF"
 
+  ATM:
+    - model: "Cash machine"
+      type: "ATM"
+
 # CNAE × wallets: what the proprietary network accepts at each establishment
 # =====================================
 cnae_wallets:
@@ -185,6 +203,7 @@ cnae_wallets:
 
   # Supermarkets and hypermarkets
   "4711": ["FOOD", "GIFT", "PREMIUM"]
+  "4691": ["FOOD", "GIFT"]       # cash-and-carry food wholesale
 
   # Food retail
   "4721": ["FOOD", "GIFT"]       # bakeries, dairy, cold cuts
@@ -232,11 +251,55 @@ cnae_wallets:
   "4789": ["GIFT", "PREMIUM"]    # other new goods
 
 # =====================================
+# CNAE × MCC: the MCC an acquirer gives an establishment of each activity
+# (longest prefix wins, as in cnae_wallets)
+# =====================================
+cnae_mcc:
+  "4711": "5411"     # supermarkets
+  "4711301": "5300"  # hypermarkets
+  "4691": "5300"     # cash-and-carry wholesale
+  "4721": "5462"     # bakeries
+  "4722": "5422"     # butchers
+  "4723": "5921"     # beverages
+  "4724": "5499"     # fruit and vegetables
+  "4729": "5499"     # other food
+  "5611": "5812"     # restaurants
+  "5611203": "5814"  # snack bars
+  "5611204": "5813"  # bars
+  "5611205": "5813"  # bars with entertainment
+  "5612": "5814"     # street food
+  "5620": "5812"     # catering
+  "4731": "5541"     # fuel stations
+  "4520": "7538"     # vehicle repair
+  "4530": "5533"     # vehicle parts
+  "5223": "7523"     # parking
+  "4771": "5912"     # pharmacies
+  "4773": "5976"     # orthopedic goods
+  "4774": "8043"     # opticians
+  "8630": "8011"     # doctors
+  "9313": "7997"     # gyms
+  "4751": "5732"     # IT equipment
+  "4752": "5732"     # telecom equipment
+  "4753": "5722"     # home appliances
+  "4754": "5712"     # furniture
+  "4761": "5942"     # books
+  "8599": "8299"     # courses
+  "4755": "5714"     # household textiles
+  "4763": "5941"     # sports and toys
+  "4772": "5977"     # cosmetics
+  "4781": "5651"     # clothing
+  "4782": "5661"     # footwear
+  "4789": "5999"     # other retail
+  "4923": "4121"     # taxi and ride-hailing
+  "6319": "4899"     # online content and subscriptions
+  "6422": "6011"     # banks: cash machines
+
+# =====================================
 # MCC × wallets: on a brand (4-party) card the issuer picks the wallet from
 # the establishment's MCC. GIFT is open: it takes any MCC the brand accepts.
 # =====================================
 mcc_wallets:
-  FOOD: ["5411", "5422", "5441", "5451", "5462", "5499"]
+  FOOD: ["5411", "5300", "5422", "5441", "5451", "5462", "5499"]
   MEAL: ["5811", "5812", "5814"]
   MOBILITY: ["5541", "5542", "5531", "5532", "5533", "7523", "7542", "7531", "7538", "4111", "4121", "4131"]
   HEALTH: ["5912", "5976", "8011", "8021", "8031", "8041", "8042", "8043", "8049", "8050", "8062", "8071", "8099", "7997"]
@@ -323,6 +386,10 @@ transaction_technologies:
   - code: GOOGLE_PAY
     category: digital
     name: Google Pay
+
+  - code: ECOMMERCE
+    category: digital
+    name: E-commerce (card not present)
 
 # Response codes: ISO 8583, the card industry's standard. Descriptions are
 # shown to Brazilian users, so they stay in Portuguese. The specific reason

@@ -51,18 +51,6 @@ status_validations:
       inactive: "58"
       maintenance: "58"
 
-  card_wallet_status:
-    description: "The wallet on the card must be active"
-    required_value: "active"
-    error_codes:
-      suspended: "57"
-      cancelled: "57"
-
-  wallet_active:
-    description: "Wallet must be enabled"
-    error_codes:
-      false: "57"
-
   modality_active:
     description: "Modality must be enabled"
     error_codes:
@@ -110,14 +98,6 @@ security_validations:
 # Business-rule validations: where each wallet can be used
 # =====================================
 business_rules_validations:
-  cnae_wallet:
-    description: "Proprietary network: the establishment's CNAE accepts the chosen wallet"
-    applies_to: "proprietary_network"
-    validation:
-      - "longest CNAE prefix × wallet exists in cnae_wallets"
-      - "cnae_wallets.active = true"
-    error_code: "57"
-
   mcc_brand:
     description: "Brand network: the brand accepts the establishment's MCC"
     applies_to: "brand"
@@ -127,13 +107,24 @@ business_rules_validations:
     error_code: "57"
 
   wallet_routing:
-    description: "Brand network: the issuer picks the wallet from the MCC"
-    applies_to: "brand"
-    # First wallet in this order that the card holds, that is active and
-    # whose MCC list (pre_populated_data.yaml → mcc_wallets) covers the
-    # establishment; GIFT takes any MCC. No candidate → 57; candidates
+    description: "The issuer picks the wallet to charge"
+    # Candidates, in order: the wallets the card holds, active (card wallet
+    # and wallet), accepted at the establishment, with enough balance; the
+    # first wins. Accepted: proprietary network — the establishment's CNAE
+    # (longest prefix in cnae_wallets, active rule); brand — the MCC
+    # (mcc_wallets; GIFT takes any MCC). No candidate → 57; candidates
     # without enough balance → 51.
+    #
+    # Proprietary network: the cardholder picks an option on the terminal
+    # and the issuer routes inside it.
+    proprietary_options:
+      FOOD: ["FOOD"]
+      MEAL: ["MEAL"]
+      OTHERS: ["MOBILITY", "HEALTH", "HOME_OFFICE", "EDUCATION", "GIFT", "PREMIUM"]
+    # Brand network: the issuer routes by MCC in this order
     wallet_priority: ["MEAL", "FOOD", "MOBILITY", "HEALTH", "HOME_OFFICE", "EDUCATION", "GIFT"]
+    # Cash withdrawal: brand cards only, from these wallets
+    withdrawal_wallets: ["GIFT"]
     error_code: "57"
 
 # =====================================
@@ -157,6 +148,12 @@ balance_and_limits_validations:
     condition: "monthly_limit > 0"  # a limit of 0 means no limit
     error_code: "61"
 
+  daily_count_limit:
+    description: "Purchases per day on the wallet not exceeded"
+    rule: "daily_count + 1 <= daily_count_limit"
+    condition: "daily_count_limit > 0"  # 0 means no limit
+    error_code: "65"
+
 # =====================================
 # Infrastructure validations
 # =====================================
@@ -167,6 +164,8 @@ infrastructure_validations:
     supported_by_terminal_type:
       POS: ["CHIP", "MAG_STRIPE", "CONTACTLESS", "MOBILE_NFC", "APPLE_PAY", "GOOGLE_PAY"]
       TEF: ["CHIP", "MAG_STRIPE"]
+      ECOMMERCE: ["ECOMMERCE"]
+      ATM: ["CHIP"]
     error_code: "58"
 
 # =====================================
@@ -358,7 +357,7 @@ mcc_acceptance_rules:
   "5998": "M, V"
   "5999": "E, M, V"
   "6010": "M, V"
-  "6011": "M, V"
+  "6011": "E, M, V"
   "6012": "M, V"
   "6051": "M, V"
   "6211": "M, V"

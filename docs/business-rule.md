@@ -33,23 +33,35 @@ Source: `config/pre_populated_data.yaml → wallets`, `card_programs`.
 | | Proprietary network (`OWN`, 3-party) | Brand network (Visa, Mastercard, Elo — 4-party) |
 |---|---|---|
 | Chain | Terminal → issuer | Terminal → acquirer → brand → issuer |
-| Who picks the wallet | The cardholder, on the terminal | The issuer, from the establishment's **MCC** |
+| Who picks the wallet | The cardholder picks an option on the terminal (*Food*, *Meal* or *Others*); the issuer routes inside it | The issuer, from the establishment's **MCC** |
 | What authorizes the place | The establishment's **CNAE** accepts that wallet | The brand accepts the MCC |
 | Rule data | `cnae_wallets` | `mcc_modalities` (MCC × brand) + `mcc_wallets` (MCC × wallet) |
 
-### CNAE rule (proprietary network)
+### Options and CNAE rule (proprietary network)
 
-`cnae_wallets` lists CNAE prefixes at several levels. **The longest prefix of the establishment's CNAE decides**, so a subclass entry replaces its class's list. Example: `5611` (restaurants and bars) accepts MEAL and GIFT, but `5611201` (restaurants) lists only MEAL, so GIFT is declined at a `5611201` restaurant.
+The terminal offers three options (`validation_rules.yaml → wallet_routing.proprietary_options`):
 
-- The chosen wallet isn't accepted → `57`, `wallet_not_accepted_at_cnae`
-- Rule exists but inactive → `57`, `cnae_rule_inactive`
+| Option | Wallets, in routing order |
+|---|---|
+| `FOOD` | FOOD |
+| `MEAL` | MEAL |
+| `OTHERS` | MOBILITY → HEALTH → HOME_OFFICE → EDUCATION → GIFT → PREMIUM |
+
+The issuer takes the first wallet of the option that the card holds, is active, is accepted at the establishment's CNAE and has the balance. `cnae_wallets` lists CNAE prefixes at several levels; **the longest prefix of the establishment's CNAE decides** (its active rules), so a subclass entry replaces its class's list. Example: `5611` (restaurants and bars) accepts MEAL and GIFT, but `5611201` (restaurants) lists only MEAL, so *Others* is declined at a `5611201` restaurant.
+
+- The card holds no wallet of the option → `57`, `wallet_not_on_card`
+- None of them active → `57`, `card_wallet_inactive`
+- None accepted at the CNAE → `57`, `wallet_not_accepted_at_cnae`
+- None with enough balance → `51`, `insufficient_balance`
 
 ### MCC rules (brand network)
 
 1. The brand must accept the MCC (`validation_rules.yaml → mcc_acceptance_rules`, `E` Elo, `M` Mastercard, `V` Visa). Otherwise `57`, `mcc_not_accepted_by_brand`.
-2. The issuer **routes the wallet**: it walks `wallet_priority` (MEAL → FOOD → MOBILITY → HEALTH → HOME_OFFICE → EDUCATION → GIFT) and takes the first wallet that the card holds, is active, accepts the MCC (`mcc_wallets`; GIFT accepts any MCC) and has enough balance.
-   - No wallet accepts the MCC → `57`, `no_wallet_for_mcc`
-   - Some do, none with enough balance → `51`, `insufficient_balance`
+2. The issuer **routes the wallet**: it walks `wallet_priority` (MEAL → FOOD → MOBILITY → HEALTH → HOME_OFFICE → EDUCATION → GIFT) and takes the first wallet that the card holds, is active, accepts the MCC (`mcc_wallets`; GIFT accepts any MCC) and has enough balance. The declines are those of the proprietary network, with `no_wallet_for_mcc` when no wallet accepts the MCC.
+
+### Cash withdrawal
+
+Brand cards withdraw at cash machines (MCC `6011`) from the GIFT wallet only (`withdrawal_wallets`); a proprietary-network card can't (`57`, `withdrawal_not_allowed`).
 
 Example: a Visa multi-benefit card at a restaurant (MCC `5812`) with MEAL 20.00 and GIFT 1,000.00 buys 50.00 → MEAL can't pay, FOOD doesn't take `5812`, GIFT pays.
 
@@ -59,11 +71,11 @@ Example: a Visa multi-benefit card at a restaurant (MCC `5812`) with MEAL 20.00 
 
 ```mermaid
 flowchart TD
-    TX["Purchase attempt<br/>card, terminal, amount, capture, PIN"] --> S["1. Status<br/>card, cardholder, establishment,<br/>terminal, wallet, modality, acquirer"]
+    TX["Purchase attempt<br/>card, terminal, amount, capture, PIN"] --> S["1. Status<br/>card, cardholder, establishment,<br/>terminal, modality, acquirer"]
     S --> T["2. Temporal<br/>expiry, admission,<br/>accreditation, installation"]
     T --> P["3. Security<br/>PIN"]
     P --> NET{"Network?"}
-    NET -->|OWN| CNAE["4. CNAE × chosen wallet"]
+    NET -->|OWN| CNAE["4. Route inside the option<br/>picked on the terminal,<br/>CNAE × wallet"]
     NET -->|brand| MCC["4. Brand × MCC,<br/>then route the wallet by MCC"]
     CNAE --> B["5. Balance and limits<br/>on that wallet"]
     MCC --> B
@@ -84,22 +96,24 @@ flowchart TD
 | | Cardholder inactive or terminated | `62` | `cardholder_inactive`, `cardholder_terminated` |
 | | Establishment not active | `03` | `establishment_<status>` |
 | | Terminal inactive or in maintenance | `58` | `terminal_<status>` |
-| | Wallet on the card suspended or cancelled | `57` | `card_wallet_<status>` |
-| | Wallet, modality disabled / acquirer disabled | `57` / `58` | `wallet_disabled`, `modality_disabled` / `acquirer_disabled` |
+| | Modality disabled / acquirer disabled | `57` / `58` | `modality_disabled` / `acquirer_disabled` |
 | Temporal | Card expired | `54` | `card_expired` |
 | | Before the cardholder's admission | `62` | `before_admission` |
 | | Before accreditation / installation | `03` / `58` | `before_accreditation` / `before_installation` |
 | Security | Wrong PIN (chip and stripe ask for it) | `55` | `wrong_pin` |
-| Business rules | See the networks above | `57`, `51` | |
+| Business rules | See the networks above: no wallet on the card, inactive, not accepted here, no withdrawal | `57`, `51` | `wallet_not_on_card`, `card_wallet_inactive`, `wallet_not_accepted_at_cnae`, `no_wallet_for_mcc`, `mcc_not_accepted_by_brand`, `withdrawal_not_allowed` |
 | Balance and limits | Balance below the amount | `51` | `insufficient_balance` |
 | | Daily / monthly limit (0 = no limit) | `61` | `daily_limit_exceeded`, `monthly_limit_exceeded` |
-| Infrastructure | TEF terminals take only chip and stripe | `58` | `capture_not_supported` |
+| | Purchases per day on the wallet (Food and Meal) | `65` | `daily_count_exceeded` |
+| Infrastructure | The terminal doesn't take the capture: TEF only chip and stripe, e-commerce only online, ATM only chip | `58` | `capture_not_supported` |
 
 A referenced record that doesn't exist declines with the ISO code for that party (`14` card or cardholder, `57` wallet not on the card, `15` modality, `03` establishment, `58` terminal, `92` acquirer) and `<entity>_not_found`. A status missing from a rule's list declines with `96`.
 
 ## Balance
 
-Each wallet starts the simulation with a balance (`simulation_config.yaml → generation_settings.wallet_starting_balance`). An approved purchase debits the charged wallet and writes a `balance_history` row (`src/processors/balance.py`), so a later purchase on the same wallet can be declined with `51`. Where the balance comes from (employer credit orders) is out of scope.
+Each card wallet has a **monthly credit** (`card_wallets.monthly_credit`, drawn from `simulation_config.yaml → generation_settings.wallets`) and starts the simulation with a share of it. On the credit day (`benefit_credit_day`) the credit lands (`balance.credit`, `balance_history.operation_type = credit`); an approved purchase debits the charged wallet (`balance.debit`, `purchase`). Spending follows the credit — more early in the month, more `51` declines late. How the employer orders and pays the credit is out of scope.
+
+Limits per wallet are in the same section: Meal has the lowest daily amount; Food and Meal cap the purchases per day; the other wallets have none.
 
 ## Statuses
 

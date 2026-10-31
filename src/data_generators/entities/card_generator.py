@@ -6,8 +6,6 @@ import polars as pl
 from src.data_generators.providers import fake
 from src.utils.read_yamls import load_pre_populated_data
 
-CARD_TYPES = ["physical", "virtual"]
-
 _REFERENCE = load_pre_populated_data()
 PROGRAMS = {program["id"]: program for program in _REFERENCE["card_programs"]}
 PROPRIETARY_MODALITY = next(
@@ -38,7 +36,7 @@ class Card:
         self.program_id: str = program_id
         self.modality_id: str = modality_for(program_id)
         self.card_number: str = "".join(str(random.randint(0, 9)) for _ in range(16))
-        self.card_type: str = random.choice(CARD_TYPES)
+        self.card_type: str = fake.weighted_choice("card_type_distribution")
         self.status: str = fake.status("card")
         self.issue_date: date = fake.date_in_range("card_issuance", issued_from)
 
@@ -62,22 +60,35 @@ class Card:
 
 
 class CardGenerator:
-    """Generates cards for existing cardholders."""
+    """Generates the cards of existing cardholders.
+
+    Each company contracts a bundle of programs (`generation_settings.program_bundles`)
+    and each of its cardholders gets one card per program of the bundle.
+    """
 
     def __init__(self, cardholders_df: pl.DataFrame) -> None:
-        """`cardholders_df` needs `id` and `admission_date`.
+        """`cardholders_df` needs `id`, `company_id` and `admission_date`."""
+        self.cardholders: list[dict] = cardholders_df.select(
+            "id", "company_id", "admission_date"
+        ).to_dicts()
 
-        Programs are drawn with `generation_settings.card_program_distribution`.
-        """
-        self.cardholders: list[dict] = cardholders_df.select("id", "admission_date").to_dicts()
+    @staticmethod
+    def draw_bundle() -> list[str]:
+        bundles = fake.SETTINGS["program_bundles"]
+        return random.choices(bundles, weights=[b["weight"] for b in bundles])[0]["programs"]
 
-    def generate_card(self) -> Card:
-        cardholder = random.choice(self.cardholders)
-        return Card(
-            cardholder_id=cardholder["id"],
-            program_id=fake.weighted_choice("card_program_distribution"),
-            issued_from=cardholder["admission_date"],
-        )
+    def generate_cards(self) -> list[Card]:
+        bundles: dict[str, list[str]] = {}
+        cards = []
+        for cardholder in self.cardholders:
+            company_id = cardholder["company_id"]
+            if company_id not in bundles:
+                bundles[company_id] = self.draw_bundle()
+            cards += [
+                Card(cardholder["id"], program_id, issued_from=cardholder["admission_date"])
+                for program_id in bundles[company_id]
+            ]
+        return cards
 
-    def generate_cards_as_dataframe(self, n_cards: int) -> pl.DataFrame:
-        return pl.DataFrame([self.generate_card().to_dict() for _ in range(n_cards)])
+    def generate_cards_as_dataframe(self) -> pl.DataFrame:
+        return pl.DataFrame([card.to_dict() for card in self.generate_cards()])
