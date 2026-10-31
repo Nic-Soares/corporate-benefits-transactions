@@ -1,6 +1,6 @@
 # Runbook — Local setup
 
-From a fresh clone to a database with the schema created.
+From a fresh clone to a database filled with reference data and entities.
 
 ---
 
@@ -42,12 +42,25 @@ Postgres 18 keeps its data in the `corporate_benefits_postgres_data` volume,
 mounted at `/var/lib/postgresql` (18 stores data in a versioned subfolder).
 
 ```bash
-uv run pytest -m db                                       # connection + schema
-uv run python -m src.infrastructure.schema.schema_creator # create both schemas
+uv run pytest -m db                       # connection, schema, setup (scratch schema, rolled back)
+uv run python -m src.main setup --seed 42 # schema + reference tables + entities
 ```
 
-The schema creator builds the 14 OLTP tables in Postgres and the DuckDB file
-`database/olap_duck/olap_corporate_benefits.duckdb` (git-ignored).
+`setup` creates the 17 OLTP tables, upserts the reference tables from
+`config/` and writes the generated entities, then prints the rows per table.
+The first run downloads the public sources into `data/raw/` (CNAE from
+Kaggle, the MCC list from GitHub, municipalities from the IBGE API).
+
+| Option | Effect |
+|---|---|
+| `--seed N` | Random seed (default 42) |
+| `--today YYYY-MM-DD` | Reference day of every generated date (default today); with the seed, fixes the data |
+| `--reset` | Replace the entities (and any simulated transactions) already in the database |
+
+Without `--reset`, a second run stops: `The database already has entities`.
+
+The DuckDB file for the OLAP model (`EP-09`) comes from
+`uv run python -m src.infrastructure.schema.schema_creator`.
 
 ## 5. Network sources (optional)
 
@@ -55,9 +68,9 @@ The schema creator builds the 14 OLTP tables in Postgres and the DuckDB file
 uv run pytest -m network
 ```
 
-Calls the IBGE municipalities API. The CNAE dataset comes from Kaggle
-(`src/extractors/kaggle_downloader.py`) and needs Kaggle credentials
-(`~/.kaggle/kaggle.json` or `KAGGLE_USERNAME` / `KAGGLE_KEY`).
+Calls the IBGE municipalities API. The CNAE dataset is public on Kaggle
+(`src/extractors/kaggle_downloader.py`); if the download asks for
+credentials, set `~/.kaggle/kaggle.json` or `KAGGLE_USERNAME` / `KAGGLE_KEY`.
 
 ## 6. Reset
 
@@ -77,3 +90,5 @@ rm -f database/olap_duck/olap_corporate_benefits.duckdb
 | Container exits right after start with a data-directory error | Volume created by another Postgres major version | `docker compose down -v` (local data is regenerable) |
 | `ModuleNotFoundError: src` | Running outside the uv environment | Prefix with `uv run`, or `uv sync` again |
 | `db` or `network` tests don't run | Their markers are left out of the default run | `uv run pytest -m db` (or `-m network`) |
+| `The database already has entities` | `setup` ran before | `--reset` to replace them |
+| A source fails to download | No network, or the API is down | Run again later; once in `data/raw/` it isn't downloaded again |
