@@ -42,7 +42,7 @@ def build_tables(municipios_df):
     def build():
         companies = CompanyGenerator(municipios_df).generate_companies_as_dataframe(10)
         cardholders = CardholderGenerator(municipios_df).generate_cardholders_as_dataframe(
-            companies, scale=0.2
+            companies, scale=0.02
         )
         cards = CardGenerator(cardholders).generate_cards_as_dataframe()
         card_wallets = generate_card_wallets(cards)

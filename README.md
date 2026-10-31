@@ -26,7 +26,7 @@ The two networks authorize differently:
 
 Every decline carries an ISO 8583 response code and a specific reason (wrong PIN, wallet not accepted here, insufficient balance…). An approved purchase spends the wallet's balance, and the benefit is credited again each month. Brand cards can also withdraw cash from the gift wallet.
 
-The data is shaped like the market, with synthetic numbers: lunch and evening peaks, more spending early in the month, small tickets with a long tail, a few heavy cards and many light ones, companies from a handful to hundreds of employees, and declines that are mostly for lack of balance.
+The data is shaped like the market, with synthetic numbers: lunch and evening peaks, more spending early in the month, small tickets with a long tail, a few heavy cards and many light ones, companies from a handful to thousands of employees (SME up to 250, Middle up to 1,999, Corporate from 2,000, and Public), and declines that are mostly for lack of balance.
 
 Details in [`docs/business-rule.md`](docs/business-rule.md).
 
