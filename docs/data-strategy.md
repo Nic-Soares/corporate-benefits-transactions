@@ -77,10 +77,16 @@ establishments               category by weight → a CNAE of it → the MCC of 
 
 `TransactionGenerator` (`src/data_generators/entities/transaction_generator.py`) draws each attempt from `simulation_config.yaml → usage_patterns`: a card weighted by its activity (log-normal; inactive cards rarely), a kind of place its wallets fit (now and then one they don't), a popular shop's terminal, a day weighted by weekday and day of month, an hour from the category's curve, a log-normal ticket, a capture the terminal and card take, and, on the proprietary network, the option picked on the terminal (now and then the wrong one). The validators run in order and the first failure sets the code and reason; an approval debits the wallet.
 
-## Pipeline (planned, `EP-07`)
+## Pipeline
 
-1. Create the schemas (`src/infrastructure/schema/schema_creator.py` — exists).
-2. Load the reference tables.
-3. Generate and load the entities, at the volumes in `simulation_config.yaml → data_volumes`.
+`python -m src.main setup` (`src/pipeline/`), in one transaction:
+
+1. Create the OLTP schema (idempotent).
+2. Upsert the reference tables: running again leaves the same rows.
+3. Generate the entities at `simulation_config.yaml → data_volumes` and write them parents first. With entities already in the database it stops unless `--reset`; `--seed` and `--today` fix the result.
+
+The public sources (CNAE, MCC list, IBGE municipalities) are downloaded once into `data/raw/` (git-ignored).
+
+Next:
 4. Simulate transactions (`EP-08`).
 5. ETL into the DuckDB star schema (`EP-09`), export Parquet (`EP-10`).

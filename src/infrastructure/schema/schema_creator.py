@@ -1,5 +1,5 @@
 from src.infrastructure.database.duckdb_manager import connect_database, execute_sql_file
-from src.infrastructure.database.postgres_manager import connect_pg_db, execute_pg_sql_file
+from src.infrastructure.database.postgres_manager import connect_pg_db, run_sql_file
 from src.utils.read_yamls import CONFIG_DIR, load_database
 
 # Paths in config/database.yaml are relative to the repository root
@@ -7,11 +7,8 @@ ROOT = CONFIG_DIR.parent
 
 
 def create_schema_postgres():
-    conn = connect_pg_db()
-    if conn:
-        config = load_database()["oltp_postgres"]
-        execute_pg_sql_file(conn, ROOT / config["schema"])
-        conn.close()
+    with connect_pg_db() as conn:
+        run_sql_file(conn, ROOT / load_database()["oltp_postgres"]["schema"])
 
 
 def create_schema_duckdb():

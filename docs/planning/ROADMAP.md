@@ -15,7 +15,7 @@
 | `EP-04` Config and model consistency | ✅ Done — merged into `develop` 2026-10-30 | `config/`, `database/` |
 | `EP-05` Documentation | ✅ Done — merged into `develop` 2026-10-30 | `README.md`, `docs/` |
 | `EP-06` Transaction core review | ✅ Done — merged into `develop` 2026-10-31 (ADR-007, 008, 009) | `docs/`, then `config/`, `database/`, `src/` |
-| `EP-07` Setup pipeline (reference data + entities) | Not started — after `EP-06`, which changes the model | code (`src/main.py`, `src/processors/`) |
+| `EP-07` Setup pipeline (reference data + entities) | ✅ Done — merged into `develop` 2026-10-31 | code (`src/main.py`, `src/processors/`) |
 | `EP-08` Transaction simulator | Not started | code (`src/processors/transaction_simulator.py`) |
 | `EP-09` OLAP: Postgres → DuckDB | Not started | code + `database/olap_duck/` |
 | `EP-10` Dataset export and quality | Not started | code + `data/final_datasets/` |
@@ -377,20 +377,23 @@ Second pass against how benefits cards are used in the market. The model held; t
 
 ### ST-07.1 — Reference data
 
-- [ ] Load every reference table from `config/` into Postgres: wallets, programs and their wallets, modalities, acquirers, response codes, `cnae_wallets`, `mcc_wallets`, and `mcc_modalities` from `validation_rules.yaml → mcc_acceptance_rules` (descriptions from the public MCC list and the CNAE dataset)
-- [ ] Idempotent: running it twice doesn't duplicate rows
+- [x] Load every reference table from `config/` into Postgres: wallets, programs and their wallets, modalities, acquirers, response codes, `cnae_wallets` (descriptions from the CNAE dataset), `mcc_wallets`, and `mcc_modalities` from `validation_rules.yaml → mcc_acceptance_rules` (descriptions from the public MCC list) — `src/pipeline/reference.py`
+- [x] Idempotent: upsert on the primary key; the schema's indexes became `IF NOT EXISTS`
+- [x] Public sources cached in `data/raw/` (`src/pipeline/sources.py`)
 
 ### ST-07.2 — Entities
 
-- [ ] Generate companies → cardholders → cards → card wallets → establishments → terminals, at `simulation_config.yaml → data_volumes` (companies, `cardholder_scale`, establishments, terminals)
-- [ ] Write to Postgres respecting the foreign keys — parents first, and holdings before branches (`companies.parent_id`)
-- [ ] The same seed gives the same database
+- [x] Generate companies → cardholders → cards → card wallets → establishments → terminals, at `simulation_config.yaml → data_volumes` — `src/pipeline/entities.py`
+- [x] Written with COPY, parents first, holdings before branches
+- [x] The same seed and reference day give the same database (checked by hash); a second run stops unless `--reset`
 
 ### ST-07.3 — Entrypoint
 
-- [ ] `src/main.py` with subcommands: `setup` (schema, reference data, entities), `simulate`, `export` (the last two arrive with `EP-08` and `EP-10`)
-- [ ] Progress logging and row counts per table
-- [ ] Runbook: from an empty Docker to a filled database
+- [x] `src/main.py setup [--seed] [--today] [--reset]`, one transaction; `simulate` and `export` arrive with `EP-08` and `EP-10`
+- [x] Progress logging and row counts per table
+- [x] `postgres_manager` rewritten for psycopg 3 (the COPY helpers used the psycopg 2 API); the unused Parquet export of the reference data removed
+- [x] Tests: the schema test loads the reference tables as the setup builds them; `pytest -m db` runs the whole setup in a scratch schema (counts, refusal, reset, same seed → same data)
+- [x] Runbook: from an empty Docker to a filled database (`docs/runbooks/local-setup.md`)
 
 ---
 

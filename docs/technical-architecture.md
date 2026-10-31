@@ -27,7 +27,7 @@ simulator ─► validators ────────────┘
         DuckDB (9 dimensions + fact_transactions) ─► Parquet ─► Kaggle
 ```
 
-Exists today: config, extractors, loaders, generators, validators, both schemas and the schema creator. Planned: the setup pipeline (`EP-07`), the simulator (`EP-08`), the ETL (`EP-09`), the export (`EP-10`).
+Exists today: config, extractors, loaders, generators, validators, both schemas, and the setup pipeline (`python -m src.main setup`, `src/pipeline/`). Planned: the simulator (`EP-08`), the ETL (`EP-09`), the export (`EP-10`).
 
 ## Data models
 
