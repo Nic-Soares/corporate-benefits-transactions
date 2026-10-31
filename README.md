@@ -4,7 +4,7 @@ A synthetic dataset of Brazilian corporate benefits card transactions — food, 
 
 The goal is a public dataset on Kaggle for studying approval rates, decline reasons and spending patterns in the Brazilian benefits market.
 
-> **Status:** the existing code was refined and made consistent (`EP-01`–`EP-05`), and the transaction core was reshaped after how benefits issuers work (`EP-06`). Next: the setup pipeline and the transaction simulator (`EP-07`, `EP-08`). See the [roadmap](docs/planning/ROADMAP.md).
+> **Status:** the existing code was refined and made consistent (`EP-01`–`EP-05`), the transaction core was reshaped after how benefits issuers work (`EP-06`), and `python -m src.main setup` fills the database (`EP-07`). Next: the setup pipeline and the transaction simulator (`EP-07`, `EP-08`). See the [roadmap](docs/planning/ROADMAP.md).
 
 ## Business context
 
@@ -66,7 +66,9 @@ corporate-benefits-transactions/
 │   │   └── reference_data/ # Loaders for the config's reference tables, MCC and CNAE
 │   ├── extractors/         # IBGE municipalities, MCC list, Kaggle downloads
 │   ├── infrastructure/     # PostgreSQL / DuckDB connections, schema creation
-│   ├── processors/         # Wallet balance movements, reference data export
+│   ├── pipeline/           # setup: sources, reference tables, entities
+│   ├── processors/         # Wallet balance movements
+│   ├── main.py             # Command line (python -m src.main setup)
 │   ├── utils/              # YAML, CSV and Parquet helpers
 │   └── validators/         # Authorization rules
 ├── tests/
@@ -88,12 +90,14 @@ To run against PostgreSQL:
 cp .env.example .env           # then set DB_PASSWORD
 docker compose up -d
 uv run pytest -m db            # database tests
-uv run python -m src.infrastructure.schema.schema_creator
+uv run python -m src.main setup --seed 42
 ```
+
+`setup` creates the OLTP schema, loads the reference tables from `config/` and writes the generated companies, cardholders, cards, wallets, establishments and terminals (`--reset` replaces them; the same `--seed` and `--today` give the same data).
 
 Step by step, with troubleshooting: [`docs/runbooks/local-setup.md`](docs/runbooks/local-setup.md).
 
-There is no single entrypoint yet: `src/main.py` (`setup`, `simulate`, `export`) is planned in `EP-07`.
+`simulate` arrives with the transaction simulator (`EP-08`) and `export` with the dataset export (`EP-10`).
 
 ## Development workflow
 
