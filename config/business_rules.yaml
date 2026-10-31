@@ -37,7 +37,8 @@ status_options:
 # =====================================
 # Capture technologies: which need a physical card
 # =====================================
-# Not read by the code yet (EP-08).
+# A virtual card only uses the captures that don't need the physical card
+# (read by src/data_generators/entities/transaction_generator.py).
 transaction_technology_rules:
   CHIP:
     requires_physical_card: true
@@ -62,3 +63,7 @@ transaction_technology_rules:
   GOOGLE_PAY:
     requires_physical_card: false
     description: "Google Pay - no physical card"
+
+  ECOMMERCE:
+    requires_physical_card: false
+    description: "Online purchase - card number and CVV"
