@@ -12,17 +12,7 @@ import polars as pl
 import pytest
 
 from src.data_generators.providers import fake
-from src.data_generators.reference_data.acquirer_loader import load_acquirers
-from src.data_generators.reference_data.card_program_loader import (
-    load_card_program_wallets,
-    load_card_programs,
-    load_cnae_wallets,
-    load_mcc_wallets,
-)
-from src.data_generators.reference_data.modalities_loader import load_transaction_modalities
-from src.data_generators.reference_data.response_codes_loader import load_response_codes
-from src.data_generators.reference_data.wallet_loader import load_wallets
-from src.utils.read_yamls import load_pre_populated_data
+from src.pipeline.reference import build_reference_tables
 
 DATABASE = Path(__file__).parent.parent / "database"
 OLTP_SCHEMA = DATABASE / "oltp_postgres" / "oltp_schema.sql"
@@ -49,19 +39,10 @@ def _insert(conn: duckdb.DuckDBPyConnection, table: str, df: pl.DataFrame) -> No
     conn.unregister("rows")
 
 
-def _reference_tables() -> dict[str, pl.DataFrame]:
-    """Reference tables in load order (parents first)."""
-    data = load_pre_populated_data()
-    return {
-        "wallets": load_wallets(data),
-        "transaction_modalities": load_transaction_modalities(data),
-        "acquirers": load_acquirers(data),
-        "response_codes": load_response_codes(data),
-        "card_programs": load_card_programs(data),
-        "card_program_wallets": load_card_program_wallets(data),
-        "cnae_wallets": load_cnae_wallets(data),
-        "mcc_wallets": load_mcc_wallets(data),
-    }
+@pytest.fixture
+def reference_tables(sources) -> dict[str, pl.DataFrame]:
+    """Reference tables in load order (parents first), as the setup builds them."""
+    return build_reference_tables(sources.cnae, sources.mcc)
 
 
 OLAP_DIMENSIONS = {
@@ -72,11 +53,13 @@ OLAP_DIMENSIONS = {
 }
 
 
-def test_oltp_takes_reference_and_generated_data(build_tables, transaction_generator):
+def test_oltp_takes_reference_and_generated_data(
+    reference_tables, build_tables, transaction_generator
+):
     conn = duckdb.connect()
     conn.execute(OLTP_SCHEMA.read_text())
 
-    for table, df in _reference_tables().items():
+    for table, df in reference_tables.items():
         _insert(conn, table, df)
 
     fake.seed(1, today=date(2026, 10, 30))
@@ -99,11 +82,11 @@ def test_oltp_takes_reference_and_generated_data(build_tables, transaction_gener
     assert conn.execute("SELECT count(*) FROM transactions").fetchall()[0][0] == 20
 
 
-def test_oltp_rejects_a_dangling_reference(build_tables):
+def test_oltp_rejects_a_dangling_reference(reference_tables, build_tables):
     """The foreign keys are really enforced: a card for an unknown cardholder fails."""
     conn = duckdb.connect()
     conn.execute(OLTP_SCHEMA.read_text())
-    for table, df in _reference_tables().items():
+    for table, df in reference_tables.items():
         _insert(conn, table, df)
 
     cards = build_tables()["cards"].head(1)
@@ -111,12 +94,12 @@ def test_oltp_rejects_a_dangling_reference(build_tables):
         _insert(conn, "cards", cards)
 
 
-def test_olap_schema_and_reference_dimensions():
+def test_olap_schema_and_reference_dimensions(reference_tables):
     conn = duckdb.connect()
     for path in OLAP_SCHEMA:
         conn.execute(path.read_text())
 
-    reference = _reference_tables()
+    reference = reference_tables
     for table, dimension in OLAP_DIMENSIONS.items():
         _insert(conn, dimension, reference[table])
 
