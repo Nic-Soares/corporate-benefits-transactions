@@ -11,7 +11,7 @@ BALANCE_RULES = RULES["balance_and_limits_validations"]
 
 def _card_wallet(transaction: dict[str, Any], card_wallets_df: pl.DataFrame):
     return find_one(
-        card_wallets_df, card_id=transaction["card_id"], wallet_id=transaction["wallet_id"]
+        card_wallets_df, id=transaction["card_wallet_id"], card_id=transaction["card_id"]
     )
 
 

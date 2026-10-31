@@ -29,6 +29,12 @@ Table acquirers {
   created_at timestamp [default: `now()`]
 }
 
+Table response_codes {
+  id varchar [primary key]
+  description varchar [not null]
+  Note: 'ISO 8583 response codes'
+}
+
 Table card_programs {
   id varchar [primary key]
   name varchar [not null]
@@ -167,11 +173,11 @@ Table terminals {
   updated_at timestamp
 }
 
-// TRANSACTIONS (basic attempt data)
+// TRANSACTIONS (every purchase attempt and the authorizer's response)
 Table transactions {
   id varchar [primary key]
   card_id varchar [not null]
-  wallet_id varchar [note: 'Chosen by the cardholder (3-party) or routed by MCC (4-party); NULL when none could be routed']
+  card_wallet_id varchar [note: 'Chosen by the cardholder (3-party) or routed by MCC (4-party); NULL when none could be routed']
   establishment_id varchar [not null]
   terminal_id varchar [not null]
   amount decimal(15,2) [not null]
@@ -179,21 +185,11 @@ Table transactions {
   capture_type varchar [not null]
   pin_status varchar [not null, note: 'ok, wrong or not_required']
   response_code varchar [not null, note: 'ISO 8583']
-  response_message varchar
   decline_reason varchar [note: 'Specific cause behind the ISO code; NULL when approved']
+  nsu varchar [not null, note: 'Sequence number the terminal gives the attempt']
+  authorization_code varchar [note: 'Issued by the issuer on approval; NULL when declined']
   created_at timestamp [default: `now()`]
   updated_at timestamp
-}
-
-// AUTHORIZATIONS (authorizer response)
-Table authorizations {
-  id varchar [primary key]
-  transaction_id varchar [not null]
-  authorization_code varchar
-  nsu varchar [not null]
-  authorization_datetime timestamp [not null]
-  status varchar [not null]
-  created_at timestamp [default: `now()`]
 }
 
 // BALANCE HISTORY (audit)
@@ -225,9 +221,9 @@ Ref: mcc_modalities.modality_id > transaction_modalities.id
 Ref: cnae_wallets.wallet_id > wallets.id
 Ref: mcc_wallets.wallet_id > wallets.id
 Ref: transactions.card_id > cards.id
-Ref: transactions.wallet_id > wallets.id
+Ref: transactions.card_wallet_id > card_wallets.id
+Ref: transactions.response_code > response_codes.id
 Ref: transactions.establishment_id > establishments.id
 Ref: transactions.terminal_id > terminals.id
-Ref: authorizations.transaction_id > transactions.id
 Ref: balance_history.card_wallet_id > card_wallets.id
 Ref: balance_history.transaction_id > transactions.id

@@ -32,6 +32,13 @@ CREATE TABLE IF NOT EXISTS acquirers (
   created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT now()
 );
 
+CREATE TABLE IF NOT EXISTS response_codes (
+  id VARCHAR PRIMARY KEY,
+  description VARCHAR NOT NULL
+);
+
+COMMENT ON TABLE response_codes IS 'ISO 8583 response codes';
+
 CREATE TABLE IF NOT EXISTS card_programs (
   id VARCHAR PRIMARY KEY,
   name VARCHAR NOT NULL,
@@ -182,7 +189,7 @@ CREATE TABLE IF NOT EXISTS terminals (
 CREATE TABLE IF NOT EXISTS transactions (
   id VARCHAR PRIMARY KEY,
   card_id VARCHAR NOT NULL,
-  wallet_id VARCHAR,
+  card_wallet_id VARCHAR,
   establishment_id VARCHAR NOT NULL,
   terminal_id VARCHAR NOT NULL,
   amount DECIMAL(15,2) NOT NULL,
@@ -190,30 +197,23 @@ CREATE TABLE IF NOT EXISTS transactions (
   capture_type VARCHAR NOT NULL,
   pin_status VARCHAR NOT NULL,
   response_code VARCHAR NOT NULL,
-  response_message VARCHAR,
   decline_reason VARCHAR,
+  nsu VARCHAR NOT NULL,
+  authorization_code VARCHAR,
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP,
   FOREIGN KEY (card_id) REFERENCES cards(id),
-  FOREIGN KEY (wallet_id) REFERENCES wallets(id),
+  FOREIGN KEY (card_wallet_id) REFERENCES card_wallets(id),
   FOREIGN KEY (establishment_id) REFERENCES establishments(id),
-  FOREIGN KEY (terminal_id) REFERENCES terminals(id)
+  FOREIGN KEY (terminal_id) REFERENCES terminals(id),
+  FOREIGN KEY (response_code) REFERENCES response_codes(id)
 );
 
-COMMENT ON COLUMN transactions.wallet_id IS 'Wallet charged: chosen by the cardholder (3-party) or routed by MCC (4-party); NULL when no wallet could be routed';
+COMMENT ON COLUMN transactions.card_wallet_id IS 'Wallet of the card charged: chosen by the cardholder (3-party) or routed by MCC (4-party); NULL when no wallet could be routed';
 COMMENT ON COLUMN transactions.pin_status IS 'ok, wrong or not_required';
 COMMENT ON COLUMN transactions.decline_reason IS 'Specific cause behind the ISO response code; NULL when approved';
-
-CREATE TABLE IF NOT EXISTS authorizations (
-  id VARCHAR PRIMARY KEY,
-  transaction_id VARCHAR NOT NULL,
-  authorization_code VARCHAR,
-  nsu VARCHAR NOT NULL,
-  authorization_datetime TIMESTAMP NOT NULL,
-  status VARCHAR NOT NULL,
-  created_at TIMESTAMP DEFAULT now(),
-  FOREIGN KEY (transaction_id) REFERENCES transactions(id)
-);
+COMMENT ON COLUMN transactions.nsu IS 'Sequence number the terminal gives the attempt';
+COMMENT ON COLUMN transactions.authorization_code IS 'Issued by the issuer on approval; NULL when declined';
 
 CREATE TABLE IF NOT EXISTS balance_history (
   id VARCHAR PRIMARY KEY,
@@ -255,13 +255,11 @@ CREATE INDEX idx_terminals_establishment_id ON terminals(establishment_id);
 CREATE INDEX idx_terminals_acquirer_id ON terminals(acquirer_id);
 
 CREATE INDEX idx_transactions_card_id ON transactions(card_id);
-CREATE INDEX idx_transactions_wallet_id ON transactions(wallet_id);
+CREATE INDEX idx_transactions_card_wallet_id ON transactions(card_wallet_id);
 CREATE INDEX idx_transactions_establishment_id ON transactions(establishment_id);
 CREATE INDEX idx_transactions_terminal_id ON transactions(terminal_id);
 CREATE INDEX idx_transactions_date ON transactions(date);
 CREATE INDEX idx_transactions_response_code ON transactions(response_code);
-
-CREATE INDEX idx_authorizations_transaction_id ON authorizations(transaction_id);
 
 CREATE INDEX idx_balance_history_card_wallet_id ON balance_history(card_wallet_id);
 CREATE INDEX idx_balance_history_transaction_id ON balance_history(transaction_id);

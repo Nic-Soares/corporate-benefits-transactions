@@ -11,6 +11,7 @@ import duckdb
 import polars as pl
 import pytest
 
+from src.data_generators.entities.transaction_generator import generate_single_transaction
 from src.data_generators.providers import fake
 from src.data_generators.reference_data.acquirer_loader import load_acquirers
 from src.data_generators.reference_data.card_program_loader import (
@@ -20,6 +21,7 @@ from src.data_generators.reference_data.card_program_loader import (
     load_mcc_wallets,
 )
 from src.data_generators.reference_data.modalities_loader import load_transaction_modalities
+from src.data_generators.reference_data.response_codes_loader import load_response_codes
 from src.data_generators.reference_data.wallet_loader import load_wallets
 from src.utils.read_yamls import load_pre_populated_data
 
@@ -55,6 +57,7 @@ def _reference_tables() -> dict[str, pl.DataFrame]:
         "wallets": load_wallets(data),
         "transaction_modalities": load_transaction_modalities(data),
         "acquirers": load_acquirers(data),
+        "response_codes": load_response_codes(data),
         "card_programs": load_card_programs(data),
         "card_program_wallets": load_card_program_wallets(data),
         "cnae_wallets": load_cnae_wallets(data),
@@ -89,6 +92,19 @@ def test_oltp_takes_reference_and_generated_data(build_tables):
             _insert(conn, table, generated[table])
         count = conn.execute(f"SELECT count(*) FROM {table}").fetchall()[0][0]
         assert count == len(generated[table]), table
+
+    # Transactions reference the card wallet charged and an ISO response code
+    transactions = pl.DataFrame(
+        [
+            generate_single_transaction(
+                generated["cards"], generated["card_wallets"], generated["terminals"]
+            )
+            | {"response_code": "00"}
+            for _ in range(20)
+        ]
+    )
+    _insert(conn, "transactions", transactions)
+    assert conn.execute("SELECT count(*) FROM transactions").fetchall()[0][0] == 20
 
 
 def test_oltp_rejects_a_dangling_reference(build_tables):
