@@ -37,7 +37,7 @@ erDiagram
 | `card_programs` | `pre_populated_data.yaml → card_programs` | 7 |
 | `card_program_wallets` | each program's `wallets` | one row per program × wallet |
 | `transaction_modalities` | `pre_populated_data.yaml → transaction_modalities` | 4 (OWN, VISA, MASTERCARD, ELO) |
-| `acquirers` | `pre_populated_data.yaml → acquirers` | 6 |
+| `acquirers` | `pre_populated_data.yaml → acquirers` | 7 (six acquirers and the ATM network) |
 | `response_codes` | `pre_populated_data.yaml → response_codes` | 16 ISO 8583 codes |
 | `cnae_wallets` | `pre_populated_data.yaml → cnae_wallets` | one row per CNAE prefix × wallet |
 | `mcc_wallets` | `pre_populated_data.yaml → mcc_wallets` | one row per MCC × wallet (GIFT takes any MCC, no rows) |
@@ -50,17 +50,19 @@ Loaders: `src/data_generators/reference_data/`. External sources: the IBGE munic
 Generated in batches, parents first, by `src/data_generators/entities/`:
 
 ```
-companies (holdings, then branches)
-  └── cardholders            admission ≥ company registration
-        └── cards            program drawn by weight; network from the program
-              └── card_wallets   every wallet of the program; starting balance and limits
-establishments               CNAE mostly one that accepts a wallet; category from it
-  └── terminals              model and type from the acquirer's list; installation ≥ accreditation
+companies (holdings, then branches)   segment by weight; a branch keeps its holding's
+  └── cardholders            as many as the segment says; admission ≥ company registration
+        └── cards            one per program of the company's bundle; network from the program
+              └── card_wallets   every wallet of the program; monthly credit, balance, limits
+establishments               category by weight → a CNAE of it → the MCC of that CNAE
+  └── terminals              POS/TEF by acquirer weight, e-commerce gateway or ATM by category
 ```
 
-- Programs: `simulation_config.yaml → generation_settings.card_program_distribution`.
+- Segments and sizes: `simulation_config.yaml → generation_settings.company_segments`.
+- Programs: `program_bundles` — what a company contracts.
+- Wallets: `wallets` — monthly credit range and limits per wallet; `starting_balance_ratio`.
+- Establishments: `establishment_categories` (weight, CNAE prefixes, ticket); `pre_populated_data.yaml → cnae_mcc`.
 - Statuses: weights in `generation_settings.*_status_distribution`.
-- Balances and limits: `wallet_starting_balance`, `wallet_daily_limit`, `wallet_monthly_limit` (synthetic).
 - Dates: ranges in `generation_settings.date_ranges`, relative to a reference day.
 - CPF and card numbers are generated valid and stored hashed (`cpf_hash`, `card_number_hash`).
 - Reproducible: `src/data_generators/providers/fake.py → seed(n, today=…)` fixes every random source.
@@ -70,10 +72,10 @@ establishments               CNAE mostly one that accepts a wallet; category fro
 
 | Table | Content |
 |---|---|
-| `transactions` | Every purchase attempt and its answer: card wallet charged, capture, `pin_status`, `nsu`, ISO `response_code`, `decline_reason`, `authorization_code` when approved |
-| `balance_history` | Wallet movements of approved purchases (`src/processors/balance.py`) |
+| `transactions` | Every attempt (purchase or withdrawal) and its answer: option picked on the terminal, card wallet charged, capture, `pin_status`, `nsu`, ISO `response_code`, `decline_reason`, `authorization_code` when approved |
+| `balance_history` | Monthly credits and the debits of approved attempts (`src/processors/balance.py`) |
 
-A transaction picks a card and a terminal. On the proprietary network the cardholder picks one of the card's wallets; on a brand card the issuer routes it by MCC. The validators run in order and the first failure sets the code and reason; an approval debits the wallet.
+`TransactionGenerator` (`src/data_generators/entities/transaction_generator.py`) draws each attempt from `simulation_config.yaml → usage_patterns`: a card weighted by its activity (log-normal; inactive cards rarely), a kind of place its wallets fit (now and then one they don't), a popular shop's terminal, a day weighted by weekday and day of month, an hour from the category's curve, a log-normal ticket, a capture the terminal and card take, and, on the proprietary network, the option picked on the terminal (now and then the wrong one). The validators run in order and the first failure sets the code and reason; an approval debits the wallet.
 
 ## Pipeline (planned, `EP-07`)
 

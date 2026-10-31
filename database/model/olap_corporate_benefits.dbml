@@ -110,6 +110,8 @@ Table fact_transactions {
   cardholder_id varchar [not null]
   program_id varchar [not null]
   wallet_id varchar [note: 'From the card wallet charged']
+  transaction_type varchar [not null, note: 'purchase or withdrawal']
+  wallet_option varchar [note: 'Proprietary network: FOOD, MEAL or OTHERS']
   establishment_id varchar [not null]
   terminal_id varchar [not null]
 
