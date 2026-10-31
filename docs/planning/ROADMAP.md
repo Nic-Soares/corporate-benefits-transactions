@@ -364,10 +364,10 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] Monthly credit: `card_wallets.monthly_credit`, `benefit_credit_day`, `balance.credit` (`balance_history` `credit`); the starting balance is a share of the credit
 - [x] Cash withdrawal (from `ST-08.2`, #9): `transactions.transaction_type`, brand cards from GIFT only, at cash machines (MCC `6011`, ATM network and terminals)
 - [x] Limits per wallet from the config, Meal lowest; purchases per day on Food and Meal (from `ST-08.2`, #6): `card_wallets.daily_count_limit`, `validate_daily_count` → `65`
-- [x] Companies by segment, cardholders by the segment's size, cards by the company's program bundle (from `ST-08.2`, #11)
+- [x] Companies by segment, cardholders by the segment's size (SME 1–250, Middle 251–1,999, Corporate 2,000+, Public any), cards by the company's program bundle (from `ST-08.2`, #11)
 - [x] Establishments by category → CNAE → the MCC of that CNAE (`cnae_mcc`), so the CNAE and MCC rules describe the same business; e-commerce gateways for online businesses
 - [x] `TransactionGenerator` (from `ST-08.2`, #10): log-normal card activity and shop popularity, inactive records rarely used, hour curves (lunch and evening; restaurant and fuel their own), weekday and day-of-month weights, log-normal tickets per category, captures per terminal type (virtual cards never physical), wrong option and off-pattern attempts, no attempt before the card or terminal exists
-- [x] Calibration run (5,000 attempts, scratch script): 86% approved, most declines `51`; the simulator (`EP-08`) checks it for real
+- [x] Calibration runs (scratch script, four seeds): 75–82% approved, most declines `51`; volume per card (`transactions_per_card_month`) and no attempt on a terminal before it's installed; the simulator (`EP-08`) checks it for real
 
 ---
 

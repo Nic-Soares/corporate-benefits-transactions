@@ -37,5 +37,5 @@ market. The tables held; the behavior didn't:
 ## Consequences
 - Still 17 OLTP and 10 OLAP tables; the fact gains `transaction_type` and
   `wallet_option`.
-- A calibration run approves about 86%, with `51` the main decline.
+- Calibration runs (four seeds, 4 attempts per card per month) approve 75–82%, with `51` the main decline; the volume follows the number of cards (`transactions_per_card_month`).
 - Reversals, cancellations and buying near home stay in `ST-08.2`.

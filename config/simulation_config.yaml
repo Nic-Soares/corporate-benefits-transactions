@@ -9,22 +9,30 @@
 # company's segment and cards follow its program bundle.
 data_volumes:
   companies: 30
+  # Share of each company's headcount that is generated: a Corporate client
+  # has thousands of employees, more than a dataset needs
+  cardholder_scale: 0.1
   establishments: 300
   terminals: 450
-  transactions: 5000
+  # Attempts per card per month, on average: the volume follows the cards,
+  # so balances and limits stay in proportion
+  transactions_per_card_month: 4
 
 # Expected share of approved attempts — checked by the simulator (EP-08)
 approval_rates:
-  overall: 0.85
+  overall: 0.80
 
 # Data generation (read by src/data_generators/providers/fake.py)
 generation_settings:
-  # Company segment: its weight and how many cardholders it has
+  # Company segment: its weight and how many employees (cardholders) it has.
+  # SME, Middle and Corporate are cut by headcount; Public is the kind of
+  # client (government bodies), of any size. Sizes are log-uniform in the
+  # range, so small companies are the commonest.
   company_segments:
-    SME:       {weight: 0.60, cardholders: {min: 1,   max: 25}}
-    Middle:    {weight: 0.25, cardholders: {min: 25,  max: 120}}
-    Corporate: {weight: 0.08, cardholders: {min: 120, max: 500}}
-    Public:    {weight: 0.07, cardholders: {min: 50,  max: 300}}
+    SME:       {weight: 0.70, cardholders: {min: 1,    max: 250}}
+    Middle:    {weight: 0.18, cardholders: {min: 251,  max: 1999}}
+    Corporate: {weight: 0.05, cardholders: {min: 2000, max: 10000}}
+    Public:    {weight: 0.07, cardholders: {min: 50,   max: 5000}}
 
   # Programs a company contracts; every cardholder gets one card per program.
   # The 3-party multi-benefit card replaces the separate Food, Meal and Gift
