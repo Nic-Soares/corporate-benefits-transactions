@@ -43,7 +43,7 @@ erDiagram
 | `mcc_wallets` | `pre_populated_data.yaml → mcc_wallets` | one row per MCC × wallet (GIFT takes any MCC, no rows) |
 | `mcc_modalities` | `validation_rules.yaml → mcc_acceptance_rules` × the public MCC list | one row per MCC × accepting brand |
 
-Loaders: `src/data_generators/reference_data/`. External sources: the IBGE municipalities API, a public MCC list, and the CNAE 2024 dataset on Kaggle (`src/extractors/`).
+Loaders: `src/data_generators/reference_data/`. External sources (`src/extractors/`, listed in the README): the IBGE CNAE, localities and population APIs, and the public MCC list. `mcc_acceptance_rules` is synthetic: the brands don't publish their acceptance tables.
 
 ## Entity tables — generated
 
@@ -85,7 +85,7 @@ establishments               category by weight → a CNAE of it → the MCC of 
 2. Upsert the reference tables: running again leaves the same rows.
 3. Generate the entities at `simulation_config.yaml → data_volumes` and write them parents first. With entities already in the database it stops unless `--reset`; `--seed` and `--today` fix the result.
 
-The public sources (CNAE, MCC list, IBGE municipalities) are downloaded once into `data/raw/` (git-ignored).
+The public sources (CNAE, municipalities and population from IBGE, the MCC list) are downloaded once into `data/raw/` (git-ignored). Municipalities are drawn by population, and 80% of cardholders live in their company's city (`cardholder_same_city_ratio`).
 
 Next:
 4. Simulate transactions (`EP-08`).
