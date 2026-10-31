@@ -21,10 +21,12 @@ In Brazil, employers give employees benefit cards whose balances can only be spe
 
 The two networks authorize differently:
 
-- **The issuer's proprietary network** (`OWN`, the 3-party model): the cardholder picks the wallet on the terminal, and the establishment's **CNAE** (Brazil's economic activity code) must accept it — the most specific code prefix with a rule decides.
+- **The issuer's proprietary network** (`OWN`, the 3-party model): the cardholder picks *Food*, *Meal* or *Others* on the terminal, the issuer routes inside that option, and the establishment's **CNAE** (Brazil's economic activity code) must accept the wallet — the most specific code prefix with a rule decides.
 - **Brand networks** (Visa, Mastercard, Elo — the 4-party model: acquirer → brand → issuer): the brand must accept the establishment's **MCC** (Merchant Category Code), and the issuer picks the wallet from it (meal first, then food, the other wallets, gift last).
 
-Every decline carries an ISO 8583 response code and a specific reason (wrong PIN, wallet not accepted here, insufficient balance…). An approved purchase spends the wallet's balance.
+Every decline carries an ISO 8583 response code and a specific reason (wrong PIN, wallet not accepted here, insufficient balance…). An approved purchase spends the wallet's balance, and the benefit is credited again each month. Brand cards can also withdraw cash from the gift wallet.
+
+The data is shaped like the market, with synthetic numbers: lunch and evening peaks, more spending early in the month, small tickets with a long tail, a few heavy cards and many light ones, companies from a handful to hundreds of employees, and declines that are mostly for lack of balance.
 
 Details in [`docs/business-rule.md`](docs/business-rule.md).
 
@@ -38,8 +40,8 @@ generators (seeded) ──► entities ──┤
 transactions ──► validators ───────┘   approved / declined with a response code
 ```
 
-- **Generators** (`src/data_generators/`) create companies, cardholders, cards (with their program's wallets), establishments and terminals with real IBGE municipalities, statuses weighted as configured, and dates that follow their parent records. One seed reproduces a whole run.
-- **Validators** (`src/validators/`) check status, dates, PIN, network rules (CNAE for the proprietary network; MCC and wallet routing for brands), balance and limits, and capture technology. Each returns the ISO 8583 code configured in `config/validation_rules.yaml` and a `decline_reason`.
+- **Generators** (`src/data_generators/`) create companies (by segment and size), cardholders, cards (the programs the company contracts, with their wallets), establishments (CNAE and the matching MCC) and terminals (POS, TEF, e-commerce gateway, ATM) with real IBGE municipalities, statuses weighted as configured, and dates that follow their parent records; then purchase attempts with the usage patterns in `config/simulation_config.yaml`. One seed reproduces a whole run.
+- **Validators** (`src/validators/`) check status, dates, PIN, network rules and wallet routing (CNAE for the proprietary network, MCC for brands), balance and limits (amount and purchases per day), and capture technology. Each returns the ISO 8583 code configured in `config/validation_rules.yaml` and a `decline_reason`.
 - **Config** (`config/`) is the source of truth for business rules; the **OLTP schema** is the source of truth for table and column names.
 
 Architecture: [`docs/technical-architecture.md`](docs/technical-architecture.md). Decisions: [`docs/adr/`](docs/adr/).
