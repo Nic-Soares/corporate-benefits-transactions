@@ -36,18 +36,19 @@ def generate_single_transaction(
 
     Picks a card and a terminal (so the establishment has one). On the
     proprietary network the cardholder picks one of the card's wallets on the
-    terminal; on a brand card `wallet_id` stays empty until the issuer routes
-    it by MCC. Columns of `transactions`.
+    terminal; on a brand card `card_wallet_id` stays empty until the issuer
+    routes it by MCC. The terminal numbers the attempt (`nsu`); the issuer's
+    `authorization_code` comes with an approval. Columns of `transactions`.
     """
     card = cards_df.select("id", "modality_id").sample(1, seed=random.getrandbits(32))
     card = card.row(0, named=True)
     terminal = terminals_df.select("id", "establishment_id").sample(1, seed=random.getrandbits(32))
     terminal = terminal.row(0, named=True)
 
-    wallet_id = None
+    card_wallet_id = None
     if card["modality_id"] in PROPRIETARY_MODALITIES:
-        wallets = card_wallets_df.filter(card_id=card["id"])["wallet_id"].to_list()
-        wallet_id = random.choice(wallets)
+        held = card_wallets_df.filter(card_id=card["id"])["id"].to_list()
+        card_wallet_id = random.choice(held)
 
     end = datetime.combine(fake.reference_date, datetime.min.time())
     moment = end - timedelta(seconds=random.randint(0, days_back * 24 * 3600))
@@ -56,7 +57,7 @@ def generate_single_transaction(
     return {
         "id": fake.new_id("tx"),
         "card_id": card["id"],
-        "wallet_id": wallet_id,
+        "card_wallet_id": card_wallet_id,
         "establishment_id": terminal["establishment_id"],
         "terminal_id": terminal["id"],
         "amount": transaction_amount(max_amount=500, scale=100),
@@ -64,6 +65,7 @@ def generate_single_transaction(
         "capture_type": capture_type,
         "pin_status": pin_status(capture_type),
         "response_code": None,
-        "response_message": None,
         "decline_reason": None,
+        "nsu": f"{random.randrange(10**12):012d}",
+        "authorization_code": None,
     }

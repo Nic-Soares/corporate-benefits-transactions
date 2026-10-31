@@ -98,7 +98,7 @@ Table dim_terminals {
 }
 
 // ============================================================================
-// FACT TABLE (Denormalized from OLTP transactions + authorizations)
+// FACT TABLE (Denormalized from OLTP transactions, card_wallets and response_codes)
 // ============================================================================
 
 Table fact_transactions {
@@ -109,7 +109,7 @@ Table fact_transactions {
   card_id varchar [not null]
   cardholder_id varchar [not null]
   program_id varchar [not null]
-  wallet_id varchar
+  wallet_id varchar [note: 'From the card wallet charged']
   establishment_id varchar [not null]
   terminal_id varchar [not null]
 
@@ -123,14 +123,10 @@ Table fact_transactions {
   capture_type varchar [not null]
   pin_status varchar [not null]
   response_code varchar [not null]
-  response_message varchar
+  response_message varchar [note: 'From response_codes']
   decline_reason varchar
-
-  // Authorization Details (denormalized from OLTP authorizations table)
+  nsu varchar [not null]
   authorization_code varchar
-  nsu varchar
-  authorization_datetime timestamp
-  authorization_status varchar
 }
 
 // ============================================================================
