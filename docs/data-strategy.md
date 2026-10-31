@@ -58,7 +58,7 @@ establishments               category by weight → a CNAE of it → the MCC of 
   └── terminals              POS/TEF by acquirer weight, e-commerce gateway or ATM by category
 ```
 
-- Segments and sizes: `simulation_config.yaml → generation_settings.company_segments`.
+- Segments and sizes: `simulation_config.yaml → generation_settings.company_segments` — SME 1–250 employees, Middle 251–1,999, Corporate 2,000+, Public by kind of client; `data_volumes.cardholder_scale` generates a share of each headcount.
 - Programs: `program_bundles` — what a company contracts.
 - Wallets: `wallets` — monthly credit range and limits per wallet; `starting_balance_ratio`.
 - Establishments: `establishment_categories` (weight, CNAE prefixes, ticket); `pre_populated_data.yaml → cnae_mcc`.

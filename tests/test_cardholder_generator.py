@@ -21,7 +21,7 @@ def test_cardholders_dataframe(municipios_df):
     companies_df = pl.DataFrame(
         {
             "id": ["c1", "c2"],
-            "segment": ["SME", "Corporate"],
+            "segment": ["SME", "Middle"],
             "registration_date": [date(2020, 1, 1), date(2023, 6, 1)],
         }
     )
@@ -31,7 +31,7 @@ def test_cardholders_dataframe(municipios_df):
     assert df["id"].n_unique() == len(df)
     # as many as the segment says
     counts = dict(df["company_id"].value_counts().iter_rows())
-    for company_id, segment in [("c1", "SME"), ("c2", "Corporate")]:
+    for company_id, segment in [("c1", "SME"), ("c2", "Middle")]:
         size = COMPANY_SEGMENTS[segment]["cardholders"]
         assert size["min"] <= counts[company_id] <= size["max"]
     # hired after the company was registered
