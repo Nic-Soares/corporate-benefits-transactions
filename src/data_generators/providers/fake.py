@@ -5,6 +5,7 @@ never from its own instances.
 """
 
 import hashlib
+import math
 import random
 import uuid
 from datetime import date, timedelta
@@ -42,10 +43,26 @@ def sha256(value: str) -> str:
     return hashlib.sha256(value.encode()).hexdigest()
 
 
+def weighted_key(distribution: dict[str, float]) -> str:
+    """A key of `distribution`, drawn with its value as weight."""
+    return random.choices(list(distribution), weights=list(distribution.values()))[0]
+
+
 def weighted_choice(setting: str) -> str:
     """A key of `generation_settings.<setting>`, drawn with its value as weight."""
-    distribution = SETTINGS[setting]
-    return random.choices(list(distribution), weights=list(distribution.values()))[0]
+    return weighted_key(SETTINGS[setting])
+
+
+def log_uniform_int(low: int, high: int) -> int:
+    """An integer in [low, high], uniform on a log scale: small values are commoner."""
+    return min(high, max(low, round(math.exp(random.uniform(math.log(low), math.log(high))))))
+
+
+def lognormal_amount(median: float, p90: float, cap: float, step: float = 0.01) -> float:
+    """A log-normal amount with this median and 90th percentile, capped, in `step` units."""
+    sigma = math.log(p90 / median) / 1.2816  # z of the 90th percentile
+    value = min(random.lognormvariate(math.log(median), sigma), cap)
+    return round(max(round(value / step), 1) * step, 2)
 
 
 def status(entity: str) -> str:

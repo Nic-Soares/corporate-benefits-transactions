@@ -3,6 +3,7 @@ from datetime import date
 
 import polars as pl
 
+from src.data_generators.entities.company_generator import COMPANY_SEGMENTS
 from src.data_generators.providers import fake
 
 JOB_POSITIONS = [
@@ -80,12 +81,22 @@ class CardholderGenerator:
         return Cardholder(company_id, random.choice(self.municipios), hired_from)
 
     def generate_cardholders_as_dataframe(
-        self, companies_df: pl.DataFrame, cardholders_per_company: int
+        self, companies_df: pl.DataFrame, scale: float = 1.0
     ) -> pl.DataFrame:
-        """`companies_df` needs `id` and `registration_date` (admissions come after it)."""
-        cardholders = [
-            self.generate_cardholder(company["id"], company["registration_date"])
-            for company in companies_df.select("id", "registration_date").iter_rows(named=True)
-            for _ in range(cardholders_per_company)
-        ]
+        """Cardholders of each company, as many as its segment says.
+
+        `companies_df` needs `id`, `segment` and `registration_date` (admissions
+        come after it). The count is drawn from the segment's range in
+        `generation_settings.company_segments`, small sizes commoner, times `scale`.
+        """
+        cardholders = []
+        for company in companies_df.select("id", "segment", "registration_date").iter_rows(
+            named=True
+        ):
+            size = COMPANY_SEGMENTS[company["segment"]]["cardholders"]
+            count = max(round(fake.log_uniform_int(size["min"], size["max"]) * scale), 1)
+            cardholders += [
+                self.generate_cardholder(company["id"], company["registration_date"])
+                for _ in range(count)
+            ]
         return pl.DataFrame([cardholder.to_dict() for cardholder in cardholders])

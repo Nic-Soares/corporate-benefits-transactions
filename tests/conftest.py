@@ -7,6 +7,7 @@ from src.data_generators.entities.cardholder_generator import CardholderGenerato
 from src.data_generators.entities.company_generator import CompanyGenerator
 from src.data_generators.entities.establishment_generator import generate_establishments
 from src.data_generators.entities.terminal_generator import generate_terminals
+from src.data_generators.entities.transaction_generator import TransactionGenerator
 from src.utils.read_yamls import load_pre_populated_data
 
 REFERENCE = load_pre_populated_data()
@@ -23,6 +24,17 @@ def municipios_df() -> pl.DataFrame:
     )
 
 
+# One or more CNAE subclasses per establishment category, and one outside them
+CNAE_SUBCLASSES = [
+    *["4711302", "4711301", "4691500"],
+    *["4721102", "4722901", "4724500"],
+    *["5611201", "5611203", "5612100"],
+    *["4731800", "4520001", "4771701", "4774100", "9313100"],
+    *["4751201", "4761003", "8599604", "4781400", "4772500"],
+    *["4923002", "6319400", "6422100", "9999999"],
+]
+
+
 @pytest.fixture
 def build_tables(municipios_df):
     """Run the generators chained as the setup pipeline will, against the real config."""
@@ -30,25 +42,16 @@ def build_tables(municipios_df):
     def build():
         companies = CompanyGenerator(municipios_df).generate_companies_as_dataframe(10)
         cardholders = CardholderGenerator(municipios_df).generate_cardholders_as_dataframe(
-            companies, cardholders_per_company=5
+            companies, scale=0.2
         )
-        cards = CardGenerator(cardholders).generate_cards_as_dataframe(80)
+        cards = CardGenerator(cardholders).generate_cards_as_dataframe()
         card_wallets = generate_card_wallets(cards)
         establishments = generate_establishments(
-            40,
-            df_cnae=pl.DataFrame(
-                {"subclasse_id": ["5611201", "4711302", "4731800", "4771701", "9999999"]}
-            ),
-            df_mcc=pl.DataFrame({"mcc_code": ["5812", "5411"]}),
+            120,
+            df_cnae=pl.DataFrame({"subclasse_id": CNAE_SUBCLASSES}),
             municipios_df=municipios_df,
-            cnae_wallets_mapping=REFERENCE["cnae_wallets"],
         )
-        terminals = generate_terminals(
-            60,
-            establishments,
-            acquirers_df=pl.DataFrame({"id": [a["id"] for a in REFERENCE["acquirers"]]}),
-            business_data=REFERENCE,
-        )
+        terminals = generate_terminals(160, establishments, business_data=REFERENCE)
         return {
             "companies": companies,
             "cardholders": cardholders,
@@ -59,3 +62,20 @@ def build_tables(municipios_df):
         }
 
     return build
+
+
+@pytest.fixture
+def transaction_generator():
+    """A TransactionGenerator over the tables `build_tables` returns."""
+
+    def make(tables, days_back: int = 30):
+        return TransactionGenerator(
+            tables["cards"],
+            tables["cardholders"],
+            tables["card_wallets"],
+            tables["establishments"],
+            tables["terminals"],
+            days_back=days_back,
+        )
+
+    return make

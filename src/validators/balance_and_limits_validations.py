@@ -51,3 +51,17 @@ def validate_monthly_limit(
 ) -> dict[str, Any]:
     """`monthly_usage`: amount already spent on this wallet this month."""
     return _within_limit(transaction, card_wallets_df, monthly_usage, "monthly_limit")
+
+
+def validate_daily_count(
+    transaction: dict[str, Any], card_wallets_df: pl.DataFrame, daily_count: int = 0
+) -> dict[str, Any]:
+    """`daily_count`: purchases already approved on this wallet today."""
+    card_wallet = _card_wallet(transaction, card_wallets_df)
+    if card_wallet is None:
+        return not_found("card_wallet")
+    limit = card_wallet["daily_count_limit"]
+    # A limit of 0 means no limit
+    if limit > 0 and daily_count + 1 > limit:
+        return fail(BALANCE_RULES["daily_count_limit"]["error_code"], "daily_count_exceeded")
+    return PASS

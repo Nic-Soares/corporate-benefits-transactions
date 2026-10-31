@@ -3,64 +3,56 @@ import random
 import polars as pl
 
 from src.data_generators.providers import fake
+from src.utils.read_yamls import load_pre_populated_data, load_simulation_config
 
-# Category of an establishment, from the first wallet its CNAE accepts.
-# Matches the categories of `usage_patterns.peak_hours_by_category`.
-CATEGORY_BY_WALLET = {
-    "MEAL": "restaurant",
-    "FOOD": "supermarket",
-    "MOBILITY": "mobility",
-    "HEALTH": "health",
-    "HOME_OFFICE": "home_office",
-    "EDUCATION": "education",
-}
-DEFAULT_CATEGORY = "retail"
+# Category → {weight, cnae prefixes, online, atm, amount} (simulation_config.yaml)
+CATEGORIES: dict[str, dict] = load_simulation_config()["establishment_categories"]
+CNAE_MCC: dict[str, str] = load_pre_populated_data()["cnae_mcc"]
 
 
-def _accepted_wallets(cnae: str, cnae_wallets_mapping: dict[str, list[str]]) -> list[str]:
-    """Wallets of the longest CNAE prefix in the mapping (same rule as the validator)."""
-    prefixes = [prefix for prefix in cnae_wallets_mapping if cnae.startswith(prefix)]
-    return cnae_wallets_mapping[max(prefixes, key=len)] if prefixes else []
+def longest_prefix(code: str, mapping: dict[str, object]) -> str | None:
+    """The longest key of `mapping` that `code` starts with."""
+    prefixes = [prefix for prefix in mapping if code.startswith(prefix)]
+    return max(prefixes, key=len) if prefixes else None
+
+
+def mcc_for(cnae: str) -> str:
+    """The MCC an acquirer gives this activity (`cnae_mcc`, longest prefix)."""
+    return CNAE_MCC[longest_prefix(cnae, CNAE_MCC)]
 
 
 def generate_establishments(
     n_establishments: int,
     df_cnae: pl.DataFrame,
-    df_mcc: pl.DataFrame,
     municipios_df: pl.DataFrame,
-    cnae_wallets_mapping: dict[str, list[str]],
-    cnae_with_wallets_ratio: float = fake.SETTINGS["cnae_with_wallets_ratio"],
 ) -> pl.DataFrame:
-    """Establishments, most of them with a CNAE that accepts some wallet.
+    """Establishments of the categories in `establishment_categories`, by weight.
+
+    Each takes a CNAE subclass of its category and the MCC of that CNAE, so the
+    CNAE rule (proprietary network) and the MCC rule (brands) describe the same
+    business.
 
     Args:
-        df_cnae: CNAE codes (`subclasse_id`)
-        df_mcc: MCC codes (`mcc_code`)
+        df_cnae: CNAE subclasses (`subclasse_id`); categories without any are skipped
         municipios_df: IBGE municipalities (`municipio_nome`, `uf_sigla`)
-        cnae_wallets_mapping: CNAE prefix → accepted wallets (`cnae_wallets` in
-            `pre_populated_data.yaml`)
-        cnae_with_wallets_ratio: share of establishments whose CNAE accepts a wallet
     """
     all_cnaes = df_cnae["subclasse_id"].to_list()
-    cnaes_with_wallets = [
-        cnae for cnae in all_cnaes if _accepted_wallets(cnae, cnae_wallets_mapping)
-    ]
-    n_with_wallets = int(n_establishments * cnae_with_wallets_ratio)
-
-    mcc_codes = df_mcc["mcc_code"].to_list()
+    cnaes_by_category = {
+        name: [c for c in all_cnaes if any(c.startswith(p) for p in category["cnae"])]
+        for name, category in CATEGORIES.items()
+    }
+    weights = {
+        name: category["weight"] for name, category in CATEGORIES.items() if cnaes_by_category[name]
+    }
     municipios = (
         municipios_df.select("municipio_nome", "uf_sigla").unique(maintain_order=True).to_dicts()
     )
 
     establishments = []
-    for i in range(n_establishments):
-        if i < n_with_wallets and cnaes_with_wallets:
-            main_cnae = random.choice(cnaes_with_wallets)
-        else:
-            main_cnae = random.choice(all_cnaes)
-        wallets = _accepted_wallets(main_cnae, cnae_wallets_mapping)
+    for _ in range(n_establishments):
+        category = fake.weighted_key(weights)
+        main_cnae = random.choice(cnaes_by_category[category])
         municipio = random.choice(municipios)
-
         establishments.append(
             {
                 "id": fake.new_id("est"),
@@ -68,10 +60,8 @@ def generate_establishments(
                 "name": fake.finance.company(),
                 "trade_name": f"{fake.finance.company()} {fake.person.surname()}",
                 "main_cnae": main_cnae,
-                "mcc_code": random.choice(mcc_codes),
-                "category": CATEGORY_BY_WALLET.get(wallets[0], DEFAULT_CATEGORY)
-                if wallets
-                else DEFAULT_CATEGORY,
+                "mcc_code": mcc_for(main_cnae),
+                "category": category,
                 "city": municipio["municipio_nome"],
                 "state": municipio["uf_sigla"],
                 "status": fake.status("establishment"),
