@@ -59,7 +59,7 @@ Table mcc_modalities {
   Primary Key (mcc_code, modality_id)
 }
 
-// CNAE x PRODUCTS MAPPING TABLE (for proprietary network)
+// CNAE x WALLETS MAPPING TABLE (for proprietary network)
 Table cnae_wallets {
   cnae_code varchar [not null]
   wallet_id varchar [not null]
