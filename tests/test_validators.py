@@ -46,7 +46,7 @@ def tx():
     return {
         "id": "tx_1",
         "card_id": "card_own",
-        "wallet_id": "MEAL",
+        "card_wallet_id": "cw_1",  # MEAL
         "establishment_id": "est_restaurant",
         "terminal_id": "term_pos",
         "amount": 50.0,
@@ -59,7 +59,7 @@ def tx():
 @pytest.fixture
 def brand_tx(tx):
     """The same purchase on a brand card: the issuer still has to route the wallet."""
-    return tx | {"card_id": "card_brand", "wallet_id": None}
+    return tx | {"card_id": "card_brand", "card_wallet_id": None}
 
 
 @pytest.fixture
@@ -102,13 +102,13 @@ def data():
         ),
         "card_wallets": pl.DataFrame(
             {
-                "id": ["cw_1", "cw_2", "cw_3", "cw_4", "cw_5", "cw_6", "cw_7"],
-                "card_id": ["card_own"] * 3 + ["card_brand"] * 4,
-                "wallet_id": ["MEAL", "FOOD", "GIFT", "MEAL", "FOOD", "HEALTH", "GIFT"],
-                "current_balance": [500.0, 500.0, 500.0, 20.0, 500.0, 300.0, 1000.0],
-                "daily_limit": [100.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                "monthly_limit": [1000.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0],
-                "status": ["active", "active", "suspended", "active", "active", "active", "active"],
+                "id": ["cw_1", "cw_2", "cw_3", "cw_4", "cw_5", "cw_6", "cw_7", "cw_8"],
+                "card_id": ["card_own"] * 3 + ["card_brand"] * 4 + ["card_own"],
+                "wallet_id": ["MEAL", "FOOD", "GIFT", "MEAL", "FOOD", "HEALTH", "GIFT", "PREMIUM"],
+                "current_balance": [500.0, 500.0, 500.0, 20.0, 500.0, 300.0, 1000.0, 500.0],
+                "daily_limit": [100.0] + [0.0] * 7,
+                "monthly_limit": [1000.0] + [0.0] * 7,
+                "status": ["active", "active", "suspended"] + ["active"] * 5,
             }
         ),
         "wallets": pl.DataFrame(
@@ -177,11 +177,11 @@ def test_terminal_status(tx, data):
 
 def test_card_wallet_status(tx, data, brand_tx):
     assert validate_card_wallet_status(tx, data["card_wallets"]) == PASS
-    suspended = tx | {"wallet_id": "GIFT"}
+    suspended = tx | {"card_wallet_id": "cw_3"}  # GIFT
     assert validate_card_wallet_status(suspended, data["card_wallets"]) == declined(
         "57", "card_wallet_suspended"
     )
-    not_held = tx | {"wallet_id": "HEALTH"}
+    not_held = tx | {"card_wallet_id": "cw_6"}  # the brand card's HEALTH
     assert validate_card_wallet_status(not_held, data["card_wallets"]) == declined(
         "57", "card_wallet_not_found"
     )
@@ -190,9 +190,10 @@ def test_card_wallet_status(tx, data, brand_tx):
 
 
 def test_wallet_active(tx, data):
-    assert validate_wallet_active(tx, data["wallets"]) == PASS
-    disabled = tx | {"wallet_id": "PREMIUM"}
-    assert validate_wallet_active(disabled, data["wallets"]) == declined("57", "wallet_disabled")
+    args = data["card_wallets"], data["wallets"]
+    assert validate_wallet_active(tx, *args) == PASS
+    disabled = tx | {"card_wallet_id": "cw_8"}  # PREMIUM
+    assert validate_wallet_active(disabled, *args) == declined("57", "wallet_disabled")
 
 
 def test_modality_active(tx, data, brand_tx):
@@ -264,14 +265,14 @@ def test_pin(tx):
 
 
 def test_cnae_wallet(tx, data, brand_tx):
-    args = data["cards"], data["establishments"], data["cnae_wallets"]
+    args = data["cards"], data["establishments"], data["card_wallets"], data["cnae_wallets"]
     assert validate_cnae_wallet(tx, *args) == PASS
     # brand card: not a CNAE decision
     assert validate_cnae_wallet(brand_tx, *args) == PASS
     # 5611 accepts GIFT, but the more specific 5611201 only lists MEAL
-    gift = tx | {"wallet_id": "GIFT"}
+    gift = tx | {"card_wallet_id": "cw_3"}
     assert validate_cnae_wallet(gift, *args) == declined("57", "wallet_not_accepted_at_cnae")
-    inactive_rule = tx | {"establishment_id": "est_closed", "wallet_id": "FOOD"}
+    inactive_rule = tx | {"establishment_id": "est_closed", "card_wallet_id": "cw_2"}  # FOOD
     assert validate_cnae_wallet(inactive_rule, *args) == declined("57", "cnae_rule_inactive")
 
 
@@ -290,14 +291,14 @@ def test_route_wallet(tx, data, brand_tx):
     args = data["cards"], data["establishments"], data["card_wallets"], data["mcc_wallets"]
 
     # proprietary network keeps the cardholder's choice
-    assert route_wallet(tx, *args) == PASS | {"wallet_id": "MEAL"}
-    # restaurant MCC: MEAL first...
-    assert route_wallet(brand_tx | {"amount": 10.0}, *args) == PASS | {"wallet_id": "MEAL"}
+    assert route_wallet(tx, *args) == PASS | {"card_wallet_id": "cw_1"}
+    # restaurant MCC: MEAL (cw_4) first...
+    assert route_wallet(brand_tx | {"amount": 10.0}, *args) == PASS | {"card_wallet_id": "cw_4"}
     # ...but MEAL has 20.00, so 50.00 falls through to GIFT, the open wallet
-    assert route_wallet(brand_tx, *args) == PASS | {"wallet_id": "GIFT"}
+    assert route_wallet(brand_tx, *args) == PASS | {"card_wallet_id": "cw_7"}
     # pharmacy MCC goes to HEALTH (FOOD isn't accepted there)
     pharmacy = brand_tx | {"establishment_id": "est_pharmacy"}
-    assert route_wallet(pharmacy, *args) == PASS | {"wallet_id": "HEALTH"}
+    assert route_wallet(pharmacy, *args) == PASS | {"card_wallet_id": "cw_6"}
     # candidates exist, none with enough balance
     big = brand_tx | {"amount": 5000.0}
     assert route_wallet(big, *args) == declined("51", "insufficient_balance")
@@ -323,7 +324,7 @@ def test_daily_limit(tx, data):
         "61", "daily_limit_exceeded"
     )
     # limit 0 = no limit
-    food = tx | {"wallet_id": "FOOD"}
+    food = tx | {"card_wallet_id": "cw_2"}
     assert validate_daily_limit(food, data["card_wallets"], daily_usage=10_000) == PASS
 
 
@@ -337,7 +338,7 @@ def test_monthly_limit(tx, data):
 def test_debit(tx, data):
     card_wallets, history = debit(data["card_wallets"], tx)
 
-    meal = card_wallets.filter(card_id="card_own", wallet_id="MEAL").row(0, named=True)
+    meal = card_wallets.filter(id="cw_1").row(0, named=True)
     assert meal["current_balance"] == 450.0
     assert history["card_wallet_id"] == "cw_1"
     assert history["operation_type"] == "purchase"

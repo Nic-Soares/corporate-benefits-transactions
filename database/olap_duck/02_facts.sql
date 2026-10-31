@@ -1,6 +1,6 @@
 -- ============================================================================
 -- OLAP FACT TABLE - DuckDB/Snowflake
--- Denormalized from OLTP transactions + authorizations
+-- Denormalized from OLTP transactions, card_wallets and response_codes
 -- No timestamps: read-only, append-only system
 -- ============================================================================
 
@@ -20,10 +20,8 @@ CREATE TABLE IF NOT EXISTS fact_transactions (
   response_code VARCHAR NOT NULL,
   response_message VARCHAR,
   decline_reason VARCHAR,
-  authorization_code VARCHAR,
-  nsu VARCHAR,
-  authorization_datetime TIMESTAMP,
-  authorization_status VARCHAR
+  nsu VARCHAR NOT NULL,
+  authorization_code VARCHAR
 );
 
 -- ============================================================================
@@ -38,4 +36,3 @@ CREATE INDEX IF NOT EXISTS idx_ft_terminal_id ON fact_transactions(terminal_id);
 CREATE INDEX IF NOT EXISTS idx_ft_program_id ON fact_transactions(program_id);
 CREATE INDEX IF NOT EXISTS idx_ft_wallet_id ON fact_transactions(wallet_id);
 CREATE INDEX IF NOT EXISTS idx_ft_response_code ON fact_transactions(response_code);
-CREATE INDEX IF NOT EXISTS idx_ft_authorization_status ON fact_transactions(authorization_status);

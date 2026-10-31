@@ -139,11 +139,13 @@ def test_transaction(tables):
         card = cards.filter(id=tx["card_id"]).row(0, named=True)
         if card["modality_id"] == "OWN":
             # the cardholder picked one of the card's wallets
-            held = card_wallets.filter(card_id=tx["card_id"])["wallet_id"]
-            assert tx["wallet_id"] in held
+            held = card_wallets.filter(card_id=tx["card_id"])["id"]
+            assert tx["card_wallet_id"] in held
         else:
             # the issuer routes brand cards by MCC later
-            assert tx["wallet_id"] is None
+            assert tx["card_wallet_id"] is None
+        assert len(tx["nsu"]) == 12 and tx["nsu"].isdigit()
+        assert tx["authorization_code"] is None
         terminal = tables["terminals"].filter(id=tx["terminal_id"]).row(0, named=True)
         assert tx["establishment_id"] == terminal["establishment_id"]
         assert 0 <= tx["amount"] <= 500

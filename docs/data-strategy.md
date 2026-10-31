@@ -1,6 +1,6 @@
 # Data Strategy
 
-Where each table's data comes from. Table and column names are those of `database/oltp_postgres/oltp_schema.sql` ([ADR-006](adr/006-oltp-schema-as-column-contract.md)); the model is explained in [ADR-007](adr/007-transaction-core-model.md).
+Where each table's data comes from. Table and column names are those of `database/oltp_postgres/oltp_schema.sql` ([ADR-006](adr/006-oltp-schema-as-column-contract.md)); the model is explained in [ADR-007](adr/007-transaction-core-model.md) and [ADR-008](adr/008-transaction-record.md).
 
 ## Model
 
@@ -21,10 +21,10 @@ erDiagram
     establishments ||--o{ terminals : "has"
     acquirers ||--o{ terminals : "captures"
     cards ||--o{ transactions : "used in"
-    wallets |o--o{ transactions : "charged"
+    card_wallets |o--o{ transactions : "charged"
+    response_codes ||--o{ transactions : "answered with"
     establishments ||--o{ transactions : "sold at"
     terminals ||--o{ transactions : "captured by"
-    transactions ||--o| authorizations : "authorized as"
     card_wallets ||--o{ balance_history : "moves"
     transactions |o--o{ balance_history : "debits"
 ```
@@ -38,6 +38,7 @@ erDiagram
 | `card_program_wallets` | each program's `wallets` | one row per program × wallet |
 | `transaction_modalities` | `pre_populated_data.yaml → transaction_modalities` | 4 (OWN, VISA, MASTERCARD, ELO) |
 | `acquirers` | `pre_populated_data.yaml → acquirers` | 6 |
+| `response_codes` | `pre_populated_data.yaml → response_codes` | 16 ISO 8583 codes |
 | `cnae_wallets` | `pre_populated_data.yaml → cnae_wallets` | one row per CNAE prefix × wallet |
 | `mcc_wallets` | `pre_populated_data.yaml → mcc_wallets` | one row per MCC × wallet (GIFT takes any MCC, no rows) |
 | `mcc_modalities` | `validation_rules.yaml → mcc_acceptance_rules` × the public MCC list | one row per MCC × accepting brand |
@@ -69,8 +70,7 @@ establishments               CNAE mostly one that accepts a wallet; category fro
 
 | Table | Content |
 |---|---|
-| `transactions` | Every purchase attempt: wallet charged, capture, `pin_status`, ISO `response_code`, `decline_reason` |
-| `authorizations` | The authorization record of each transaction |
+| `transactions` | Every purchase attempt and its answer: card wallet charged, capture, `pin_status`, `nsu`, ISO `response_code`, `decline_reason`, `authorization_code` when approved |
 | `balance_history` | Wallet movements of approved purchases (`src/processors/balance.py`) |
 
 A transaction picks a card and a terminal. On the proprietary network the cardholder picks one of the card's wallets; on a brand card the issuer routes it by MCC. The validators run in order and the first failure sets the code and reason; an approval debits the wallet.

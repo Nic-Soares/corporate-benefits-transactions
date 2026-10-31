@@ -41,6 +41,7 @@ def validate_cnae_wallet(
     transaction: dict[str, Any],
     cards_df: pl.DataFrame,
     establishments_df: pl.DataFrame,
+    card_wallets_df: pl.DataFrame,
     cnae_wallets_df: pl.DataFrame,
 ) -> dict[str, Any]:
     """The establishment's CNAE accepts the chosen wallet.
@@ -53,6 +54,11 @@ def validate_cnae_wallet(
         return failure
     if card["modality_id"] not in PROPRIETARY_MODALITIES:
         return PASS  # brand card: the MCC rules apply
+    card_wallet = find_one(
+        card_wallets_df, id=transaction["card_wallet_id"], card_id=transaction["card_id"]
+    )
+    if card_wallet is None:
+        return not_found("card_wallet")
 
     prefix_len = pl.col("cnae_code").str.len_chars()
     matching = cnae_wallets_df.filter(
@@ -61,7 +67,7 @@ def validate_cnae_wallet(
     most_specific = matching.filter(prefix_len == prefix_len.max())
 
     error_code = BUSINESS_RULES["cnae_wallet"]["error_code"]
-    rule = find_one(most_specific, wallet_id=transaction["wallet_id"])
+    rule = find_one(most_specific, wallet_id=card_wallet["wallet_id"])
     if rule is None:
         return fail(error_code, "wallet_not_accepted_at_cnae")
     if not rule["active"]:
@@ -104,14 +110,14 @@ def route_wallet(
 
     A candidate is a wallet the card holds, active, whose MCC list covers the
     establishment (GIFT takes any MCC). The first candidate with enough balance
-    wins and comes back as `wallet_id`. No candidate → 57; candidates but none
+    wins and comes back as `card_wallet_id`. No candidate → 57; candidates but none
     with enough balance → 51. Proprietary-network cards keep their chosen wallet.
     """
     card, establishment, failure = _card_and_establishment(transaction, cards_df, establishments_df)
     if failure:
         return failure
     if card["modality_id"] in PROPRIETARY_MODALITIES:
-        return PASS | {"wallet_id": transaction["wallet_id"]}
+        return PASS | {"card_wallet_id": transaction["card_wallet_id"]}
 
     rule = BUSINESS_RULES["wallet_routing"]
     at_mcc = set(mcc_wallets_df.filter(mcc_code=establishment["mcc_code"])["wallet_id"])
@@ -128,6 +134,6 @@ def route_wallet(
         return fail(rule["error_code"], "no_wallet_for_mcc")
     for card_wallet in candidates:
         if card_wallet["current_balance"] >= transaction["amount"]:
-            return PASS | {"wallet_id": card_wallet["wallet_id"]}
+            return PASS | {"card_wallet_id": card_wallet["id"]}
     balance_code = RULES["balance_and_limits_validations"]["current_balance"]["error_code"]
     return fail(balance_code, "insufficient_balance")

@@ -14,11 +14,9 @@ def debit(
     """Debit an approved purchase from its wallet.
 
     Returns the card wallets with the new balance and the `balance_history` row.
-    The transaction must already carry the charged `wallet_id`.
+    The transaction must already carry the charged `card_wallet_id`.
     """
-    is_wallet = (pl.col("card_id") == transaction["card_id"]) & (
-        pl.col("wallet_id") == transaction["wallet_id"]
-    )
+    is_wallet = pl.col("id") == transaction["card_wallet_id"]
     card_wallet = card_wallets_df.filter(is_wallet).row(0, named=True)
     previous = card_wallet["current_balance"]
     posterior = round(previous - transaction["amount"], 2)

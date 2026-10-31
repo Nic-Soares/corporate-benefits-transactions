@@ -42,7 +42,7 @@ flowchart TD
     Decision -- Yes --> Approved["00 approved"]
     Decision -- No --> Declined["First failure:<br>ISO 8583 code + decline_reason"]
     Approved --> Debit["balance.debit<br>wallet balance − amount<br>balance_history row"]
-    Debit --> InsertTrans["INSERT transactions + authorizations"]
+    Debit --> InsertTrans["INSERT transactions<br>response code, reason,<br>NSU, authorization code"]
     Declined --> InsertTrans
     InsertTrans --> CheckVolume{"Target volume reached?"}
     CheckVolume -- No --> TransGen
