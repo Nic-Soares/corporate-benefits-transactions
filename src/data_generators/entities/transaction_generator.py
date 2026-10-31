@@ -130,6 +130,10 @@ class TransactionGenerator:
             weight = popularity[t["establishment_id"]]
             if t["status"] != "active":
                 weight *= USAGE["inactive_usage_factor"]
+            # Like a card, in proportion to the days it was installed
+            weight *= sum(day.date() >= t["installation_date"] for day in self.days) / days_back
+            if not weight:
+                continue
             self.terminals.setdefault(category, []).append(t)
             self.terminal_weights.setdefault(category, []).append(weight)
 
