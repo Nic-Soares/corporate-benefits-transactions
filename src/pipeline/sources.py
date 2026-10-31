@@ -2,21 +2,25 @@
 
 import logging
 from dataclasses import dataclass
+from pathlib import Path
 
 import polars as pl
 
-from src.data_generators.reference_data.mcc_and_cnae_loader import RAW_DIR, extract_cnae_data
+from src.extractors.ibge_cnae import fetch_cnae
 from src.extractors.ibge_municipalities import fetch_municipios
+from src.extractors.ibge_population import fetch_population
 from src.extractors.mcc_extractor import fetch_mcc_codes
 
 log = logging.getLogger(__name__)
 
+RAW_DIR = Path(__file__).parents[2] / "data" / "raw"
+
 
 @dataclass
 class Sources:
-    cnae: pl.DataFrame  # CNAE 2024 (Kaggle): classe_id, classe, subclasse_id, subclasse
+    cnae: pl.DataFrame  # IBGE CNAE: classe_id, classe, subclasse_id, subclasse
     mcc: pl.DataFrame  # public MCC list: mcc_code, description
-    municipios: pl.DataFrame  # IBGE: municipio_nome, uf_sigla
+    municipios: pl.DataFrame  # IBGE: municipio_nome, uf_sigla, population
 
 
 def _cached(name: str, fetch) -> pl.DataFrame:
@@ -31,13 +35,16 @@ def _cached(name: str, fetch) -> pl.DataFrame:
 
 
 def fetch_sources() -> Sources:
-    """CNAE (Kaggle), MCC list (GitHub) and municipalities (IBGE API)."""
+    """CNAE, municipalities and population (IBGE APIs) and the MCC list (GitHub)."""
+    cnae = _cached("ibge_cnae", fetch_cnae)
     mcc = _cached(
         "mcc_codes",
         lambda: fetch_mcc_codes().select(
             pl.col("mcc").alias("mcc_code"), pl.col("edited_description").alias("description")
         ),
     )
-    municipios = _cached("ibge_municipios", fetch_municipios)
-    cnae = extract_cnae_data().with_columns(pl.col(pl.Categorical).cast(pl.String))
+    population = _cached("ibge_population", fetch_population)
+    municipios = _cached("ibge_municipios", fetch_municipios).join(
+        population, on="municipio_id", how="left"
+    )
     return Sources(cnae=cnae, mcc=mcc, municipios=municipios)
