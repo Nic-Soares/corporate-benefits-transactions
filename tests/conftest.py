@@ -8,6 +8,7 @@ from src.data_generators.entities.company_generator import CompanyGenerator
 from src.data_generators.entities.establishment_generator import generate_establishments
 from src.data_generators.entities.terminal_generator import generate_terminals
 from src.data_generators.entities.transaction_generator import TransactionGenerator
+from src.pipeline.sources import Sources
 from src.utils.read_yamls import load_pre_populated_data
 
 REFERENCE = load_pre_populated_data()
@@ -79,3 +80,18 @@ def transaction_generator():
         )
 
     return make
+
+
+@pytest.fixture
+def sources(municipios_df) -> Sources:
+    """Offline stand-in for `fetch_sources()`: CNAE and MCC rows in the shape the setup reads."""
+    cnae = pl.DataFrame(
+        {
+            "classe_id": [f"{code[:4]}0" for code in CNAE_SUBCLASSES],
+            "classe": [f"Class {code[:4]}" for code in CNAE_SUBCLASSES],
+            "subclasse_id": CNAE_SUBCLASSES,
+            "subclasse": [f"Subclass {code}" for code in CNAE_SUBCLASSES],
+        }
+    )
+    mcc = pl.DataFrame({"mcc_code": ["5411", "5812"], "description": ["Grocery", "Restaurants"]})
+    return Sources(cnae=cnae, mcc=mcc, municipios=municipios_df)

@@ -241,33 +241,33 @@ CREATE TABLE IF NOT EXISTS balance_history (
 -- INDEXES FOR PERFORMANCE
 -- ============================================================================
 
-CREATE INDEX idx_companies_cnpj ON companies(cnpj);
-CREATE INDEX idx_companies_status ON companies(status);
-CREATE INDEX idx_companies_parent_id ON companies(parent_id);
+CREATE INDEX IF NOT EXISTS idx_companies_cnpj ON companies(cnpj);
+CREATE INDEX IF NOT EXISTS idx_companies_status ON companies(status);
+CREATE INDEX IF NOT EXISTS idx_companies_parent_id ON companies(parent_id);
 
-CREATE INDEX idx_cardholders_company_id ON cardholders(company_id);
-CREATE INDEX idx_cardholders_status ON cardholders(status);
+CREATE INDEX IF NOT EXISTS idx_cardholders_company_id ON cardholders(company_id);
+CREATE INDEX IF NOT EXISTS idx_cardholders_status ON cardholders(status);
 
-CREATE INDEX idx_cards_cardholder_id ON cards(cardholder_id);
-CREATE INDEX idx_cards_status ON cards(status);
+CREATE INDEX IF NOT EXISTS idx_cards_cardholder_id ON cards(cardholder_id);
+CREATE INDEX IF NOT EXISTS idx_cards_status ON cards(status);
 
-CREATE INDEX idx_cards_program_id ON cards(program_id);
+CREATE INDEX IF NOT EXISTS idx_cards_program_id ON cards(program_id);
 
-CREATE INDEX idx_card_wallets_card_id ON card_wallets(card_id);
-CREATE INDEX idx_card_wallets_wallet_id ON card_wallets(wallet_id);
+CREATE INDEX IF NOT EXISTS idx_card_wallets_card_id ON card_wallets(card_id);
+CREATE INDEX IF NOT EXISTS idx_card_wallets_wallet_id ON card_wallets(wallet_id);
 
-CREATE INDEX idx_establishments_cnpj ON establishments(cnpj);
-CREATE INDEX idx_establishments_status ON establishments(status);
+CREATE INDEX IF NOT EXISTS idx_establishments_cnpj ON establishments(cnpj);
+CREATE INDEX IF NOT EXISTS idx_establishments_status ON establishments(status);
 
-CREATE INDEX idx_terminals_establishment_id ON terminals(establishment_id);
-CREATE INDEX idx_terminals_acquirer_id ON terminals(acquirer_id);
+CREATE INDEX IF NOT EXISTS idx_terminals_establishment_id ON terminals(establishment_id);
+CREATE INDEX IF NOT EXISTS idx_terminals_acquirer_id ON terminals(acquirer_id);
 
-CREATE INDEX idx_transactions_card_id ON transactions(card_id);
-CREATE INDEX idx_transactions_card_wallet_id ON transactions(card_wallet_id);
-CREATE INDEX idx_transactions_establishment_id ON transactions(establishment_id);
-CREATE INDEX idx_transactions_terminal_id ON transactions(terminal_id);
-CREATE INDEX idx_transactions_date ON transactions(date);
-CREATE INDEX idx_transactions_response_code ON transactions(response_code);
+CREATE INDEX IF NOT EXISTS idx_transactions_card_id ON transactions(card_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_card_wallet_id ON transactions(card_wallet_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_establishment_id ON transactions(establishment_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_terminal_id ON transactions(terminal_id);
+CREATE INDEX IF NOT EXISTS idx_transactions_date ON transactions(date);
+CREATE INDEX IF NOT EXISTS idx_transactions_response_code ON transactions(response_code);
 
-CREATE INDEX idx_balance_history_card_wallet_id ON balance_history(card_wallet_id);
-CREATE INDEX idx_balance_history_transaction_id ON balance_history(transaction_id);
+CREATE INDEX IF NOT EXISTS idx_balance_history_card_wallet_id ON balance_history(card_wallet_id);
+CREATE INDEX IF NOT EXISTS idx_balance_history_transaction_id ON balance_history(transaction_id);
