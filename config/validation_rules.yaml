@@ -184,7 +184,10 @@ not_found:
 # A status missing from the rule's error_codes
 unknown_status: "96"
 
-# MCC × brands that accept it (E = Elo | M = Mastercard | V = Visa)
+# MCC × brands that accept it (E = Elo | M = Mastercard | V = Visa).
+# SYNTHETIC: a plausible rule set for the simulation, not the brands' official
+# acceptance tables (which aren't published as open data). The MCC codes
+# themselves are real (public MCC list).
 
 mcc_acceptance_rules:
   "0742": "E, M, V"

@@ -48,6 +48,10 @@ generation_settings:
     - {programs: ["MULTI_4P", "PREMIUM"],   weight: 0.03}
     - {programs: ["GIFT"],                  weight: 0.03}
 
+  # Share of cardholders who live in their company's municipality; the others
+  # anywhere, by population
+  cardholder_same_city_ratio: 0.8
+
   card_type_distribution:
     physical: 0.85
     virtual: 0.15

@@ -30,6 +30,19 @@ The data is shaped like the market, with synthetic numbers: lunch and evening pe
 
 Details in [`docs/business-rule.md`](docs/business-rule.md).
 
+## Data sources
+
+Every record is synthetic. The generators draw on public reference data, downloaded once into `data/raw/`:
+
+| Data | Source | Used for |
+|---|---|---|
+| CNAE 2.3 classes and subclasses | [IBGE CNAE API](https://servicodados.ibge.gov.br/api/docs/cnae) (CONCLA), official | Establishment activities, CNAE rule descriptions |
+| Municipalities | [IBGE localities API](https://servicodados.ibge.gov.br/api/docs/localidades), official | Where companies, cardholders and establishments are |
+| Population estimates | [IBGE aggregates API](https://servicodados.ibge.gov.br/api/docs/agregados), table 6579, official | Weighting municipalities: more records where more people live |
+| Merchant Category Codes | [greggles/mcc-codes](https://github.com/greggles/mcc-codes) (Unlicense), compiled from the card brands' public manuals; the ISO 18245 list itself isn't free | MCC codes and descriptions |
+
+**Synthetic by design:** which brand accepts each MCC (`validation_rules.yaml → mcc_acceptance_rules`), which wallet each CNAE and MCC takes, the CNAE → MCC mapping, and every weight, balance, limit and ticket in `config/simulation_config.yaml`. They follow how the Brazilian benefits market works, not any company's data.
+
 ## How it works
 
 ```
@@ -64,7 +77,7 @@ corporate-benefits-transactions/
 │   │   ├── entities/       # Companies, cardholders, cards, establishments, terminals, transactions
 │   │   ├── providers/      # Seeded fake-data sources, CPF/CNPJ
 │   │   └── reference_data/ # Loaders for the config's reference tables, MCC and CNAE
-│   ├── extractors/         # IBGE municipalities, MCC list, Kaggle downloads
+│   ├── extractors/         # IBGE (CNAE, municipalities, population), MCC list
 │   ├── infrastructure/     # PostgreSQL / DuckDB connections, schema creation
 │   ├── pipeline/           # setup: sources, reference tables, entities
 │   ├── processors/         # Wallet balance movements

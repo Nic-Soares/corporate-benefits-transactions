@@ -49,5 +49,5 @@ wallets + MCC → mcc_wallets
 ## Testing
 
 - `uv run pytest` — offline: validators (approved + declined per rule), generators (schema columns, statuses, date order, reproducibility), config consistency, and the OLTP schema on in-memory DuckDB with every generated table loaded under foreign keys.
-- `uv run pytest -m network` — IBGE API.
+- `uv run pytest -m network` — IBGE APIs (CNAE, municipalities, population).
 - `uv run pytest -m db` — PostgreSQL connection and schema (needs `docker compose up -d`).
