@@ -11,7 +11,6 @@ import duckdb
 import polars as pl
 import pytest
 
-from src.data_generators.entities.transaction_generator import generate_single_transaction
 from src.data_generators.providers import fake
 from src.data_generators.reference_data.acquirer_loader import load_acquirers
 from src.data_generators.reference_data.card_program_loader import (
@@ -73,7 +72,7 @@ OLAP_DIMENSIONS = {
 }
 
 
-def test_oltp_takes_reference_and_generated_data(build_tables):
+def test_oltp_takes_reference_and_generated_data(build_tables, transaction_generator):
     conn = duckdb.connect()
     conn.execute(OLTP_SCHEMA.read_text())
 
@@ -94,15 +93,8 @@ def test_oltp_takes_reference_and_generated_data(build_tables):
         assert count == len(generated[table]), table
 
     # Transactions reference the card wallet charged and an ISO response code
-    transactions = pl.DataFrame(
-        [
-            generate_single_transaction(
-                generated["cards"], generated["card_wallets"], generated["terminals"]
-            )
-            | {"response_code": "00"}
-            for _ in range(20)
-        ]
-    )
+    generator = transaction_generator(generated)
+    transactions = pl.DataFrame([generator.generate() | {"response_code": "00"} for _ in range(20)])
     _insert(conn, "transactions", transactions)
     assert conn.execute("SELECT count(*) FROM transactions").fetchall()[0][0] == 20
 

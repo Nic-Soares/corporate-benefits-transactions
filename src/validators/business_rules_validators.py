@@ -1,10 +1,10 @@
 """Business-rule validations: where each wallet can be used.
 
-Proprietary-network cards (`OWN`, the 3-party model): the cardholder picks the
-wallet on the terminal, and the establishment's CNAE must accept it.
-Brand cards (Visa, Mastercard, Elo: the 4-party model): the brand must accept
-the establishment's MCC, and the issuer picks the wallet from that MCC.
-Each validator passes the cards of the other network, so a caller runs all.
+Proprietary-network cards (`OWN`, the 3-party model): the cardholder picks an
+option on the terminal (Food, Meal or Others) and the issuer routes inside it;
+the establishment's CNAE must accept the wallet. Brand cards (Visa,
+Mastercard, Elo: the 4-party model): the brand must accept the establishment's
+MCC, and the issuer picks the wallet from that MCC.
 """
 
 from typing import Any
@@ -37,44 +37,6 @@ def _card_and_establishment(
     return card, establishment, None
 
 
-def validate_cnae_wallet(
-    transaction: dict[str, Any],
-    cards_df: pl.DataFrame,
-    establishments_df: pl.DataFrame,
-    card_wallets_df: pl.DataFrame,
-    cnae_wallets_df: pl.DataFrame,
-) -> dict[str, Any]:
-    """The establishment's CNAE accepts the chosen wallet.
-
-    `cnae_wallets.cnae_code` holds CNAE prefixes at several levels (e.g. `5611`,
-    `5611201`); the longest prefix of the establishment's CNAE decides.
-    """
-    card, establishment, failure = _card_and_establishment(transaction, cards_df, establishments_df)
-    if failure:
-        return failure
-    if card["modality_id"] not in PROPRIETARY_MODALITIES:
-        return PASS  # brand card: the MCC rules apply
-    card_wallet = find_one(
-        card_wallets_df, id=transaction["card_wallet_id"], card_id=transaction["card_id"]
-    )
-    if card_wallet is None:
-        return not_found("card_wallet")
-
-    prefix_len = pl.col("cnae_code").str.len_chars()
-    matching = cnae_wallets_df.filter(
-        pl.lit(establishment["main_cnae"]).str.starts_with(pl.col("cnae_code"))
-    )
-    most_specific = matching.filter(prefix_len == prefix_len.max())
-
-    error_code = BUSINESS_RULES["cnae_wallet"]["error_code"]
-    rule = find_one(most_specific, wallet_id=card_wallet["wallet_id"])
-    if rule is None:
-        return fail(error_code, "wallet_not_accepted_at_cnae")
-    if not rule["active"]:
-        return fail(error_code, "cnae_rule_inactive")
-    return PASS
-
-
 def validate_mcc_brand(
     transaction: dict[str, Any],
     cards_df: pl.DataFrame,
@@ -99,39 +61,74 @@ def validate_mcc_brand(
     return PASS
 
 
+def _accepted_by_cnae(cnae: str, cnae_wallets_df: pl.DataFrame) -> set[str]:
+    """Wallets the CNAE takes: the active rules of its longest matching prefix."""
+    matching = cnae_wallets_df.filter(pl.lit(cnae).str.starts_with(pl.col("cnae_code")))
+    if not matching.height:
+        return set()
+    prefix_len = pl.col("cnae_code").str.len_chars()
+    most_specific = matching.filter(prefix_len == prefix_len.max())
+    return set(most_specific.filter(active=True)["wallet_id"])
+
+
 def route_wallet(
     transaction: dict[str, Any],
     cards_df: pl.DataFrame,
     establishments_df: pl.DataFrame,
     card_wallets_df: pl.DataFrame,
+    wallets_df: pl.DataFrame,
+    cnae_wallets_df: pl.DataFrame,
     mcc_wallets_df: pl.DataFrame,
 ) -> dict[str, Any]:
-    """Brand cards: the wallet the issuer charges, in `wallet_priority` order.
+    """The card wallet the issuer charges; it comes back as `card_wallet_id`.
 
-    A candidate is a wallet the card holds, active, whose MCC list covers the
-    establishment (GIFT takes any MCC). The first candidate with enough balance
-    wins and comes back as `card_wallet_id`. No candidate → 57; candidates but none
-    with enough balance → 51. Proprietary-network cards keep their chosen wallet.
+    The candidates, in order: proprietary network — the wallets of the option
+    picked on the terminal (`wallet_option`); brand — `wallet_priority`; cash
+    withdrawal — `withdrawal_wallets`, brand cards only. Each must be held by
+    the card, active (card wallet and wallet), accepted here (CNAE on the
+    proprietary network, MCC on a brand; GIFT takes any MCC) and have the
+    balance; the first that passes wins. The first step no candidate passes
+    gives the reason (57), and balance is last (51).
     """
     card, establishment, failure = _card_and_establishment(transaction, cards_df, establishments_df)
     if failure:
         return failure
-    if card["modality_id"] in PROPRIETARY_MODALITIES:
-        return PASS | {"card_wallet_id": transaction["card_wallet_id"]}
 
     rule = BUSINESS_RULES["wallet_routing"]
-    at_mcc = set(mcc_wallets_df.filter(mcc_code=establishment["mcc_code"])["wallet_id"])
+    proprietary = card["modality_id"] in PROPRIETARY_MODALITIES
+    if transaction["transaction_type"] == "withdrawal":
+        if proprietary:
+            return fail(rule["error_code"], "withdrawal_not_allowed")
+        priority = rule["withdrawal_wallets"]
+    elif proprietary:
+        priority = rule["proprietary_options"].get(transaction["wallet_option"], [])
+    else:
+        priority = rule["wallet_priority"]
+
     held = {
         row["wallet_id"]: row
-        for row in card_wallets_df.filter(card_id=card["id"], status="active").iter_rows(named=True)
+        for row in card_wallets_df.filter(card_id=card["id"]).iter_rows(named=True)
     }
-    candidates = [
-        held[wallet]
-        for wallet in rule["wallet_priority"]
-        if wallet in held and (wallet in at_mcc or wallet == OPEN_WALLET)
-    ]
+    candidates = [held[wallet] for wallet in priority if wallet in held]
     if not candidates:
-        return fail(rule["error_code"], "no_wallet_for_mcc")
+        return fail(rule["error_code"], "wallet_not_on_card")
+
+    enabled = set(wallets_df.filter(active=True)["id"])
+    candidates = [c for c in candidates if c["status"] == "active" and c["wallet_id"] in enabled]
+    if not candidates:
+        return fail(rule["error_code"], "card_wallet_inactive")
+
+    if proprietary:
+        accepted = _accepted_by_cnae(establishment["main_cnae"], cnae_wallets_df)
+        reason = "wallet_not_accepted_at_cnae"
+    else:
+        accepted = set(mcc_wallets_df.filter(mcc_code=establishment["mcc_code"])["wallet_id"])
+        accepted.add(OPEN_WALLET)
+        reason = "no_wallet_for_mcc"
+    candidates = [c for c in candidates if c["wallet_id"] in accepted]
+    if not candidates:
+        return fail(rule["error_code"], reason)
+
     for card_wallet in candidates:
         if card_wallet["current_balance"] >= transaction["amount"]:
             return PASS | {"card_wallet_id": card_wallet["id"]}
