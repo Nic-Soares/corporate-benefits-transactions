@@ -25,7 +25,7 @@ flowchart TD
 
     EntitiesReady --> Phase3{"3. Simulation"}
     Phase3 --> Credit["Credit day:<br>balance.credit, monthly credit"]
-    Credit --> TransGen["TransactionGenerator<br>card by activity, place, hour,<br>ticket, capture, PIN"]
+    Credit --> TransGen["TransactionGenerator<br>card by activity, place, hour,<br>ticket, capture, PIN<br>+ FraudGenerator incidents"]
     TransGen --> Network{"Card network?"}
     Network -- "OWN (3-party)" --> Chosen["Cardholder picks Food,<br>Meal or Others"]
     Network -- "brand (4-party)" --> Unrouted["The issuer routes by MCC<br>(cash: GIFT only)"]
@@ -45,7 +45,8 @@ flowchart TD
     Approved --> Debit["balance.debit<br>wallet balance − amount<br>balance_history row"]
     Debit --> Reversal["Now and then a reversal later:<br>balance back, related_transaction_id"]
     Declined --> GiveUp["Declined for balance:<br>the cardholder mostly stops<br>until the next credit"]
-    Reversal --> InsertTrans["COPY transactions,<br>balance_history, final balances"]
+    Reversal --> Disputes["Disputes: most approved fraud,<br>a few legit purchases"]
+    Disputes --> InsertTrans["COPY transactions,<br>balance_history, final balances"]
     GiveUp --> InsertTrans
     InsertTrans --> Phase4{"4. Analytics"}
 
