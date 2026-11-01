@@ -204,19 +204,22 @@ CREATE TABLE IF NOT EXISTS transactions (
   decline_reason VARCHAR,
   nsu VARCHAR NOT NULL,
   authorization_code VARCHAR,
+  related_transaction_id VARCHAR,
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP,
   FOREIGN KEY (card_id) REFERENCES cards(id),
   FOREIGN KEY (card_wallet_id) REFERENCES card_wallets(id),
   FOREIGN KEY (establishment_id) REFERENCES establishments(id),
   FOREIGN KEY (terminal_id) REFERENCES terminals(id),
-  FOREIGN KEY (response_code) REFERENCES response_codes(id)
+  FOREIGN KEY (response_code) REFERENCES response_codes(id),
+  FOREIGN KEY (related_transaction_id) REFERENCES transactions(id)
 );
 
 COMMENT ON COLUMN card_wallets.monthly_credit IS 'Benefit credited on the credit day each month (synthetic)';
 COMMENT ON COLUMN card_wallets.daily_count_limit IS 'Purchases per day on the wallet; 0 = no limit';
 COMMENT ON COLUMN transactions.card_wallet_id IS 'Wallet of the card charged, routed by the issuer; NULL when no wallet could be routed';
-COMMENT ON COLUMN transactions.transaction_type IS 'purchase or withdrawal';
+COMMENT ON COLUMN transactions.transaction_type IS 'purchase, withdrawal or reversal';
+COMMENT ON COLUMN transactions.related_transaction_id IS 'A reversal points to the purchase it undoes';
 COMMENT ON COLUMN transactions.wallet_option IS 'Proprietary network: FOOD, MEAL or OTHERS, picked on the terminal; NULL on brand cards';
 COMMENT ON COLUMN transactions.pin_status IS 'ok, wrong or not_required';
 COMMENT ON COLUMN transactions.decline_reason IS 'Specific cause behind the ISO response code; NULL when approved';

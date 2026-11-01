@@ -59,3 +59,11 @@ def upsert_dataframe(
     )
     with conn.cursor() as cur:
         cur.executemany(query, list(df.iter_rows()))
+
+
+def read_table(conn: psycopg.Connection, table: str) -> pl.DataFrame:
+    """A whole table as a DataFrame; numeric columns as floats."""
+    cur = conn.execute(f"SELECT * FROM {table}")
+    columns = [column.name for column in cur.description]
+    df = pl.DataFrame(cur.fetchall(), schema=columns, orient="row", infer_schema_length=None)
+    return df.with_columns(pl.col(pl.Decimal).cast(pl.Float64))

@@ -88,6 +88,10 @@ class TransactionGenerator:
             row["id"]: row["status"] == "active"
             for row in cardholders_df.select("id", "status").iter_rows(named=True)
         }
+        self.home = {
+            row["id"]: (row["city"], row["state"])
+            for row in cardholders_df.select("id", "city", "state").iter_rows(named=True)
+        }
         self.cards = cards_df.select(
             "id", "cardholder_id", "modality_id", "card_type", "status", "issue_date"
         ).to_dicts()
@@ -115,14 +119,20 @@ class TransactionGenerator:
         for card_id, wallets in held.items():
             self.wallets_by_card.setdefault(card_id, wallets)
 
-        # Terminals of each category, weighted by the shop's popularity
+        # Terminals of each category, weighted by the shop's popularity; also
+        # indexed by the shop's city and state, for purchases near home
         popularity = {
             row["id"]: _activity(USAGE["establishment_popularity_sigma"], row["status"] == "active")
             for row in establishments_df.select("id", "status").iter_rows(named=True)
         }
         category_of = dict(establishments_df.select("id", "category").iter_rows())
+        place_of = {
+            row["id"]: (row["city"], row["state"])
+            for row in establishments_df.select("id", "city", "state").iter_rows(named=True)
+        }
         self.terminals: dict[str, list[dict]] = {}
         self.terminal_weights: dict[str, list[float]] = {}
+        self.local: dict[tuple, tuple[list[dict], list[float]]] = {}
         for t in terminals_df.select(
             "id", "establishment_id", "type", "status", "installation_date"
         ).to_dicts():
@@ -136,6 +146,11 @@ class TransactionGenerator:
                 continue
             self.terminals.setdefault(category, []).append(t)
             self.terminal_weights.setdefault(category, []).append(weight)
+            city, state = place_of[t["establishment_id"]]
+            for key in ((category, city, state), (category, state)):
+                terminals, weights = self.local.setdefault(key, ([], []))
+                terminals.append(t)
+                weights.append(weight)
 
     @staticmethod
     def _day_weight(day: datetime) -> float:
@@ -193,11 +208,23 @@ class TransactionGenerator:
         hour = random.choices(range(24), weights=hours)[0]
         return day + timedelta(hours=hour, seconds=random.randint(0, 3599))
 
+    def _nearby(self, category: str, card: dict) -> tuple[list[dict], list[float]]:
+        """The category's terminals in the cardholder's city, else state, most of the
+        time (`local_purchase_ratio`); anywhere otherwise and for online businesses."""
+        everywhere = self.terminals[category], self.terminal_weights[category]
+        online = CATEGORIES[category].get("online")
+        if online or random.random() >= USAGE["local_purchase_ratio"]:
+            return everywhere
+        city, state = self.home[card["cardholder_id"]]
+        return self.local.get((category, city, state)) or self.local.get(
+            (category, state), everywhere
+        )
+
     def generate(self) -> dict:
         """One attempt: columns of `transactions`, before the issuer answers."""
         card = random.choices(self.cards, weights=self.card_weights)[0]
         category = self._category(card)
-        terminals, weights = self.terminals[category], self.terminal_weights[category]
+        terminals, weights = self._nearby(category, card)
         if card["card_type"] == "virtual":
             # A virtual card goes where it can be used, when there is such a terminal
             usable = [
@@ -230,4 +257,5 @@ class TransactionGenerator:
             "decline_reason": None,
             "nsu": f"{random.randrange(10**12):012d}",
             "authorization_code": None,
+            "related_transaction_id": None,
         }
