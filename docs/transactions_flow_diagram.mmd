@@ -5,11 +5,11 @@ config:
   look: neo
 ---
 %% Target flow of a full run. Solid boxes exist today; dashed ones are planned
-%% (roadmap EP-09 ETL, EP-10 export).
+%% (roadmap EP-10 export).
 flowchart TD
     Start(["main.py setup / simulate / export"]) --> Phase1{"1. Setup"}
 
-    Phase1 --> Schema["schema_creator.py<br>oltp_schema.sql → PostgreSQL (17 tables)<br>01_dimensions + 02_facts → DuckDB"]
+    Phase1 --> Schema["setup<br>oltp_schema.sql → PostgreSQL (17 tables)"]
     Schema --> RefLoad["Load reference tables from config/<br>wallets, card_programs, card_program_wallets,<br>transaction_modalities, acquirers,<br>cnae_wallets, mcc_wallets, mcc_modalities"]
 
     RefLoad --> Phase2{"2. Entities"}
@@ -50,12 +50,12 @@ flowchart TD
     GiveUp --> InsertTrans
     InsertTrans --> Phase4{"4. Analytics"}
 
-    Phase4 --> ETL["ETL PostgreSQL → DuckDB<br>9 dimensions + fact_transactions"]
+    Phase4 --> ETL["etl: PostgreSQL → DuckDB<br>10 dimensions, 2 facts, views"]
     ETL --> Export["Export Parquet"]
     Export --> End(["Kaggle dataset"])
 
     classDef planned stroke-dasharray: 5 5
-    class ETL,Export,End planned
+    class Export,End planned
     style Phase1 fill:#e3f2fd
     style Phase2 fill:#f3e5f5
     style Phase3 fill:#fce4ec

@@ -17,7 +17,7 @@
 | `EP-06` Transaction core review | ✅ Done — merged into `develop` 2026-10-31 (ADR-007, 008, 009) | `docs/`, then `config/`, `database/`, `src/` |
 | `EP-07` Setup pipeline (reference data + entities) | ✅ Done — merged into `develop` 2026-10-31 | code (`src/main.py`, `src/processors/`) |
 | `EP-08` Transaction simulator | ✅ Done — merged into `develop` 2026-11-01 (ADR-010, ADR-011) | code (`src/processors/transaction_simulator.py`) |
-| `EP-09` OLAP: Postgres → DuckDB | Not started | code + `database/olap_duck/` |
+| `EP-09` OLAP: Postgres → DuckDB | ✅ Done — merged into `develop` 2026-11-01 (ADR-012) | code + `database/olap_duck/` |
 | `EP-10` Dataset export and quality | Not started | code + `data/final_datasets/` |
 | `EP-11` Kaggle release | Not started | Kaggle |
 
@@ -440,9 +440,12 @@ Second pass against how benefits cards are used in the market. The model held; t
 
 **Dependencies:** `EP-08`. **Size:** M (~2–3 days).
 
-- [ ] Decide dbt × plain SQL (ADR)
-- [ ] ETL from OLTP into `dim_*` and `fact_transactions`
-- [ ] Basic analytical views (approval by product, average ticket, declines by response code)
+- [x] Plain SQL on DuckDB, no dbt (ADR-012); full refresh into a new file
+- [x] ETL from OLTP into `dim_*`, `fact_transactions` and `fact_balance_movements` (`src/pipeline/etl.py`, `03_load.sql`); `python -m src.main etl`
+- [x] Model: `dim_card_wallets` (credit, limits, final balance); `fact_balance_movements`; the fact gains `company_id`, `modality_id`, `acquirer_id`, `card_wallet_id`; no CPF or card number hashes
+- [x] Views (`04_views.sql`): approval by program and network, declines by code and reason, ticket by category, fraud by scenario, daily volume, wallet flows by month
+- [x] Tests: loads, keys resolve, denormalized keys agree, sums match, views; `pytest -m db` runs setup → simulate → etl
+- [ ] Found on the way, for `ST-08.4`: wallets spend only 20–45% of their monthly credit, because purchase volume doesn't follow the credit
 
 ---
 
