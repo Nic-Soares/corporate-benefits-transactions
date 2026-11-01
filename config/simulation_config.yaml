@@ -142,20 +142,21 @@ generation_settings:
 # cnae: CNAE prefixes of the category (the MCC comes from
 #   pre_populated_data.yaml → cnae_mcc). online: sells through an e-commerce
 #   gateway, no physical terminal. atm: cash withdrawal.
+# names: words for the trade name (with a Brazilian surname).
 # amount: a log-normal ticket — median, 90th percentile and cap (R$).
 # =====================================
 establishment_categories:
-  supermarket:      {weight: 0.22, cnae: ["4711", "4691"], amount: {median: 60.00, p90: 280.00, max: 2500.00}}
-  food_retail:      {weight: 0.16, cnae: ["4721", "4722", "4723", "4724", "4729"], amount: {median: 22.00, p90: 80.00, max: 400.00}}
-  restaurant:       {weight: 0.24, cnae: ["5611", "5612", "5620"], amount: {median: 35.00, p90: 85.00, max: 400.00}}
-  fuel:             {weight: 0.10, cnae: ["4731", "4520", "4530", "5223"], amount: {median: 110.00, p90: 250.00, max: 1000.00}}
-  health:           {weight: 0.07, cnae: ["4771", "4773", "4774", "8630", "9313"], amount: {median: 45.00, p90: 180.00, max: 1500.00}}
-  home_office:      {weight: 0.02, cnae: ["4751", "4752", "4753", "4754"], amount: {median: 120.00, p90: 600.00, max: 5000.00}}
-  education:        {weight: 0.02, cnae: ["4761", "8599"], amount: {median: 80.00, p90: 400.00, max: 3000.00}}
-  retail:           {weight: 0.10, cnae: ["4755", "4763", "4772", "4781", "4782", "4789"], amount: {median: 70.00, p90: 300.00, max: 2500.00}}
-  ride_hailing:     {weight: 0.03, cnae: ["4923"], online: true, amount: {median: 18.00, p90: 45.00, max: 250.00}}
-  digital_services: {weight: 0.02, cnae: ["6319"], online: true, amount: {median: 30.00, p90: 80.00, max: 300.00}}
-  atm:              {weight: 0.02, cnae: ["6422"], atm: true, amount: {median: 150.00, p90: 400.00, max: 1500.00, step: 20.00}}
+  supermarket:      {weight: 0.22, names: ["Supermercado", "Mercado", "Atacarejo"], cnae: ["4711", "4691"], amount: {median: 60.00, p90: 280.00, max: 2500.00}}
+  food_retail:      {weight: 0.16, names: ["Padaria", "Açougue", "Hortifruti", "Empório"], cnae: ["4721", "4722", "4723", "4724", "4729"], amount: {median: 22.00, p90: 80.00, max: 400.00}}
+  restaurant:       {weight: 0.24, names: ["Restaurante", "Lanchonete", "Cantina", "Bar e Restaurante"], cnae: ["5611", "5612", "5620"], amount: {median: 35.00, p90: 85.00, max: 400.00}}
+  fuel:             {weight: 0.10, names: ["Auto Posto", "Posto", "Auto Center"], cnae: ["4731", "4520", "4530", "5223"], amount: {median: 110.00, p90: 250.00, max: 1000.00}}
+  health:           {weight: 0.07, names: ["Farmácia", "Drogaria", "Ótica", "Academia"], cnae: ["4771", "4773", "4774", "8630", "9313"], amount: {median: 45.00, p90: 180.00, max: 1500.00}}
+  home_office:      {weight: 0.02, names: ["Informática", "Eletro", "Móveis"], cnae: ["4751", "4752", "4753", "4754"], amount: {median: 120.00, p90: 600.00, max: 5000.00}}
+  education:        {weight: 0.02, names: ["Livraria", "Papelaria", "Escola"], cnae: ["4761", "8599"], amount: {median: 80.00, p90: 400.00, max: 3000.00}}
+  retail:           {weight: 0.10, names: ["Loja", "Magazine", "Calçados", "Modas"], cnae: ["4755", "4763", "4772", "4781", "4782", "4789"], amount: {median: 70.00, p90: 300.00, max: 2500.00}}
+  ride_hailing:     {weight: 0.03, names: ["Mobilidade", "Transportes"], cnae: ["4923"], online: true, amount: {median: 18.00, p90: 45.00, max: 250.00}}
+  digital_services: {weight: 0.02, names: ["Digital", "Streaming"], cnae: ["6319"], online: true, amount: {median: 30.00, p90: 80.00, max: 300.00}}
+  atm:              {weight: 0.02, names: ["Banco"], cnae: ["6422"], atm: true, amount: {median: 150.00, p90: 400.00, max: 1500.00, step: 20.00}}
 
 # =====================================
 # Simulation (read by src/processors/transaction_simulator.py)
@@ -167,6 +168,24 @@ simulation:
   # After a decline for lack of balance, the cardholder skips this share of
   # their card's attempts until the next credit (they know the balance is gone)
   give_up_after_insufficient_balance: 0.7
+
+# =====================================
+# Fraud (read by src/data_generators/entities/fraud_generator.py). Typologies
+# of the benefits market; every number synthetic.
+# =====================================
+fraud:
+  # Fraud attempts as a share of the legit ones
+  share_of_attempts: 0.005
+  # Weight of each scenario among the incidents
+  scenarios:
+    account_takeover_wallet: 0.35   # app account taken over, card added to a mobile wallet, burst far from home
+    card_not_present: 0.30          # brand card's open wallet drained online
+    intercepted_card: 0.15          # new card used before the cardholder gets it, in another state
+    point_of_compromise: 0.20       # cards skimmed at one shop, cloned stripe used in another state
+  # Share of approved fraud the cardholder disputes
+  report_ratio: 0.85
+  # Legit approved purchases disputed by mistake or bad faith, per fraud dispute
+  friendly_disputes_per_fraud_dispute: 0.4
 
 # =====================================
 # Transactions (read by src/data_generators/entities/transaction_generator.py)
