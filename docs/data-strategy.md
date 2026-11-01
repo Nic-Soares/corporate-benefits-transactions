@@ -91,4 +91,17 @@ The public sources (CNAE, municipalities and population from IBGE, the MCC list)
 
 `python -m src.main simulate` reads the database, simulates `simulation.days` before `--today` (about `transactions_per_card_month` attempts per card per month) and writes the transactions, the balance movements and the final balances in one transaction. It stops if transactions are already there (start over with `setup --reset`) or if `--today` is before the generated data.
 
-Next: ETL into the DuckDB star schema (`EP-09`), export Parquet (`EP-10`).
+## Analytical model
+
+`python -m src.main etl` (`src/pipeline/etl.py`, [ADR-012](adr/012-olap-plain-sql.md)) stages the OLTP tables in DuckDB and loads the star schema with `database/olap_duck/03_load.sql` — a full refresh into a new file:
+
+| Table | Grain | From |
+|---|---|---|
+| `dim_*` (10) | one row per wallet, program, network, acquirer, company, cardholder, card, card wallet, establishment, terminal | the OLTP table of the same name; no CPF or card number hashes |
+| `dim_card_wallets` | one row per wallet of a card | `card_wallets`; `final_balance` is the balance at the end of the simulation |
+| `fact_transactions` | one row per attempt | `transactions`, with the cardholder, company, program, network (`modality_id`), wallet, acquirer and response message joined in |
+| `fact_balance_movements` | one row per balance movement | `balance_history`, with the card and wallet |
+
+Views in `04_views.sql`: approval per program and network, declines per code and reason, ticket per category, fraud per scenario, daily volume, wallet flows per month.
+
+Next: export Parquet (`EP-10`).

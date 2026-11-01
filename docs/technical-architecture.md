@@ -24,10 +24,10 @@ seeded generators ─► entities ──────┤
 simulator ─► validators ────────────┘
                      │
                      ▼
-        DuckDB (9 dimensions + fact_transactions) ─► Parquet ─► Kaggle
+        DuckDB (10 dimensions + 2 facts + views) ─► Parquet ─► Kaggle
 ```
 
-Exists today: config, extractors, loaders, generators, validators, both schemas, the setup pipeline and the simulator (`python -m src.main setup | simulate`, `src/pipeline/`, `src/processors/transaction_simulator.py`). Planned: the ETL (`EP-09`), the export (`EP-10`).
+Exists today: config, extractors, loaders, generators, validators, both schemas, the setup pipeline, the simulator and the ETL (`python -m src.main setup | simulate | etl`, `src/pipeline/`, `src/processors/transaction_simulator.py`, `database/olap_duck/03_load.sql`). Planned: the export (`EP-10`).
 
 ## Data models
 
