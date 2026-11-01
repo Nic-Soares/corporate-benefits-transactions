@@ -60,7 +60,7 @@ def test_simulate_after_setup(conn, sources):
     from src.pipeline.simulate import SimulationError, run_simulation
 
     run_setup(conn, sources, VOLUMES, seed=1, today=TODAY)
-    summary = run_simulation(conn, seed=1, today=TODAY, days=30, per_card_month=4)
+    summary = run_simulation(conn, seed=1, today=TODAY, days=30)
 
     assert summary["transactions"] > 0
     assert 0.5 < summary["approval_rate"] < 1
@@ -78,7 +78,7 @@ def test_simulate_after_setup(conn, sources):
 
     # balances moved: a second run has to start over from setup
     with pytest.raises(SimulationError):
-        run_simulation(conn, seed=1, today=TODAY, days=30, per_card_month=4)
+        run_simulation(conn, seed=1, today=TODAY, days=30)
 
 
 @pytest.mark.db
@@ -87,7 +87,7 @@ def test_simulate_needs_the_setup_day(conn, sources):
 
     run_setup(conn, sources, VOLUMES, seed=1, today=TODAY)
     with pytest.raises(SimulationError, match="before the generated data"):
-        run_simulation(conn, seed=1, today=date(2020, 1, 1), days=30, per_card_month=4)
+        run_simulation(conn, seed=1, today=date(2020, 1, 1), days=30)
 
 
 @pytest.mark.db
@@ -98,7 +98,7 @@ def test_etl_after_simulate(conn, sources, tmp_path):
     from src.pipeline.simulate import run_simulation
 
     run_setup(conn, sources, VOLUMES, seed=1, today=TODAY)
-    summary = run_simulation(conn, seed=1, today=TODAY, days=30, per_card_month=4)
+    summary = run_simulation(conn, seed=1, today=TODAY, days=30)
     counts = run_etl(conn, tmp_path / "olap.duckdb")
 
     assert counts["fact_transactions"] == summary["transactions"]

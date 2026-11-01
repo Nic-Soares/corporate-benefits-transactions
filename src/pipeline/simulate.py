@@ -23,12 +23,11 @@ class SimulationError(Exception):
     pass
 
 
-def run_simulation(
-    conn: psycopg.Connection, seed: int, today: date, days: int, per_card_month: float
-) -> dict:
+def run_simulation(conn: psycopg.Connection, seed: int, today: date, days: int) -> dict:
     """Simulate the `days` before `today` and write the result. Doesn't commit.
 
-    About `per_card_month` attempts per card per month. Stops when the database
+    The volume follows the credits (`TransactionGenerator.expected_attempts`).
+    Stops when the database
     already has transactions (balances moved: start over with `setup --reset`),
     has no entities, or when `today` is before the generated data.
     Returns the counts and the share of each response.
@@ -57,7 +56,7 @@ def run_simulation(
         tables["terminals"],
         days_back=days,
     )
-    n_attempts = round(per_card_month * tables["cards"].height * days / 30)
+    n_attempts = round(generator.expected_attempts())
     attempts = [generator.generate() for _ in range(n_attempts)]
     fraud = FraudGenerator(generator).generate(round(n_attempts * FRAUD["share_of_attempts"]))
     attempts += fraud
@@ -94,7 +93,7 @@ def run_simulation(
     }
 
 
-def simulation_defaults() -> tuple[int, float]:
-    """`simulation.days` and `data_volumes.transactions_per_card_month` from the config."""
+def simulation_defaults() -> int:
+    """`simulation.days` from the config."""
     config = load_simulation_config()
-    return config["simulation"]["days"], config["data_volumes"]["transactions_per_card_month"]
+    return config["simulation"]["days"]

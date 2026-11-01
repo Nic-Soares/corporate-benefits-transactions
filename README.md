@@ -28,7 +28,7 @@ Every decline carries an ISO 8583 response code and a specific reason (wrong PIN
 
 Fraud is labeled: `is_fraud`, `fraud_scenario` (mobile wallet after an account takeover, online use of a brand card, a card intercepted before delivery, skimming at a point of compromise) and `disputed`, which also catches legit purchases contested by mistake. See [`docs/fraud-scenarios.md`](docs/fraud-scenarios.md).
 
-The data is shaped like the market, with synthetic numbers: lunch and evening peaks, more spending early in the month, small tickets with a long tail, a few heavy cards and many light ones, companies from a handful to thousands of employees (SME up to 250, Middle up to 1,999, Corporate from 2,000, and Public), and declines that are mostly for lack of balance.
+The data is shaped like the market, with synthetic numbers: lunch and evening peaks, more spending early in the month, small tickets with a long tail, spending that follows each wallet's monthly credit (most cardholders spend nearly all of it, a few let it build up), companies from a handful to thousands of employees (SME up to 250, Middle up to 1,999, Corporate from 2,000, and Public), and declines that are mostly for lack of balance.
 
 Details in [`docs/business-rule.md`](docs/business-rule.md).
 

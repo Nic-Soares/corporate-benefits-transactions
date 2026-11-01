@@ -81,8 +81,9 @@ class TransactionSimulator:
         self.daily_amount: dict[tuple[str, date], float] = defaultdict(float)
         self.daily_count: dict[tuple[str, date], int] = defaultdict(int)
         self.monthly_amount: dict[tuple[str, int, int], float] = defaultdict(float)
-        # Cards declined for lack of balance since the last credit
-        self.out_of_balance: set[str] = set()
+        # (card, option or kind of place) declined for lack of balance since the last credit
+        self.out_of_balance: set[tuple[str, str]] = set()
+        self.category_of = dict(tables["establishments"].select("id", "category").iter_rows())
         self.checks = self._checks()
 
     def _checks(self) -> dict[str, list[Callable[[dict], dict]]]:
@@ -170,14 +171,15 @@ class TransactionSimulator:
 
     def credit(self, moment: datetime) -> None:
         """The monthly credit, to every wallet still in use: not cancelled, on a card
-        not cancelled, of a cardholder not terminated, already activated."""
+        not cancelled, of an active cardholder (the employer stops crediting the
+        others), already activated."""
         cards = self.t["cards"].join(
             self.t["cardholders"].select(pl.col("id").alias("cardholder_id"), holder="status"),
             on="cardholder_id",
         )
-        in_use = cards.filter(
-            pl.col("status") != "cancelled", pl.col("holder") != "terminated"
-        ).select(pl.col("id").alias("card_id"))
+        in_use = cards.filter(pl.col("status") != "cancelled", pl.col("holder") == "active").select(
+            pl.col("id").alias("card_id")
+        )
         eligible = self.card_wallets.join(in_use, on="card_id").filter(
             pl.col("status") != "cancelled", pl.col("activation_date") <= moment.date()
         )
@@ -186,6 +188,11 @@ class TransactionSimulator:
         )
         self.credit_frames.append(history)
         self.out_of_balance.clear()
+
+    def _intent(self, tx: dict[str, Any]) -> tuple[str, str]:
+        """What the cardholder was spending: the option picked on the terminal, or on a
+        brand card the kind of place (the issuer routes there by MCC)."""
+        return tx["card_id"], tx["wallet_option"] or self.category_of[tx["establishment_id"]]
 
     def reverse(self, original: dict[str, Any], moment: datetime) -> dict[str, Any]:
         """A reversal of an approved purchase: its own row, pointing to the original."""
@@ -231,14 +238,14 @@ class TransactionSimulator:
                 continue
             if (
                 not payload["is_fraud"]
-                and payload["card_id"] in self.out_of_balance
+                and self._intent(payload) in self.out_of_balance
                 and random.random() < SIMULATION["give_up_after_insufficient_balance"]
             ):
                 continue  # the cardholder doesn't try: the balance is gone (a fraudster does)
             tx = self.authorize(payload)
             answered.append(tx)
             if tx["decline_reason"] == "insufficient_balance" and not tx["is_fraud"]:
-                self.out_of_balance.add(tx["card_id"])
+                self.out_of_balance.add(self._intent(tx))
             if (
                 tx["response_code"] == APPROVED
                 and tx["transaction_type"] == "purchase"
