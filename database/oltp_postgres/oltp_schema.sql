@@ -205,6 +205,9 @@ CREATE TABLE IF NOT EXISTS transactions (
   nsu VARCHAR NOT NULL,
   authorization_code VARCHAR,
   related_transaction_id VARCHAR,
+  is_fraud BOOLEAN NOT NULL DEFAULT false,
+  fraud_scenario VARCHAR,
+  disputed BOOLEAN NOT NULL DEFAULT false,
   created_at TIMESTAMP DEFAULT now(),
   updated_at TIMESTAMP,
   FOREIGN KEY (card_id) REFERENCES cards(id),
@@ -220,6 +223,9 @@ COMMENT ON COLUMN card_wallets.daily_count_limit IS 'Purchases per day on the wa
 COMMENT ON COLUMN transactions.card_wallet_id IS 'Wallet of the card charged, routed by the issuer; NULL when no wallet could be routed';
 COMMENT ON COLUMN transactions.transaction_type IS 'purchase, withdrawal or reversal';
 COMMENT ON COLUMN transactions.related_transaction_id IS 'A reversal points to the purchase it undoes';
+COMMENT ON COLUMN transactions.is_fraud IS 'Ground truth: made by someone other than the cardholder';
+COMMENT ON COLUMN transactions.fraud_scenario IS 'How the fraud happened (simulation_config.yaml → fraud.scenarios); NULL when not fraud';
+COMMENT ON COLUMN transactions.disputed IS 'The cardholder contested it; also legit purchases contested by mistake or bad faith';
 COMMENT ON COLUMN transactions.wallet_option IS 'Proprietary network: FOOD, MEAL or OTHERS, picked on the terminal; NULL on brand cards';
 COMMENT ON COLUMN transactions.pin_status IS 'ok, wrong or not_required';
 COMMENT ON COLUMN transactions.decline_reason IS 'Specific cause behind the ISO response code; NULL when approved';

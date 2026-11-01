@@ -129,6 +129,9 @@ Table fact_transactions {
   decline_reason varchar
   nsu varchar [not null]
   authorization_code varchar
+  is_fraud boolean [not null]
+  fraud_scenario varchar
+  disputed boolean [not null]
 }
 
 // ============================================================================

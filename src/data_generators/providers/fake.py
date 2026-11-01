@@ -12,14 +12,13 @@ from datetime import date, timedelta
 from itertools import accumulate
 
 import polars as pl
-from mimesis import Finance, Person
+from mimesis import Person
 from mimesis.locales import Locale
 
 from src.data_generators.providers.brazil_provider import BrazilProvider
 from src.utils.read_yamls import load_simulation_config
 
 person = Person(Locale.PT_BR)
-finance = Finance(Locale.PT_BR)
 brazil = BrazilProvider()
 
 SETTINGS = load_simulation_config()["generation_settings"]
@@ -32,7 +31,7 @@ def seed(value: int, today: date | None = None) -> None:
     """Reseed every source; `today` pins the reference date as well."""
     global reference_date
     random.seed(value)
-    for provider in (person, finance, brazil):
+    for provider in (person, brazil):
         provider.reseed(value)
     reference_date = today or date.today()
 
@@ -86,6 +85,41 @@ class Municipalities:
     def draw(self) -> dict[str, str]:
         """`{municipio_nome, uf_sigla}`"""
         return random.choices(self.rows, cum_weights=self.cum_weights)[0]
+
+
+# Legal names: "<Surname> <activity> <type>"; synthetic, never a real company's
+ACTIVITIES = [
+    "Comércio",
+    "Indústria e Comércio",
+    "Serviços",
+    "Tecnologia",
+    "Engenharia",
+    "Logística",
+    "Alimentos",
+    "Construções",
+    "Consultoria",
+    "Participações",
+]
+LEGAL_TYPES = {"Ltda": 0.8, "S.A.": 0.2}
+
+
+def company_names(word: str | None = None) -> tuple[str, str]:
+    """(legal name, trade name) from Brazilian surnames. `word` (e.g. "Padaria")
+    goes into the trade name; without it the trade name is the surnames."""
+    surname = person.surname()
+    if random.random() < 0.3:
+        surname = f"{surname} & {person.surname()}"
+    trade = (
+        surname
+        if word is None
+        else (
+            f"{surname} {word}"
+            if word in ("Mobilidade", "Transportes", "Digital", "Streaming")
+            else f"{word} {surname}"
+        )
+    )
+    legal = f"{surname} {random.choice(ACTIVITIES)} {weighted_key(LEGAL_TYPES)}"
+    return legal, trade
 
 
 def relative_date(spec: str) -> date:

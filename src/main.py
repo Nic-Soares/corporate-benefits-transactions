@@ -48,6 +48,8 @@ def simulate(args: argparse.Namespace) -> int:
     log.info("  transactions    %9s", f"{summary['transactions']:,}")
     log.info("  balance_history %9s", f"{summary['balance_history']:,}")
     log.info("  approved        %8.1f%%", 100 * summary["approval_rate"])
+    log.info("  fraud           %9s", f"{summary['fraud']:,}")
+    log.info("  disputed        %9s", f"{summary['disputed']:,}")
     for code, reason, rows in summary["answers"].head(8).iter_rows():
         log.info("    %s %-30s %7s", code, reason or "approved", f"{rows:,}")
     return 0

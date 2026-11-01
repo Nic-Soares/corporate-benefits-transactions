@@ -52,12 +52,13 @@ def generate_establishments(
         category = fake.weighted_key(weights)
         main_cnae = random.choice(cnaes_by_category[category])
         municipio = municipios.draw()
+        legal_name, trade_name = fake.company_names(random.choice(CATEGORIES[category]["names"]))
         establishments.append(
             {
                 "id": fake.new_id("est"),
                 "cnpj": fake.brazil.cnpj(),
-                "name": fake.finance.company(),
-                "trade_name": f"{fake.finance.company()} {fake.person.surname()}",
+                "name": legal_name,
+                "trade_name": trade_name,
                 "main_cnae": main_cnae,
                 "mcc_code": mcc_for(main_cnae),
                 "category": category,
