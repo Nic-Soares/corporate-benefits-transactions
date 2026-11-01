@@ -2,7 +2,8 @@
 # simulation_config.yaml
 # Parameters of the data generation and the transaction simulation.
 # Every number here is synthetic: shaped like a benefits-card market (lunch
-# and evening peaks, small tickets, a few heavy users), not taken from one.
+# and evening peaks, small tickets, spending that follows the credit), not
+# taken from one.
 # =====================================
 
 # Volumes — Not read by the code yet (EP-07). Cardholders follow each
@@ -14,9 +15,7 @@ data_volumes:
   cardholder_scale: 0.1
   establishments: 300
   terminals: 450
-  # Attempts per card per month, on average: the volume follows the cards,
-  # so balances and limits stay in proportion
-  transactions_per_card_month: 4
+  # No attempt count: the volume follows the credits (usage_patterns.spend_profile)
 
 # Expected share of approved attempts — checked by the simulator (EP-08)
 approval_rates:
@@ -81,15 +80,15 @@ generation_settings:
     suspended: 0.03
 
   cardholder_status_distribution:
-    active: 0.85
-    inactive: 0.10
-    terminated: 0.05
+    active: 0.92
+    inactive: 0.05
+    terminated: 0.03
 
   card_status_distribution:
-    active: 0.80
-    inactive: 0.05
-    blocked: 0.10
-    cancelled: 0.05
+    active: 0.90
+    inactive: 0.04
+    blocked: 0.04
+    cancelled: 0.02
 
   card_wallet_status_distribution:
     active: 0.96
@@ -166,7 +165,8 @@ simulation:
   reversal_ratio: 0.004           # share of approved purchases reversed later
   reversal_delay_minutes: {min: 2, max: 2880}
   # After a decline for lack of balance, the cardholder skips this share of
-  # their card's attempts until the next credit (they know the balance is gone)
+  # their attempts with that option (proprietary network) or at that kind of
+  # place (brand) until the next credit: they know that balance is gone
   give_up_after_insufficient_balance: 0.7
 
 # =====================================
@@ -205,9 +205,13 @@ usage_patterns:
   # Weight of the first and last day of the month: spending follows the credit
   month_day_weights: {first: 1.4, last: 0.8}
 
-  # Per-card activity is log-normal: most cards buy a few times a month,
-  # a few buy every day
-  card_activity_sigma: 1.0
+  # Share of the monthly credit each cardholder spends: most spend nearly all
+  # of it; savers let the balance build up. Each wallet then makes about
+  # credit × ratio ÷ average ticket attempts a month.
+  spend_profile:
+    saver_share: 0.10
+    saver: {min: 0.10, max: 0.50}
+    spender: {min: 0.80, max: 1.00}
   # Share of in-person purchases in the cardholder's city (else state, when
   # the kind of place exists there); online businesses are anywhere
   local_purchase_ratio: 0.8

@@ -105,19 +105,25 @@ def test_reversals(world, transaction_generator, monkeypatch):
 
 
 def test_gives_up_after_insufficient_balance(world, transaction_generator, monkeypatch):
-    """With a give-up share of 1, a card declined for balance doesn't try again
-    until the next credit."""
+    """With a give-up share of 1, after a decline for balance the cardholder doesn't
+    try that option (or kind of place, on a brand card) again until the next credit."""
     monkeypatch.setitem(transaction_simulator.SIMULATION, "give_up_after_insufficient_balance", 1)
     tx = simulate(world, transaction_generator, attempts=1500).transactions
     credits = credit_moments(START, END)
+    category = world["establishments"].select(pl.col("id").alias("establishment_id"), "category")
+    intent = pl.coalesce("wallet_option", "category")
     period = pl.col("date").map_elements(
         lambda d: sum(d >= c for c in credits), return_dtype=pl.Int64
     )
-    purchases = tx.filter(pl.col("transaction_type") != "reversal").with_columns(period=period)
-    for (card_id, _), rows in purchases.group_by("card_id", "period"):
+    purchases = (
+        tx.filter(~pl.col("is_fraud"), pl.col("transaction_type") != "reversal")
+        .join(category, on="establishment_id")
+        .with_columns(period=period, intent=intent)
+    )
+    for key, rows in purchases.group_by("card_id", "intent", "period"):
         reasons = rows.sort("date")["decline_reason"].to_list()
         if "insufficient_balance" in reasons:
-            assert reasons.index("insufficient_balance") == len(reasons) - 1, card_id
+            assert reasons.index("insufficient_balance") == len(reasons) - 1, key
 
 
 def test_same_seed_same_simulation(build_tables, sources, transaction_generator):
