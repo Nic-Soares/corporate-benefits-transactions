@@ -434,6 +434,14 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] Done earlier: MCC drawn from the CNAE (`ST-06.5`)
 - [ ] Idea, not done: acquirer × network acceptance (an acquirer takes the proprietary network only once integrated with it); blocking the card after a dispute
 
+### ST-08.4 — Spending follows the credit (2026-11-01, ADR-013)
+
+- [x] Attempts per active wallet: monthly credit × spending ratio ÷ average ticket where it is used; the volume is their sum (`transactions_per_card_month` removed)
+- [x] Spending profile: most cardholders spend 80–100%, a tenth are savers (`spend_profile`); `card_activity_sigma` removed
+- [x] Giving up after a balance decline per option or kind of place, not per card
+- [x] Credit only to active cardholders; fewer inactive and blocked cards; virtual cards look for a usable terminal beyond their city
+- [x] Result (three seeds): active cards spend 74–90% of Food and Meal; approval 81–82%
+
 ---
 
 ## EP-09 — OLAP: Postgres → DuckDB
@@ -445,7 +453,7 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] Model: `dim_card_wallets` (credit, limits, final balance); `fact_balance_movements`; the fact gains `company_id`, `modality_id`, `acquirer_id`, `card_wallet_id`; no CPF or card number hashes
 - [x] Views (`04_views.sql`): approval by program and network, declines by code and reason, ticket by category, fraud by scenario, daily volume, wallet flows by month
 - [x] Tests: loads, keys resolve, denormalized keys agree, sums match, views; `pytest -m db` runs setup → simulate → etl
-- [ ] Found on the way, for `ST-08.4`: wallets spend only 20–45% of their monthly credit, because purchase volume doesn't follow the credit
+- [x] Found on the way and fixed in `ST-08.4`: wallets spent only 20–45% of their monthly credit
 
 ---
 

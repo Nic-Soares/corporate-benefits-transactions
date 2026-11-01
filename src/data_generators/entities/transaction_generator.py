@@ -1,14 +1,18 @@
 """Purchase attempts shaped like a benefits-card market.
 
 Who buys, where, when and how much follow `simulation_config.yaml →
-usage_patterns` and `establishment_categories`: a few heavy cards, popular
-shops, lunch and evening peaks, more spending early in the month, small
-tickets with a long tail. The attempt isn't validated here: the issuer routes
+usage_patterns` and `establishment_categories`. Spending follows the credit:
+each wallet makes about (monthly credit × the cardholder's spending ratio ÷ the
+average ticket where it is used) attempts a month, at the kinds of place that
+take it. Popular shops, lunch and evening peaks, more spending early in the
+month, small tickets with a long tail. The attempt isn't validated here: the issuer routes
 the wallet and answers later (`src/validators/`).
 """
 
+import math
 import random
 from datetime import date, datetime, timedelta
+from itertools import accumulate
 
 import polars as pl
 
@@ -58,6 +62,39 @@ def _in(cnae: str, category: dict) -> bool:
 
 
 CATEGORY_WALLETS = _category_wallets()
+OPEN_WALLET = "GIFT"  # on a brand card, takes any MCC (and cash)
+# The option on the terminal each wallet sits under (proprietary network)
+OPTION_OF = {wallet: option for option, wallets in OPTIONS.items() for wallet in wallets}
+
+
+def wallet_categories(wallet: str, network: str) -> list[str]:
+    """Kinds of place a wallet is spent at: by CNAE on the proprietary network
+    (`own`), by MCC on a brand (`brand`), anywhere for the brand's open wallet."""
+    if network == "brand" and wallet == OPEN_WALLET:
+        return list(CATEGORIES)
+    return [c for c in CATEGORIES if wallet in CATEGORY_WALLETS[c][network]]
+
+
+def mean_ticket(category: str) -> float:
+    """Mean of the category's log-normal ticket."""
+    amount = CATEGORIES[category]["amount"]
+    sigma = math.log(amount["p90"] / amount["median"]) / 1.2816
+    return min(amount["median"] * math.exp(sigma**2 / 2), amount["max"])
+
+
+def wallet_mean_ticket(wallet: str, network: str) -> float:
+    """Average ticket where the wallet is spent, by category weight."""
+    categories = wallet_categories(wallet, network)
+    weights = [CATEGORIES[c]["weight"] for c in categories]
+    return sum(w * mean_ticket(c) for w, c in zip(weights, categories, strict=True)) / sum(weights)
+
+
+def spending_ratio() -> float:
+    """Share of the monthly credit a cardholder spends: most spend nearly all,
+    savers let the balance build up (`usage_patterns.spend_profile`)."""
+    profile = USAGE["spend_profile"]
+    bounds = profile["saver"] if random.random() < profile["saver_share"] else profile["spender"]
+    return random.uniform(bounds["min"], bounds["max"])
 
 
 def pin_status(capture_type: str) -> str:
@@ -99,14 +136,6 @@ class TransactionGenerator:
         self.days = [end - timedelta(days=d) for d in range(days_back, 0, -1)]
         self.day_weights = [self._day_weight(day) for day in self.days]
 
-        # A card buys in proportion to its activity and to the days it existed
-        sigma = USAGE["card_activity_sigma"]
-        self.card_weights = [
-            _activity(sigma, c["status"] == "active" and holder_active[c["cardholder_id"]])
-            * sum(day.date() >= c["issue_date"] for day in self.days)
-            / days_back
-            for c in self.cards
-        ]
         # The wallets a cardholder means to use: the active ones (all, if none is)
         self.wallets_by_card: dict[str, set[str]] = {}
         held: dict[str, set[str]] = {}
@@ -152,6 +181,48 @@ class TransactionGenerator:
                 terminals.append(t)
                 weights.append(weight)
 
+        # Who buys: one slot per active wallet of a card, weighted by the
+        # attempts a month it makes, the days the card existed in the window,
+        # and whether card and cardholder are active
+        credit = {
+            (card_id, wallet_id): amount
+            for card_id, wallet_id, amount, status in card_wallets_df.select(
+                "card_id", "wallet_id", "monthly_credit", "status"
+            ).iter_rows()
+            if status == "active"
+        }
+        self.slots: list[tuple[dict, str]] = []
+        weights = []
+        for card in self.cards:
+            alive = sum(day.date() >= card["issue_date"] for day in self.days) / days_back
+            if not alive:
+                continue
+            in_use = card["status"] == "active" and holder_active[card["cardholder_id"]]
+            factor = 1.0 if in_use else USAGE["inactive_usage_factor"]
+            ratio = spending_ratio()
+            network = self._network(card)
+            for wallet in sorted(self.wallets_by_card.get(card["id"], ())):
+                if (card["id"], wallet) not in credit or not self._places(wallet, network):
+                    continue
+                monthly = credit[card["id"], wallet] * ratio / wallet_mean_ticket(wallet, network)
+                self.slots.append((card, wallet))
+                weights.append(monthly * alive * factor)
+        self.slot_cum_weights = list(accumulate(weights))
+        self.monthly_attempts = sum(weights)
+        self.days_back = days_back
+
+    def expected_attempts(self) -> float:
+        """Attempts the window should hold: the slots' monthly attempts over its days."""
+        return self.monthly_attempts * self.days_back / 30
+
+    @staticmethod
+    def _network(card: dict) -> str:
+        return "own" if card["modality_id"] in PROPRIETARY_MODALITIES else "brand"
+
+    def _places(self, wallet: str, network: str) -> list[str]:
+        """The wallet's kinds of place that have terminals."""
+        return [c for c in wallet_categories(wallet, network) if c in self.terminals]
+
     @staticmethod
     def _day_weight(day: datetime) -> float:
         month = USAGE["month_day_weights"]
@@ -171,20 +242,22 @@ class TransactionGenerator:
             return bool(set(ROUTING["withdrawal_wallets"]) & wallets)
         return bool(CATEGORY_WALLETS[category]["brand"] & wallets)
 
-    def _category(self, card: dict) -> str:
-        available = [c for c in CATEGORIES if c in self.terminals]
-        fitting = [c for c in available if self._fits(c, card)]
-        if fitting and random.random() >= USAGE["off_pattern_ratio"]:
-            available = fitting
+    def _category(self, card: dict, wallet: str) -> str:
+        """A kind of place the wallet is spent at; now and then any place
+        (`off_pattern_ratio`)."""
+        available = self._places(wallet, self._network(card))
+        if random.random() < USAGE["off_pattern_ratio"]:
+            available = [c for c in CATEGORIES if c in self.terminals]
         return random.choices(available, weights=[CATEGORIES[c]["weight"] for c in available])[0]
 
-    def _option(self, category: str, card: dict) -> str | None:
-        """Proprietary network: the option picked on the terminal (FOOD, MEAL, OTHERS)."""
+    def _option(self, category: str, card: dict, wallet: str | None = None) -> str | None:
+        """Proprietary network: the option picked on the terminal (FOOD, MEAL, OTHERS):
+        the one of the wallet the cardholder means to use, or of the kind of place."""
         if card["modality_id"] not in PROPRIETARY_MODALITIES:
             return None
         wallets = self.wallets_by_card[card["id"]]
         held = [option for option, members in OPTIONS.items() if set(members) & wallets]
-        natural = NATURAL_OPTION.get(category, "OTHERS")
+        natural = OPTION_OF[wallet] if wallet else NATURAL_OPTION.get(category, "OTHERS")
         if natural in held and random.random() >= USAGE["wrong_option_ratio"]:
             return natural
         return random.choice(held)
@@ -208,6 +281,9 @@ class TransactionGenerator:
         hour = random.choices(range(24), weights=hours)[0]
         return day + timedelta(hours=hour, seconds=random.randint(0, 3599))
 
+    def _everywhere(self, category: str) -> tuple[list[dict], list[float]]:
+        return self.terminals[category], self.terminal_weights[category]
+
     def _nearby(self, category: str, card: dict) -> tuple[list[dict], list[float]]:
         """The category's terminals in the cardholder's city, else state, most of the
         time (`local_purchase_ratio`); anywhere otherwise and for online businesses."""
@@ -222,18 +298,21 @@ class TransactionGenerator:
 
     def generate(self) -> dict:
         """One attempt: columns of `transactions`, before the issuer answers."""
-        card = random.choices(self.cards, weights=self.card_weights)[0]
-        category = self._category(card)
+        card, wallet = random.choices(self.slots, cum_weights=self.slot_cum_weights)[0]
+        category = self._category(card, wallet)
         terminals, weights = self._nearby(category, card)
         if card["card_type"] == "virtual":
-            # A virtual card goes where it can be used, when there is such a terminal
-            usable = [
-                (t, w)
-                for t, w in zip(terminals, weights, strict=True)
-                if set(USAGE["capture_by_terminal_type"][t["type"]]) - PHYSICAL_CAPTURES
-            ]
-            if usable:
-                terminals, weights = [t for t, _ in usable], [w for _, w in usable]
+            # A virtual card goes where it can be used: nearby if there is such a
+            # terminal, else anywhere in the category
+            for pool in ((terminals, weights), self._everywhere(category)):
+                usable = [
+                    (t, w)
+                    for t, w in zip(*pool, strict=True)
+                    if set(USAGE["capture_by_terminal_type"][t["type"]]) - PHYSICAL_CAPTURES
+                ]
+                if usable:
+                    terminals, weights = [t for t, _ in usable], [w for _, w in usable]
+                    break
         terminal = random.choices(terminals, weights=weights)[0]
         return self.attempt(
             card,
@@ -242,6 +321,7 @@ class TransactionGenerator:
             # Not before the card exists or the terminal is installed
             self._moment(category, max(card["issue_date"], terminal["installation_date"])),
             self._capture(terminal["type"], card["card_type"]),
+            wallet=wallet,
         )
 
     def amount(self, category: str, factor: float = 1.0) -> float:
@@ -264,6 +344,7 @@ class TransactionGenerator:
         amount: float | None = None,
         pin: str | None = None,
         fraud_scenario: str | None = None,
+        wallet: str | None = None,
     ) -> dict:
         """One attempt: columns of `transactions`, before the issuer answers."""
         return {
@@ -271,7 +352,7 @@ class TransactionGenerator:
             "card_id": card["id"],
             "card_wallet_id": None,
             "transaction_type": "withdrawal" if CATEGORIES[category].get("atm") else "purchase",
-            "wallet_option": self._option(category, card),
+            "wallet_option": self._option(category, card, wallet),
             "establishment_id": terminal["establishment_id"],
             "terminal_id": terminal["id"],
             "amount": amount if amount is not None else self.amount(category),
