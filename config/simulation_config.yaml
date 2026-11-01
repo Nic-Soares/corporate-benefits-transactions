@@ -158,6 +158,17 @@ establishment_categories:
   atm:              {weight: 0.02, cnae: ["6422"], atm: true, amount: {median: 150.00, p90: 400.00, max: 1500.00, step: 20.00}}
 
 # =====================================
+# Simulation (read by src/processors/transaction_simulator.py)
+# =====================================
+simulation:
+  days: 90                        # window before the reference day
+  reversal_ratio: 0.004           # share of approved purchases reversed later
+  reversal_delay_minutes: {min: 2, max: 2880}
+  # After a decline for lack of balance, the cardholder skips this share of
+  # their card's attempts until the next credit (they know the balance is gone)
+  give_up_after_insufficient_balance: 0.7
+
+# =====================================
 # Transactions (read by src/data_generators/entities/transaction_generator.py)
 # =====================================
 usage_patterns:
@@ -178,6 +189,9 @@ usage_patterns:
   # Per-card activity is log-normal: most cards buy a few times a month,
   # a few buy every day
   card_activity_sigma: 1.0
+  # Share of in-person purchases in the cardholder's city (else state, when
+  # the kind of place exists there); online businesses are anywhere
+  local_purchase_ratio: 0.8
   # Popularity of an establishment, the same way
   establishment_popularity_sigma: 1.0
   # Weight of a card, cardholder, establishment or terminal that isn't active

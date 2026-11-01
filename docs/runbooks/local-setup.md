@@ -34,8 +34,7 @@ means config, generators and schema fit together.
 
 ```bash
 cp .env.example .env     # set DB_PASSWORD (DB_USER defaults to "benefits")
-docker compose up -d
-docker exec corporate_benefits_db pg_isready
+docker compose up -d --wait   # returns once Postgres accepts connections
 ```
 
 Postgres 18 keeps its data in the `corporate_benefits_postgres_data` volume,
@@ -43,7 +42,8 @@ mounted at `/var/lib/postgresql` (18 stores data in a versioned subfolder).
 
 ```bash
 uv run pytest -m db                       # connection, schema, setup (scratch schema, rolled back)
-uv run python -m src.main setup --seed 42 # schema + reference tables + entities
+uv run python -m src.main setup --seed 42 --today 2026-10-30    # schema + reference + entities
+uv run python -m src.main simulate --seed 42 --today 2026-10-30 # 90 days of transactions
 ```
 
 `setup` creates the 17 OLTP tables, upserts the reference tables from
@@ -58,6 +58,11 @@ the IBGE API, the MCC list from GitHub, municipalities and population from the I
 | `--reset` | Replace the entities (and any simulated transactions) already in the database |
 
 Without `--reset`, a second run stops: `The database already has entities`.
+
+`simulate` takes `--seed`, `--today` (the same as `setup`'s) and `--days`
+(default `simulation.days`, 90). It prints the rows written, the approval rate
+and the commonest answers. It runs once per setup: the balances move, so
+another run starts with `setup --reset`.
 
 The DuckDB file for the OLAP model (`EP-09`) comes from
 `uv run python -m src.infrastructure.schema.schema_creator`.
@@ -90,4 +95,7 @@ rm -f database/olap_duck/olap_corporate_benefits.duckdb
 | `ModuleNotFoundError: src` | Running outside the uv environment | Prefix with `uv run`, or `uv sync` again |
 | `db` or `network` tests don't run | Their markers are left out of the default run | `uv run pytest -m db` (or `-m network`) |
 | `The database already has entities` | `setup` ran before | `--reset` to replace them |
+| `The database already has transactions` | `simulate` ran before | `setup --reset`, then `simulate` |
+| `--today … is before the generated data` | `simulate` got a different `--today` than `setup` | Use `setup`'s `--today` |
+| `server closed the connection unexpectedly` right after `up` | Postgres still initializing | `docker compose up -d --wait` |
 | A source fails to download | No network, or the API is down | Run again later; once in `data/raw/` it isn't downloaded again |

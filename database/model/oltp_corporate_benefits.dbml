@@ -180,7 +180,7 @@ Table transactions {
   id varchar [primary key]
   card_id varchar [not null]
   card_wallet_id varchar [note: 'Routed by the issuer; NULL when no wallet could be routed']
-  transaction_type varchar [not null, note: 'purchase or withdrawal']
+  transaction_type varchar [not null, note: 'purchase, withdrawal or reversal']
   wallet_option varchar [note: 'Proprietary network: FOOD, MEAL or OTHERS, picked on the terminal; NULL on brand cards']
   establishment_id varchar [not null]
   terminal_id varchar [not null]
@@ -192,6 +192,7 @@ Table transactions {
   decline_reason varchar [note: 'Specific cause behind the ISO code; NULL when approved']
   nsu varchar [not null, note: 'Sequence number the terminal gives the attempt']
   authorization_code varchar [note: 'Issued by the issuer on approval; NULL when declined']
+  related_transaction_id varchar [note: 'A reversal points to the purchase it undoes']
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
@@ -227,6 +228,7 @@ Ref: mcc_wallets.wallet_id > wallets.id
 Ref: transactions.card_id > cards.id
 Ref: transactions.card_wallet_id > card_wallets.id
 Ref: transactions.response_code > response_codes.id
+Ref: transactions.related_transaction_id > transactions.id
 Ref: transactions.establishment_id > establishments.id
 Ref: transactions.terminal_id > terminals.id
 Ref: balance_history.card_wallet_id > card_wallets.id
