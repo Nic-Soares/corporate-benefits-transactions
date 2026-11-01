@@ -14,7 +14,7 @@ from src.utils.read_yamls import load_pre_populated_data
 REFERENCE = load_pre_populated_data()
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def municipios_df() -> pl.DataFrame:
     """Offline stand-in for `fetch_municipios()` with the columns the generators read."""
     return pl.DataFrame(
@@ -36,7 +36,7 @@ CNAE_SUBCLASSES = [
 ]
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def build_tables(municipios_df):
     """Run the generators chained as the setup pipeline will, against the real config."""
 
@@ -65,7 +65,7 @@ def build_tables(municipios_df):
     return build
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def transaction_generator():
     """A TransactionGenerator over the tables `build_tables` returns."""
 
@@ -82,7 +82,7 @@ def transaction_generator():
     return make
 
 
-@pytest.fixture
+@pytest.fixture(scope="session")
 def sources(municipios_df) -> Sources:
     """Offline stand-in for `fetch_sources()`: CNAE and MCC rows in the shape the setup reads."""
     cnae = pl.DataFrame(

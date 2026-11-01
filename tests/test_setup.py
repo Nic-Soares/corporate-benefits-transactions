@@ -88,3 +88,20 @@ def test_simulate_needs_the_setup_day(conn, sources):
     run_setup(conn, sources, VOLUMES, seed=1, today=TODAY)
     with pytest.raises(SimulationError, match="before the generated data"):
         run_simulation(conn, seed=1, today=date(2020, 1, 1), days=30, per_card_month=4)
+
+
+@pytest.mark.db
+def test_etl_after_simulate(conn, sources, tmp_path):
+    import duckdb
+
+    from src.pipeline.etl import run_etl
+    from src.pipeline.simulate import run_simulation
+
+    run_setup(conn, sources, VOLUMES, seed=1, today=TODAY)
+    summary = run_simulation(conn, seed=1, today=TODAY, days=30, per_card_month=4)
+    counts = run_etl(conn, tmp_path / "olap.duckdb")
+
+    assert counts["fact_transactions"] == summary["transactions"]
+    assert counts["fact_balance_movements"] == summary["balance_history"]
+    with duckdb.connect(str(tmp_path / "olap.duckdb"), read_only=True) as duck:
+        assert duck.sql("SELECT count(*) FROM v_declines").fetchall()[0][0] > 0
