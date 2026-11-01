@@ -4,7 +4,7 @@ A synthetic dataset of Brazilian corporate benefits card transactions — food, 
 
 The goal is a public dataset on Kaggle for studying approval rates, decline reasons and spending patterns in the Brazilian benefits market.
 
-> **Status:** the existing code was refined and made consistent (`EP-01`–`EP-05`), the transaction core was reshaped after how benefits issuers work (`EP-06`), `python -m src.main setup` fills the database (`EP-07`) and `simulate` answers months of purchase attempts, fraud included (`EP-08`). Next: the analytical model and the export (`EP-09`, `EP-10`). See the [roadmap](docs/planning/ROADMAP.md).
+> **Status:** the existing code was refined and made consistent (`EP-01`–`EP-05`), the transaction core was reshaped after how benefits issuers work (`EP-06`), `python -m src.main setup` fills the database (`EP-07`) and `simulate` answers months of purchase attempts, fraud included (`EP-08`), and `etl` builds the DuckDB star schema (`EP-09`). Next: the dataset export (`EP-10`). See the [roadmap](docs/planning/ROADMAP.md).
 
 ## Business context
 
@@ -107,13 +107,16 @@ docker compose up -d --wait
 uv run pytest -m db            # database tests
 uv run python -m src.main setup --seed 42 --today 2026-10-30
 uv run python -m src.main simulate --seed 42 --today 2026-10-30
+uv run python -m src.main etl
 ```
 
 `setup` creates the OLTP schema, loads the reference tables from `config/` and writes the generated companies, cardholders, cards, wallets, establishments and terminals (`--reset` replaces them; the same `--seed` and `--today` give the same data).
 
 Step by step, with troubleshooting: [`docs/runbooks/local-setup.md`](docs/runbooks/local-setup.md).
 
-`simulate` generates the purchase attempts of the 90 days before `--today` (`simulation.days`), lets the issuer answer each one in time order, and writes `transactions`, `balance_history` and the final balances: monthly credits, debits, reversals, and cardholders who stop trying once their balance runs out. Use the same `--today` as `setup`. `export` arrives with the dataset export (`EP-10`).
+`simulate` generates the purchase attempts of the 90 days before `--today` (`simulation.days`), lets the issuer answer each one in time order, and writes `transactions`, `balance_history` and the final balances: monthly credits, debits, reversals, and cardholders who stop trying once their balance runs out. Use the same `--today` as `setup`.
+
+`etl` rebuilds `database/olap_duck/olap_corporate_benefits.duckdb` from the OLTP database: 10 dimensions, `fact_transactions` (with the network, acquirer and company of each transaction) and `fact_balance_movements`, plus analytical views (`v_approval_by_program`, `v_declines`, `v_ticket_by_category`, `v_fraud_by_scenario`, `v_daily`, `v_wallet_flows_by_month`). `export` arrives with the dataset export (`EP-10`).
 
 ## Development workflow
 

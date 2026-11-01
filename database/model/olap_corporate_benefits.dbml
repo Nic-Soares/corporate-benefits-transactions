@@ -97,8 +97,21 @@ Table dim_terminals {
   installation_date date [not null]
 }
 
+Table dim_card_wallets {
+  id varchar [primary key]
+  card_id varchar [not null]
+  wallet_id varchar [not null]
+  monthly_credit decimal(15,2) [not null]
+  daily_limit decimal(15,2)
+  monthly_limit decimal(15,2)
+  daily_count_limit integer
+  final_balance decimal(15,2) [not null, note: 'Balance at the end of the simulation']
+  activation_date date [not null]
+  status varchar [not null]
+}
+
 // ============================================================================
-// FACT TABLE (Denormalized from OLTP transactions, card_wallets and response_codes)
+// FACT TABLES (Denormalized from OLTP transactions and balance_history)
 // ============================================================================
 
 Table fact_transactions {
@@ -108,12 +121,16 @@ Table fact_transactions {
   // Foreign Keys to dimensions
   card_id varchar [not null]
   cardholder_id varchar [not null]
+  company_id varchar [not null]
   program_id varchar [not null]
+  modality_id varchar [not null, note: 'Network: OWN or a brand']
+  card_wallet_id varchar
   wallet_id varchar [note: 'From the card wallet charged']
   transaction_type varchar [not null, note: 'purchase, withdrawal or reversal']
   wallet_option varchar [note: 'Proprietary network: FOOD, MEAL or OTHERS']
   establishment_id varchar [not null]
   terminal_id varchar [not null]
+  acquirer_id varchar [not null]
 
   // Financial Measures
   amount decimal(15,2) [not null]
@@ -132,6 +149,19 @@ Table fact_transactions {
   is_fraud boolean [not null]
   fraud_scenario varchar
   disputed boolean [not null]
+}
+
+Table fact_balance_movements {
+  id varchar [primary key]
+  card_wallet_id varchar [not null]
+  card_id varchar [not null]
+  wallet_id varchar [not null]
+  transaction_id varchar [note: 'NULL for the monthly credit']
+  operation_type varchar [not null, note: 'credit, purchase, withdrawal or reversal']
+  operation_amount decimal(15,2) [not null]
+  previous_balance decimal(15,2) [not null]
+  posterior_balance decimal(15,2) [not null]
+  operation_date timestamp [not null]
 }
 
 // ============================================================================
@@ -156,3 +186,15 @@ Ref: fact_transactions.program_id > dim_card_programs.id
 Ref: fact_transactions.wallet_id > dim_wallets.id
 Ref: fact_transactions.establishment_id > dim_establishments.id
 Ref: fact_transactions.terminal_id > dim_terminals.id
+Ref: fact_transactions.company_id > dim_companies.id
+Ref: fact_transactions.modality_id > dim_transaction_modalities.id
+Ref: fact_transactions.acquirer_id > dim_acquirers.id
+Ref: fact_transactions.card_wallet_id > dim_card_wallets.id
+
+Ref: dim_card_wallets.card_id > dim_cards.id
+Ref: dim_card_wallets.wallet_id > dim_wallets.id
+
+Ref: fact_balance_movements.card_wallet_id > dim_card_wallets.id
+Ref: fact_balance_movements.card_id > dim_cards.id
+Ref: fact_balance_movements.wallet_id > dim_wallets.id
+Ref: fact_balance_movements.transaction_id > fact_transactions.id
