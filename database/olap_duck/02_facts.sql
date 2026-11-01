@@ -23,7 +23,10 @@ CREATE TABLE IF NOT EXISTS fact_transactions (
   response_message VARCHAR,
   decline_reason VARCHAR,
   nsu VARCHAR NOT NULL,
-  authorization_code VARCHAR
+  authorization_code VARCHAR,
+  is_fraud BOOLEAN NOT NULL,
+  fraud_scenario VARCHAR,
+  disputed BOOLEAN NOT NULL
 );
 
 -- ============================================================================

@@ -193,6 +193,9 @@ Table transactions {
   nsu varchar [not null, note: 'Sequence number the terminal gives the attempt']
   authorization_code varchar [note: 'Issued by the issuer on approval; NULL when declined']
   related_transaction_id varchar [note: 'A reversal points to the purchase it undoes']
+  is_fraud boolean [not null, default: false, note: 'Ground truth: made by someone other than the cardholder']
+  fraud_scenario varchar [note: 'How the fraud happened; NULL when not fraud']
+  disputed boolean [not null, default: false, note: 'The cardholder contested it (fraud or not)']
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
