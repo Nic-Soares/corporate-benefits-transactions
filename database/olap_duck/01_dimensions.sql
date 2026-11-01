@@ -90,3 +90,16 @@ CREATE TABLE IF NOT EXISTS dim_terminals (
   status VARCHAR NOT NULL,
   installation_date DATE NOT NULL
 );
+
+CREATE TABLE IF NOT EXISTS dim_card_wallets (
+  id VARCHAR PRIMARY KEY,
+  card_id VARCHAR NOT NULL,
+  wallet_id VARCHAR NOT NULL,
+  monthly_credit DECIMAL(15, 2) NOT NULL,
+  daily_limit DECIMAL(15, 2),
+  monthly_limit DECIMAL(15, 2),
+  daily_count_limit INTEGER,
+  final_balance DECIMAL(15, 2) NOT NULL,
+  activation_date DATE NOT NULL,
+  status VARCHAR NOT NULL
+);
