@@ -217,7 +217,7 @@ def test_transactions_are_coherent(tables, transactions):
 
 
 def test_transactions_look_like_the_market(tables, transactions):
-    """Lunch and evening peaks, quiet nights, small tickets, a few heavy cards."""
+    """Lunch and evening peaks, quiet nights, small tickets, uneven use across cards."""
     hours = transactions["date"].dt.hour()
     assert (hours.is_between(11, 13).mean()) > 3 * hours.is_between(0, 5).mean()
     assert hours.is_between(0, 5).mean() < 0.05
@@ -226,8 +226,10 @@ def test_transactions_look_like_the_market(tables, transactions):
     assert 15 <= purchases.median() <= 90
     assert purchases.quantile(0.9) > 2 * purchases.median()
 
+    # uneven use: big credits and spenders buy far more than small credits and savers
     per_card = transactions["card_id"].value_counts()["count"]
-    assert per_card.max() > 5 * per_card.median()
+    assert per_card.max() > 3 * per_card.median()
+    assert per_card.min() < per_card.median() / 2
     # within the window, before the reference day
     today = datetime(2026, 10, 30)
     assert transactions["date"].max() < today

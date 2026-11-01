@@ -39,10 +39,10 @@ def setup(args: argparse.Namespace) -> int:
 
 
 def simulate(args: argparse.Namespace) -> int:
-    days, per_card_month = simulation_defaults()
+    days = simulation_defaults()
     with connect_pg_db() as conn:
         try:
-            summary = run_simulation(conn, args.seed, args.today, args.days or days, per_card_month)
+            summary = run_simulation(conn, args.seed, args.today, args.days or days)
         except SimulationError as error:
             log.error("%s", error)
             return 1

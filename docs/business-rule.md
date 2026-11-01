@@ -111,7 +111,7 @@ A referenced record that doesn't exist declines with the ISO code for that party
 
 ## Balance
 
-Each card wallet has a **monthly credit** (`card_wallets.monthly_credit`, drawn from `simulation_config.yaml → generation_settings.wallets`) and starts the simulation with a share of it. On the credit day (`benefit_credit_day`) the credit lands (`balance.credit`, `balance_history.operation_type = credit`); an approved purchase or withdrawal debits the charged wallet (`balance.debit`); a reversal gives the amount back (`balance.reverse`) and its transaction points to the purchase (`related_transaction_id`). Spending follows the credit — more early in the month, more `51` declines late. How the employer orders and pays the credit is out of scope.
+Each card wallet has a **monthly credit** (`card_wallets.monthly_credit`, drawn from `simulation_config.yaml → generation_settings.wallets`) and starts the simulation with a share of it. On the credit day (`benefit_credit_day`) the credit lands (`balance.credit`, `balance_history.operation_type = credit`); an approved purchase or withdrawal debits the charged wallet (`balance.debit`); a reversal gives the amount back (`balance.reverse`) and its transaction points to the purchase (`related_transaction_id`). Spending follows the credit — more early in the month, more `51` declines late. Only active cardholders are credited (on cards not cancelled), and most spend nearly all of it. How the employer orders and pays the credit is out of scope.
 
 Limits per wallet are in the same section: Meal has the lowest daily amount; Food and Meal cap the purchases per day; the other wallets have none.
 
