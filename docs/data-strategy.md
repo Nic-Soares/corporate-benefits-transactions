@@ -68,14 +68,16 @@ establishments               category by weight → a CNAE of it → the MCC of 
 - Reproducible: `src/data_generators/providers/fake.py → seed(n, today=…)` fixes every random source.
 - Loading order matters: `companies.parent_id` references `companies`, so holdings go in before branches.
 
-## Transactional tables — simulated (planned, `EP-08`)
+## Transactional tables — simulated
 
 | Table | Content |
 |---|---|
-| `transactions` | Every attempt (purchase or withdrawal) and its answer: option picked on the terminal, card wallet charged, capture, `pin_status`, `nsu`, ISO `response_code`, `decline_reason`, `authorization_code` when approved |
-| `balance_history` | Monthly credits and the debits of approved attempts (`src/processors/balance.py`) |
+| `transactions` | Every attempt (purchase, withdrawal) and its answer: option picked on the terminal, card wallet charged, capture, `pin_status`, `nsu`, ISO `response_code`, `decline_reason`, `authorization_code` when approved; reversals point to their purchase (`related_transaction_id`) |
+| `balance_history` | Every balance movement: monthly `credit`, `purchase` and `withdrawal` debits, `reversal` refunds (`src/processors/balance.py`) |
 
-`TransactionGenerator` (`src/data_generators/entities/transaction_generator.py`) draws each attempt from `simulation_config.yaml → usage_patterns`: a card weighted by its activity (log-normal; inactive cards rarely), a kind of place its wallets fit (now and then one they don't), a popular shop's terminal, a day weighted by weekday and day of month, an hour from the category's curve, a log-normal ticket, a capture the terminal and card take, and, on the proprietary network, the option picked on the terminal (now and then the wrong one). The validators run in order and the first failure sets the code and reason; an approval debits the wallet.
+`TransactionGenerator` (`src/data_generators/entities/transaction_generator.py`) draws each attempt from `simulation_config.yaml → usage_patterns`: a card weighted by its activity (log-normal; inactive cards rarely), a kind of place its wallets fit (now and then one they don't), a popular shop's terminal, a day weighted by weekday and day of month, an hour from the category's curve, a log-normal ticket, a capture the terminal and card take, and, on the proprietary network, the option picked on the terminal (now and then the wrong one). In-person purchases happen mostly in the cardholder's city (`local_purchase_ratio`).
+
+`TransactionSimulator` (`src/processors/transaction_simulator.py`) answers them in time order, together with the monthly credits (`benefit_credit_day`) and the reversals it schedules (`simulation.reversal_ratio`). The validators run in `validation_order`; the first failure sets the code and reason; an approval debits the routed wallet and counts toward its daily amount, daily count and monthly amount. A cardholder declined for lack of balance mostly stops trying until the next credit (`give_up_after_insufficient_balance`). The ledger holds: each movement starts where the last one ended, no balance goes negative, and `card_wallets.current_balance` is the last movement.
 
 ## Pipeline
 
@@ -87,6 +89,6 @@ establishments               category by weight → a CNAE of it → the MCC of 
 
 The public sources (CNAE, municipalities and population from IBGE, the MCC list) are downloaded once into `data/raw/` (git-ignored). Municipalities are drawn by population, and 80% of cardholders live in their company's city (`cardholder_same_city_ratio`).
 
-Next:
-4. Simulate transactions (`EP-08`).
-5. ETL into the DuckDB star schema (`EP-09`), export Parquet (`EP-10`).
+`python -m src.main simulate` reads the database, simulates `simulation.days` before `--today` (about `transactions_per_card_month` attempts per card per month) and writes the transactions, the balance movements and the final balances in one transaction. It stops if transactions are already there (start over with `setup --reset`) or if `--today` is before the generated data.
+
+Next: ETL into the DuckDB star schema (`EP-09`), export Parquet (`EP-10`).
