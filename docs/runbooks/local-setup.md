@@ -64,8 +64,13 @@ Without `--reset`, a second run stops: `The database already has entities`.
 and the commonest answers. It runs once per setup: the balances move, so
 another run starts with `setup --reset`.
 
-The DuckDB file for the OLAP model (`EP-09`) comes from
-`uv run python -m src.infrastructure.schema.schema_creator`.
+```bash
+uv run python -m src.main etl   # DuckDB star schema from the OLTP database
+```
+
+`etl` writes a new `database/olap_duck/olap_corporate_benefits.duckdb`
+(git-ignored) every run. Open it with `duckdb` or Python and start from the
+views: `SELECT * FROM v_declines`.
 
 ## 5. Network sources (optional)
 

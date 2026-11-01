@@ -2,6 +2,7 @@
 
     python -m src.main setup [--seed N] [--today YYYY-MM-DD] [--reset]
     python -m src.main simulate [--seed N] [--today YYYY-MM-DD] [--days N]
+    python -m src.main etl
 
 `export` arrives with the dataset export (EP-10).
 """
@@ -12,6 +13,7 @@ import sys
 from datetime import date
 
 from src.infrastructure.database.postgres_manager import connect_pg_db
+from src.pipeline.etl import run_etl
 from src.pipeline.setup import SetupError, run_setup
 from src.pipeline.simulate import SimulationError, run_simulation, simulation_defaults
 from src.pipeline.sources import fetch_sources
@@ -55,6 +57,15 @@ def simulate(args: argparse.Namespace) -> int:
     return 0
 
 
+def etl(args: argparse.Namespace) -> int:
+    with connect_pg_db() as conn:
+        counts = run_etl(conn)
+    width = max(map(len, counts))
+    for table, rows in counts.items():
+        log.info("  %s %s", table.ljust(width), f"{rows:>9,}")
+    return 0
+
+
 def _common_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--seed", type=int, default=42, help="random seed (default 42)")
     parser.add_argument(
@@ -86,6 +97,11 @@ def main(argv: list[str] | None = None) -> int:
         "--days", type=int, help="length of the window (default: simulation.days in the config)"
     )
     simulate_parser.set_defaults(run=simulate)
+
+    etl_parser = commands.add_parser(
+        "etl", help="build the DuckDB star schema from the OLTP database (full refresh)"
+    )
+    etl_parser.set_defaults(run=etl)
 
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
