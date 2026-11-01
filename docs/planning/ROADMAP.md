@@ -16,7 +16,7 @@
 | `EP-05` Documentation | ✅ Done — merged into `develop` 2026-10-30 | `README.md`, `docs/` |
 | `EP-06` Transaction core review | ✅ Done — merged into `develop` 2026-10-31 (ADR-007, 008, 009) | `docs/`, then `config/`, `database/`, `src/` |
 | `EP-07` Setup pipeline (reference data + entities) | ✅ Done — merged into `develop` 2026-10-31 | code (`src/main.py`, `src/processors/`) |
-| `EP-08` Transaction simulator | Not started | code (`src/processors/transaction_simulator.py`) |
+| `EP-08` Transaction simulator | 🟡 `ST-08.1`, `ST-08.2` done — merged into `develop` 2026-11-01 (ADR-010); `ST-08.3` fraud scenarios open | code (`src/processors/transaction_simulator.py`) |
 | `EP-09` OLAP: Postgres → DuckDB | Not started | code + `database/olap_duck/` |
 | `EP-10` Dataset export and quality | Not started | code + `data/final_datasets/` |
 | `EP-11` Kaggle release | Not started | Kaggle |
@@ -409,15 +409,20 @@ Second pass against how benefits cards are used in the market. The model held; t
 
 ### ST-08.1 — Authorization flow
 
-- [ ] `transaction_simulator.py`: transaction → validations in `validation_order` → authorization → `balance_history` when approved
-- [ ] Branded network checks MCC; proprietary network checks CNAE
+- [x] `src/processors/transaction_simulator.py`: credits, attempts and reversals in time order; each attempt through `validation_order`; approval → `authorization_code`, debit, `balance_history`
+- [x] Brand network checks the MCC, proprietary network the CNAE (inside `route_wallet`)
+- [x] `python -m src.main simulate [--seed] [--today] [--days]` (`src/pipeline/simulate.py`): reads the database, writes `transactions`, `balance_history` and the final balances in one transaction; refuses a second run and a `--today` before the data
+- [x] `docker-compose.yaml` healthcheck (over TCP), so `docker compose up --wait` waits for Postgres
 
 ### ST-08.2 — Realism
 
-- [ ] Approval rate near `approval_rates.overall`, declines mostly `51`
-- [ ] Credit on `benefit_credit_day`; daily usage, daily count and monthly usage tracked per wallet over time
-- [ ] Reversals and cancellations (from `EP-06`, #9)
-- [ ] Cardholders buy near where they live and work (from `EP-06`, #10)
+- [x] Approval near `approval_rates.overall` (80% with seed 42), declines mostly `51`
+- [x] Credit on `benefit_credit_day`; daily amount, daily count and monthly amount tracked per wallet over time
+- [x] Cardholders mostly stop trying after a decline for balance, until the next credit (`give_up_after_insufficient_balance`)
+- [x] Reversals (from `EP-06`, #9): `transactions.related_transaction_id`, type `reversal`, `balance_history` `reversal`
+- [x] Cardholders buy near where they live (from `EP-06`, #10): `local_purchase_ratio`, city then state
+- [x] Volume per card and month (`transactions_per_card_month`) over `simulation.days`
+- [x] Tests: answers, ledger chain, limits, reversals, giving up, same seed → same simulation; `pytest -m db` runs setup + simulate
 - [x] Moved to `ST-06.5`: daily count (#6), withdrawal and channels (#9), usage patterns (#10), segments and size (#11)
 
 ### ST-08.3 — Fraud scenarios
