@@ -5,6 +5,7 @@ from datetime import date, datetime, time, timedelta
 
 import psycopg
 
+from src.data_generators.entities.fraud_generator import FRAUD, FraudGenerator
 from src.data_generators.entities.transaction_generator import TransactionGenerator
 from src.data_generators.providers import fake
 from src.infrastructure.database.postgres_manager import (
@@ -58,7 +59,9 @@ def run_simulation(
     )
     n_attempts = round(per_card_month * tables["cards"].height * days / 30)
     attempts = [generator.generate() for _ in range(n_attempts)]
-    log.info("%s attempts generated", f"{n_attempts:,}")
+    fraud = FraudGenerator(generator).generate(round(n_attempts * FRAUD["share_of_attempts"]))
+    attempts += fraud
+    log.info("%s attempts generated (%s in fraud incidents)", f"{len(attempts):,}", len(fraud))
 
     end = datetime.combine(today, time())
     result = TransactionSimulator(tables).run(attempts, end - timedelta(days=days), end)
@@ -85,6 +88,8 @@ def run_simulation(
         "transactions": result.transactions.height,
         "balance_history": result.balance_history.height,
         "approval_rate": (result.transactions["response_code"] == "00").mean(),
+        "fraud": result.transactions["is_fraud"].sum(),
+        "disputed": result.transactions["disputed"].sum(),
         "answers": answers,
     }
 

@@ -235,9 +235,37 @@ class TransactionGenerator:
             if usable:
                 terminals, weights = [t for t, _ in usable], [w for _, w in usable]
         terminal = random.choices(terminals, weights=weights)[0]
-        capture_type = self._capture(terminal["type"], card["card_type"])
-        amount = CATEGORIES[category]["amount"]
+        return self.attempt(
+            card,
+            category,
+            terminal,
+            # Not before the card exists or the terminal is installed
+            self._moment(category, max(card["issue_date"], terminal["installation_date"])),
+            self._capture(terminal["type"], card["card_type"]),
+        )
 
+    def amount(self, category: str, factor: float = 1.0) -> float:
+        """A log-normal ticket of the category; `factor` scales median and 90th percentile."""
+        amount = CATEGORIES[category]["amount"]
+        return fake.lognormal_amount(
+            amount["median"] * factor,
+            amount["p90"] * factor,
+            amount["max"],
+            amount.get("step", 0.01),
+        )
+
+    def attempt(
+        self,
+        card: dict,
+        category: str,
+        terminal: dict,
+        moment: datetime,
+        capture_type: str,
+        amount: float | None = None,
+        pin: str | None = None,
+        fraud_scenario: str | None = None,
+    ) -> dict:
+        """One attempt: columns of `transactions`, before the issuer answers."""
         return {
             "id": fake.new_id("tx"),
             "card_id": card["id"],
@@ -246,16 +274,16 @@ class TransactionGenerator:
             "wallet_option": self._option(category, card),
             "establishment_id": terminal["establishment_id"],
             "terminal_id": terminal["id"],
-            "amount": fake.lognormal_amount(
-                amount["median"], amount["p90"], amount["max"], amount.get("step", 0.01)
-            ),
-            # Not before the card exists or the terminal is installed
-            "date": self._moment(category, max(card["issue_date"], terminal["installation_date"])),
+            "amount": amount if amount is not None else self.amount(category),
+            "date": moment,
             "capture_type": capture_type,
-            "pin_status": pin_status(capture_type),
+            "pin_status": pin or pin_status(capture_type),
             "response_code": None,
             "decline_reason": None,
             "nsu": f"{random.randrange(10**12):012d}",
             "authorization_code": None,
             "related_transaction_id": None,
+            "is_fraud": fraud_scenario is not None,
+            "fraud_scenario": fraud_scenario,
+            "disputed": False,
         }

@@ -22,8 +22,7 @@ class Company:
         # With a parent_id it's a branch; without one, a holding
         self.parent_id: str | None = parent_id
         self.cnpj: str = fake.brazil.cnpj()
-        self.name: str = fake.finance.company()
-        self.trade_name: str = fake.finance.company()
+        self.name, self.trade_name = fake.company_names()
         self.segment: str = segment
         self.city: str = municipio_data["municipio_nome"]
         self.state: str = municipio_data["uf_sigla"]

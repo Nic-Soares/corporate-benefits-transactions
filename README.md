@@ -4,7 +4,7 @@ A synthetic dataset of Brazilian corporate benefits card transactions — food, 
 
 The goal is a public dataset on Kaggle for studying approval rates, decline reasons and spending patterns in the Brazilian benefits market.
 
-> **Status:** the existing code was refined and made consistent (`EP-01`–`EP-05`), the transaction core was reshaped after how benefits issuers work (`EP-06`), `python -m src.main setup` fills the database (`EP-07`) and `simulate` answers months of purchase attempts (`EP-08`). Next: the analytical model and the export (`EP-09`, `EP-10`). See the [roadmap](docs/planning/ROADMAP.md).
+> **Status:** the existing code was refined and made consistent (`EP-01`–`EP-05`), the transaction core was reshaped after how benefits issuers work (`EP-06`), `python -m src.main setup` fills the database (`EP-07`) and `simulate` answers months of purchase attempts, fraud included (`EP-08`). Next: the analytical model and the export (`EP-09`, `EP-10`). See the [roadmap](docs/planning/ROADMAP.md).
 
 ## Business context
 
@@ -25,6 +25,8 @@ The two networks authorize differently:
 - **Brand networks** (Visa, Mastercard, Elo — the 4-party model: acquirer → brand → issuer): the brand must accept the establishment's **MCC** (Merchant Category Code), and the issuer picks the wallet from it (meal first, then food, the other wallets, gift last).
 
 Every decline carries an ISO 8583 response code and a specific reason (wrong PIN, wallet not accepted here, insufficient balance…). An approved purchase spends the wallet's balance, and the benefit is credited again each month. Brand cards can also withdraw cash from the gift wallet.
+
+Fraud is labeled: `is_fraud`, `fraud_scenario` (mobile wallet after an account takeover, online use of a brand card, a card intercepted before delivery, skimming at a point of compromise) and `disputed`, which also catches legit purchases contested by mistake. See [`docs/fraud-scenarios.md`](docs/fraud-scenarios.md).
 
 The data is shaped like the market, with synthetic numbers: lunch and evening peaks, more spending early in the month, small tickets with a long tail, a few heavy cards and many light ones, companies from a handful to thousands of employees (SME up to 250, Middle up to 1,999, Corporate from 2,000, and Public), and declines that are mostly for lack of balance.
 

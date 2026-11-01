@@ -20,6 +20,7 @@ import polars as pl
 
 from src.data_generators.providers import fake
 from src.processors.balance import HISTORY_SCHEMA, credit_many, debit, reverse
+from src.processors.disputes import mark_disputes
 from src.utils.read_yamls import load_simulation_config
 from src.validators import balance_and_limits_validations as balance
 from src.validators import business_rules_validators as business
@@ -198,6 +199,9 @@ class TransactionSimulator:
             "nsu": f"{random.randrange(10**12):012d}",
             "authorization_code": authorization_code(),
             "related_transaction_id": original["id"],
+            "is_fraud": False,
+            "fraud_scenario": None,
+            "disputed": False,
         }
         self.card_wallets, history = reverse(self.card_wallets, reversal)
         self.history.append(history)
@@ -226,17 +230,19 @@ class TransactionSimulator:
                 answered.append(self.reverse(payload, moment))
                 continue
             if (
-                payload["card_id"] in self.out_of_balance
+                not payload["is_fraud"]
+                and payload["card_id"] in self.out_of_balance
                 and random.random() < SIMULATION["give_up_after_insufficient_balance"]
             ):
-                continue  # the cardholder doesn't try: the balance is gone
+                continue  # the cardholder doesn't try: the balance is gone (a fraudster does)
             tx = self.authorize(payload)
             answered.append(tx)
-            if tx["decline_reason"] == "insufficient_balance":
+            if tx["decline_reason"] == "insufficient_balance" and not tx["is_fraud"]:
                 self.out_of_balance.add(tx["card_id"])
             if (
                 tx["response_code"] == APPROVED
                 and tx["transaction_type"] == "purchase"
+                and not tx["is_fraud"]
                 and random.random() < SIMULATION["reversal_ratio"]
             ):
                 when = moment + timedelta(minutes=random.randint(delay["min"], delay["max"]))
@@ -248,7 +254,7 @@ class TransactionSimulator:
             [*self.credit_frames, pl.DataFrame(self.history, schema=HISTORY_SCHEMA)]
         )
         return SimulationResult(
-            transactions=pl.DataFrame(answered, infer_schema_length=None),
+            transactions=mark_disputes(pl.DataFrame(answered, infer_schema_length=None)),
             balance_history=history.sort("operation_date"),
             card_wallets=self.card_wallets,
         )
