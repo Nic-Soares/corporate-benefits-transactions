@@ -53,3 +53,38 @@ def test_setup_twice(conn, sources):
     # the reference upsert didn't duplicate; the same seed gives the same entities
     assert counts["wallets"] == 8
     assert _fingerprint(conn) == first
+
+
+@pytest.mark.db
+def test_simulate_after_setup(conn, sources):
+    from src.pipeline.simulate import SimulationError, run_simulation
+
+    run_setup(conn, sources, VOLUMES, seed=1, today=TODAY)
+    summary = run_simulation(conn, seed=1, today=TODAY, days=30, per_card_month=4)
+
+    assert summary["transactions"] > 0
+    assert 0.5 < summary["approval_rate"] < 1
+    stored = conn.execute("SELECT count(*) FROM transactions").fetchone()[0]
+    assert stored == summary["transactions"]
+    # the balances in card_wallets are the last movements
+    mismatched = conn.execute(
+        """SELECT count(*) FROM card_wallets c
+           JOIN LATERAL (SELECT posterior_balance FROM balance_history b
+                         WHERE b.card_wallet_id = c.id
+                         ORDER BY operation_date DESC, id DESC LIMIT 1) last ON true
+           WHERE c.current_balance <> last.posterior_balance"""
+    ).fetchone()[0]
+    assert mismatched == 0
+
+    # balances moved: a second run has to start over from setup
+    with pytest.raises(SimulationError):
+        run_simulation(conn, seed=1, today=TODAY, days=30, per_card_month=4)
+
+
+@pytest.mark.db
+def test_simulate_needs_the_setup_day(conn, sources):
+    from src.pipeline.simulate import SimulationError, run_simulation
+
+    run_setup(conn, sources, VOLUMES, seed=1, today=TODAY)
+    with pytest.raises(SimulationError, match="before the generated data"):
+        run_simulation(conn, seed=1, today=date(2020, 1, 1), days=30, per_card_month=4)
