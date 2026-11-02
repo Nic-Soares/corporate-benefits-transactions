@@ -7,8 +7,8 @@ import pytest
 
 from src.data_generators.entities.card_wallet_generator import draw_program_wallets
 from src.data_generators.entities.establishment_generator import CATEGORIES, mcc_for
-from src.data_generators.entities.transaction_generator import accepted_wallets
 from src.data_generators.providers import fake
+from src.domain.acceptance import Acceptance
 from src.utils.read_yamls import (
     load_business_rules,
     load_pre_populated_data,
@@ -280,10 +280,11 @@ def test_same_seed_same_data(build_tables, transaction_generator):
 
 def test_accepted_wallets():
     """What a shop takes: its CNAE's longest prefix (own), its MCC plus GIFT (brand)."""
-    restaurant = accepted_wallets("5611201", "5812")
+    acceptance = Acceptance.from_config()
+    restaurant = acceptance.wallets("5611201", "5812")
     assert {("own", "MEAL"), ("own", "GIFT"), ("brand", "MEAL"), ("brand", "GIFT")} <= restaurant
     assert ("own", "FOOD") not in restaurant and ("brand", "FOOD") not in restaurant
-    assert accepted_wallets("0000000", "0000") == {("brand", "GIFT")}
+    assert acceptance.wallets("0000000", "0000") == {("brand", "GIFT")}
 
 
 def test_attempts_go_where_the_wallet_works(tables, transaction_generator):
@@ -292,13 +293,14 @@ def test_attempts_go_where_the_wallet_works(tables, transaction_generator):
     generator = transaction_generator(tables)
     shops = tables["establishments"].select("id", "main_cnae", "mcc_code").rows_by_key("id")
     held = generator.wallets_by_card
+    acceptance = Acceptance.from_config()
     misses = total = 0
     for _ in range(2000):
         tx = generator.generate()
         if tx["wallet_option"] is None:
             continue
         cnae, mcc = shops[tx["establishment_id"]][0]
-        own = {w for net, w in accepted_wallets(cnae, mcc) if net == "own"}
+        own = acceptance.by_cnae(cnae)
         total += 1
         misses += not (own & held[tx["card_id"]])
     assert total and misses / total < 0.2
