@@ -10,7 +10,7 @@ cards: the wallets the issuer can charge at the establishment's MCC
 from collections.abc import Iterable
 from typing import Any
 
-from src.config import load_pre_populated_data
+from src.config import load_reference
 from src.reference import (
     load_cnae_wallets,
     load_mcc_wallets,
@@ -36,8 +36,8 @@ class Acceptance:
 
     @classmethod
     def from_config(cls) -> Acceptance:
-        """The rules of `pre_populated_data.yaml`, as the setup loads them."""
-        data = load_pre_populated_data()
+        """The rules of `reference.yaml`, as the setup loads them."""
+        data = load_reference()
         return cls(load_cnae_wallets(data).to_dicts(), load_mcc_wallets(data).to_dicts())
 
     def by_cnae(self, cnae: str) -> set[str]:

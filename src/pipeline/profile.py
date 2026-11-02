@@ -1,6 +1,6 @@
 """The dataset's statistical profile: the shape a user relies on when testing a
 dashboard, a metric or a pipeline. Each measure has the range the config
-expects (`simulation_config.yaml → quality_profile`); the export fails when one
+expects (`simulation.yaml → quality_profile`); the export fails when one
 is off, and writes them all to the quality report.
 """
 
@@ -9,10 +9,10 @@ from dataclasses import dataclass
 
 import duckdb
 
-from src.config import load_simulation_config
+from src.config import load_simulation
 from src.entities.establishments import CATEGORIES
 
-_CONFIG = load_simulation_config()
+_CONFIG = load_simulation()
 PROFILE = _CONFIG["quality_profile"]
 REVERSAL_RATIO = _CONFIG["simulation"]["reversal_ratio"]
 

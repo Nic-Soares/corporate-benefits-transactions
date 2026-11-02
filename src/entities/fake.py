@@ -15,13 +15,13 @@ import polars as pl
 from mimesis import Person
 from mimesis.locales import Locale
 
-from src.config import load_simulation_config
+from src.config import load_simulation
 from src.entities.brazil import BrazilProvider
 
 person = Person(Locale.PT_BR)
 brazil = BrazilProvider()
 
-SETTINGS = load_simulation_config()["generation_settings"]
+SETTINGS = load_simulation()["generation_settings"]
 
 # Dates in the config ("-2y", "today") are relative to this day
 reference_date: date = date.today()

@@ -14,7 +14,7 @@ from datetime import date, datetime
 
 import polars as pl
 
-from src.config import load_simulation_config, load_validation_rules
+from src.config import load_authorization, load_simulation
 from src.entities import fake
 from src.entities.establishments import CATEGORIES
 from src.simulation.demand import (
@@ -28,8 +28,8 @@ from src.simulation.demand import (
 from src.simulation.pools import PHYSICAL_CAPTURES, TerminalPools
 from src.simulation.seasons import Calendar
 
-USAGE = load_simulation_config()["usage_patterns"]
-ROUTING = load_validation_rules()["business_rules_validations"]["wallet_routing"]
+USAGE = load_simulation()["usage_patterns"]
+ROUTING = load_authorization()["business_rules_validations"]["wallet_routing"]
 OPTIONS: dict[str, list[str]] = ROUTING["proprietary_options"]
 # The option on the terminal each wallet sits under (proprietary network)
 OPTION_OF = {wallet: option for option, wallets in OPTIONS.items() for wallet in wallets}

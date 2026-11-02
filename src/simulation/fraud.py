@@ -1,4 +1,4 @@
-"""Fraud attempts, by scenario (`simulation_config.yaml → fraud`).
+"""Fraud attempts, by scenario (`simulation.yaml → fraud`).
 
 Typologies of the benefits-card market: someone other than the cardholder
 uses the card. Each incident is a short burst on one card (or, for a point of
@@ -10,12 +10,12 @@ label them.
 import random
 from datetime import datetime, timedelta
 
-from src.config import load_simulation_config
+from src.config import load_simulation
 from src.entities import fake
 from src.entities.establishments import CATEGORIES
 from src.simulation.generator import TransactionGenerator
 
-FRAUD = load_simulation_config()["fraud"]
+FRAUD = load_simulation()["fraud"]
 
 # Shops with a physical terminal; each scenario keeps those the card's wallets fit
 IN_PERSON = [c for c, rule in CATEGORIES.items() if not rule.get("online") and not rule.get("atm")]

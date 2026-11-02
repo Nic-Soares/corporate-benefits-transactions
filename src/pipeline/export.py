@@ -15,7 +15,7 @@ from pathlib import Path
 import duckdb
 import yaml
 
-from src.config import load_simulation_config
+from src.config import load_simulation
 from src.pipeline import profile, provenance
 from src.pipeline.etl import OLAP_DIR, OLAP_FILE, OLAP_TABLES, ROOT
 
@@ -156,7 +156,7 @@ def quality_checks(duck: duckdb.DuckDBPyConnection) -> list[Check]:
 
     attempts = "FROM fact_transactions WHERE transaction_type <> 'reversal'"
     approval = duck.sql(f"SELECT avg((response_code = '00')::INT) {attempts}").fetchall()[0][0]
-    target = load_simulation_config()["approval_rates"]["overall"]
+    target = load_simulation()["approval_rates"]["overall"]
     off_target = approval is None or abs(approval - target) > APPROVAL_TOLERANCE
     checks.append(
         Check(

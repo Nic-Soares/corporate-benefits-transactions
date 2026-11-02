@@ -1,5 +1,4 @@
-"""Reference tables: the config's rules (`pre_populated_data.yaml`,
-`validation_rules.yaml → mcc_acceptance_rules`) in the columns of the OLTP
+"""Reference tables: `config/reference.yaml` in the columns of the OLTP
 schema, and their load into Postgres."""
 
 from typing import Any
@@ -7,7 +6,7 @@ from typing import Any
 import polars as pl
 import psycopg
 
-from src.config import load_pre_populated_data, load_validation_rules
+from src.config import load_reference
 from src.postgres import upsert_dataframe
 
 
@@ -109,7 +108,7 @@ def cnae_descriptions(cnae_df: pl.DataFrame) -> dict[str, str]:
 
 
 def mcc_modalities(mcc_df: pl.DataFrame) -> pl.DataFrame:
-    """MCC × brand that accepts it (`validation_rules.yaml → mcc_acceptance_rules`)."""
+    """MCC × brand that accepts it (`reference.yaml → mcc_acceptance_rules`)."""
     descriptions = dict(mcc_df.select("mcc_code", "description").iter_rows())
     rows = [
         {
@@ -119,7 +118,7 @@ def mcc_modalities(mcc_df: pl.DataFrame) -> pl.DataFrame:
             "observation": None,
             "active": True,
         }
-        for mcc, letters in load_validation_rules()["mcc_acceptance_rules"].items()
+        for mcc, letters in load_reference()["mcc_acceptance_rules"].items()
         for letter in letters.split(",")
     ]
     return pl.DataFrame(rows, schema_overrides={"observation": pl.String})
@@ -127,7 +126,7 @@ def mcc_modalities(mcc_df: pl.DataFrame) -> pl.DataFrame:
 
 def build_reference_tables(cnae_df: pl.DataFrame, mcc_df: pl.DataFrame) -> dict[str, pl.DataFrame]:
     """Every reference table, in load order."""
-    data = load_pre_populated_data()
+    data = load_reference()
     descriptions = cnae_descriptions(cnae_df)
     cnae_wallets = load_cnae_wallets(data).with_columns(
         cnae_description=pl.col("cnae_code").replace_strict(

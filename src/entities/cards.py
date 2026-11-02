@@ -3,10 +3,10 @@ from datetime import date, timedelta
 
 import polars as pl
 
-from src.config import load_pre_populated_data
+from src.config import load_reference
 from src.entities import fake
 
-_REFERENCE = load_pre_populated_data()
+_REFERENCE = load_reference()
 PROGRAMS = {program["id"]: program for program in _REFERENCE["card_programs"]}
 PROPRIETARY_MODALITY = next(
     m["id"] for m in _REFERENCE["transaction_modalities"] if m["type"] == "proprietary_network"

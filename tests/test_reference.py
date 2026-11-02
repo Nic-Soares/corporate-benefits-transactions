@@ -1,8 +1,8 @@
-"""Reference-data loaders read config/pre_populated_data.yaml into DataFrames."""
+"""Reference-data loaders read config/reference.yaml into DataFrames."""
 
 import pytest
 
-from src.config import load_pre_populated_data
+from src.config import load_reference
 from src.reference import (
     load_acquirers,
     load_card_program_wallets,
@@ -14,7 +14,7 @@ from src.reference import (
     load_wallets,
 )
 
-DATA = load_pre_populated_data()
+DATA = load_reference()
 
 
 @pytest.mark.parametrize(
