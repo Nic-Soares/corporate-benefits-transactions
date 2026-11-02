@@ -16,6 +16,10 @@ dependencies = [
     "requests>=2.34.2",
 ]
 
+[project.scripts]
+# uv run benefits setup | simulate | etl | export (same as python -m src.main)
+benefits = "src.main:main"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
