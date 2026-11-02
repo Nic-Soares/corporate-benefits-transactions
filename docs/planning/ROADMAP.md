@@ -564,7 +564,7 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] Public sources pinned: the `data/raw/*.parquet` files are versioned in git (about 200 KB, public data); delete one to download a newer version
 
 ### ST-12.3 — One acceptance rule
-- [ ] One module answers "which wallets does this establishment take on this network", used by the generator and the issuer; inactive rules count in both; `OPEN_WALLET` defined once
+- [x] `src/domain/acceptance.py` answers "which wallets does this establishment take on this network", for the generator (from the config) and the issuer (from the reference tables); inactive rules count in both; `OPEN_WALLET` defined once; a test checks both read the same rule for every CNAE and MCC
 
 ### ST-12.4 — One schema contract
 - [ ] Tests keep the DBML files in line with the SQL schemas

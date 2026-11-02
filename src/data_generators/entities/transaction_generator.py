@@ -21,6 +21,7 @@ import polars as pl
 
 from src.data_generators.entities.establishment_generator import CATEGORIES
 from src.data_generators.providers import fake, seasons
+from src.domain.acceptance import OPEN_WALLET, Acceptance
 from src.utils.read_yamls import (
     load_business_rules,
     load_pre_populated_data,
@@ -53,19 +54,22 @@ PROPRIETARY_MODALITIES = {
 NATURAL_OPTION = {"supermarket": "FOOD", "food_retail": "FOOD", "restaurant": "MEAL"}
 
 
-MCC_WALLETS = {
-    wallet: set(mccs) for wallet, mccs in _REFERENCE["mcc_wallets"].items() if mccs != "any"
-}
+ACCEPTANCE = Acceptance.from_config()
 
 
 def _category_wallets() -> dict[str, dict[str, set[str]]]:
-    """Wallets each category takes, per network: by its CNAEs (own) and MCCs (brand)."""
-    cnae_wallets = _REFERENCE["cnae_wallets"]
+    """Wallets each category takes, per network: by its CNAEs (own) and MCCs (brand),
+    the open wallet aside."""
     result = {}
     for name, category in CATEGORIES.items():
-        own = {w for cnae, ws in cnae_wallets.items() if _in(cnae, category) for w in ws}
+        own = {
+            w
+            for cnae in ACCEPTANCE.cnae_rules
+            if _in(cnae, category)
+            for w in ACCEPTANCE.by_cnae(cnae)
+        }
         mccs = {mcc for cnae, mcc in _REFERENCE["cnae_mcc"].items() if _in(cnae, category)}
-        brand = {wallet for wallet, codes in MCC_WALLETS.items() if codes & mccs}
+        brand = {w for mcc in mccs for w in ACCEPTANCE.by_mcc(mcc)} - {OPEN_WALLET}
         result[name] = {"own": own, "brand": brand}
     return result
 
@@ -74,18 +78,7 @@ def _in(cnae: str, category: dict) -> bool:
     return any(cnae.startswith(prefix) for prefix in category["cnae"])
 
 
-def accepted_wallets(cnae: str, mcc: str) -> set[tuple[str, str]]:
-    """(network, wallet) pairs an establishment takes: on the proprietary network
-    the wallets of its CNAE's longest matching prefix, on a brand the wallets of
-    its MCC plus the open one."""
-    prefixes = [p for p in _REFERENCE["cnae_wallets"] if cnae.startswith(p)]
-    own = _REFERENCE["cnae_wallets"][max(prefixes, key=len)] if prefixes else []
-    brand = {w for w, codes in MCC_WALLETS.items() if mcc in codes} | {OPEN_WALLET}
-    return {("own", w) for w in own} | {("brand", w) for w in brand}
-
-
 CATEGORY_WALLETS = _category_wallets()
-OPEN_WALLET = "GIFT"  # on a brand card, takes any MCC (and cash)
 # The option on the terminal each wallet sits under (proprietary network)
 OPTION_OF = {wallet: option for option, wallets in OPTIONS.items() for wallet in wallets}
 
@@ -241,7 +234,7 @@ class TransactionGenerator:
             out = self.terminal_out[t["id"]] = _earliest(_out_from(t), _out_from(shop))
             working = out is None or out > self.dates[0]
             places = [(category, shop["city"], shop["state"]), (category, shop["state"])]
-            scopes = accepted_wallets(shop["main_cnae"], shop["mcc_code"])
+            scopes = ACCEPTANCE.wallets(shop["main_cnae"], shop["mcc_code"])
             keys = (
                 [(everywhere, category)]
                 + [(local, key) for key in places]
