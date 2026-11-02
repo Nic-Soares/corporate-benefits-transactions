@@ -308,58 +308,6 @@ mcc_wallets:
   GIFT: "any"
 
 # =====================================
-# Industry segments
-# =====================================
-segments:
-  - id: "SEG_TECH"
-    name: "Tecnologia"
-    category: "Tecnologia e Inovação"
-
-  - id: "SEG_RETAIL"
-    name: "Varejo"
-    category: "Comércio"
-
-  - id: "SEG_INDUSTRY"
-    name: "Indústria"
-    category: "Manufatura"
-
-  - id: "SEG_FINANCE"
-    name: "Serviços Financeiros"
-    category: "Serviços"
-
-  - id: "SEG_HEALTH"
-    name: "Saúde"
-    category: "Saúde e Bem-estar"
-
-  - id: "SEG_EDUCATION"
-    name: "Educação"
-    category: "Educação"
-
-  - id: "SEG_FOOD"
-    name: "Alimentação"
-    category: "Alimentação e Bebidas"
-
-  - id: "SEG_CONSTRUCTION"
-    name: "Construção"
-    category: "Construção e Engenharia"
-
-  - id: "SEG_AGRO"
-    name: "Agronegócio"
-    category: "Agropecuária"
-
-  - id: "SEG_ENERGY"
-    name: "Energia"
-    category: "Energia e Utilities"
-
-  - id: "SEG_LOGISTICS"
-    name: "Logística"
-    category: "Transporte e Logística"
-
-  - id: "SEG_CONSULTING"
-    name: "Consultoria"
-    category: "Serviços Profissionais"
-
-# =====================================
 # Capture technologies (transactions.capture_type)
 # =====================================
 transaction_technologies:
