@@ -45,7 +45,6 @@ CREATE TABLE IF NOT EXISTS dim_cards (
 CREATE TABLE IF NOT EXISTS dim_cardholders (
   id VARCHAR PRIMARY KEY,
   company_id VARCHAR NOT NULL,
-  name VARCHAR NOT NULL,
   city VARCHAR NOT NULL,
   state VARCHAR NOT NULL,
   position VARCHAR,
@@ -57,7 +56,6 @@ CREATE TABLE IF NOT EXISTS dim_cardholders (
 CREATE TABLE IF NOT EXISTS dim_companies (
   id VARCHAR PRIMARY KEY,
   parent_id VARCHAR,
-  cnpj VARCHAR UNIQUE NOT NULL,
   name VARCHAR NOT NULL,
   trade_name VARCHAR,
   segment VARCHAR NOT NULL,
@@ -69,7 +67,6 @@ CREATE TABLE IF NOT EXISTS dim_companies (
 
 CREATE TABLE IF NOT EXISTS dim_establishments (
   id VARCHAR PRIMARY KEY,
-  cnpj VARCHAR UNIQUE NOT NULL,
   name VARCHAR NOT NULL,
   trade_name VARCHAR,
   main_cnae VARCHAR NOT NULL,
@@ -102,4 +99,35 @@ CREATE TABLE IF NOT EXISTS dim_card_wallets (
   final_balance DECIMAL(15, 2) NOT NULL,
   activation_date DATE NOT NULL,
   status VARCHAR NOT NULL
+);
+
+-- ============================================================================
+-- REFERENCE TABLES: the rules behind the answers
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS ref_response_codes (
+  id VARCHAR PRIMARY KEY,
+  description VARCHAR NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS ref_cnae_wallets (
+  cnae_code VARCHAR NOT NULL,
+  wallet_id VARCHAR NOT NULL,
+  cnae_description VARCHAR,
+  active BOOLEAN NOT NULL,
+  PRIMARY KEY (cnae_code, wallet_id)
+);
+
+CREATE TABLE IF NOT EXISTS ref_mcc_wallets (
+  mcc_code VARCHAR NOT NULL,
+  wallet_id VARCHAR NOT NULL,
+  PRIMARY KEY (mcc_code, wallet_id)
+);
+
+CREATE TABLE IF NOT EXISTS ref_mcc_modalities (
+  mcc_code VARCHAR NOT NULL,
+  modality_id VARCHAR NOT NULL,
+  mcc_description VARCHAR NOT NULL,
+  active BOOLEAN NOT NULL,
+  PRIMARY KEY (mcc_code, modality_id)
 );

@@ -4,7 +4,7 @@ A synthetic dataset of Brazilian corporate benefits card transactions — food, 
 
 The goal is a public dataset on Kaggle for studying approval rates, decline reasons and spending patterns in the Brazilian benefits market.
 
-> **Status:** the existing code was refined and made consistent (`EP-01`–`EP-05`), the transaction core was reshaped after how benefits issuers work (`EP-06`), `python -m src.main setup` fills the database (`EP-07`) and `simulate` answers months of purchase attempts, fraud included (`EP-08`), and `etl` builds the DuckDB star schema (`EP-09`). Next: the dataset export (`EP-10`). See the [roadmap](docs/planning/ROADMAP.md).
+> **Status:** the existing code was refined and made consistent (`EP-01`–`EP-05`), the transaction core was reshaped after how benefits issuers work (`EP-06`), `python -m src.main setup` fills the database (`EP-07`) and `simulate` answers months of purchase attempts, fraud included (`EP-08`), and `etl` builds the DuckDB star schema (`EP-09`) and `export` checks it and writes the dataset as Parquet (`EP-10`). Next: the Kaggle release (`EP-11`). See the [roadmap](docs/planning/ROADMAP.md).
 
 ## Business context
 
@@ -108,6 +108,7 @@ uv run pytest -m db            # database tests
 uv run python -m src.main setup --seed 42 --today 2026-10-30
 uv run python -m src.main simulate --seed 42 --today 2026-10-30
 uv run python -m src.main etl
+uv run python -m src.main export
 ```
 
 `setup` creates the OLTP schema, loads the reference tables from `config/` and writes the generated companies, cardholders, cards, wallets, establishments and terminals (`--reset` replaces them; the same `--seed` and `--today` give the same data).
@@ -116,7 +117,9 @@ Step by step, with troubleshooting: [`docs/runbooks/local-setup.md`](docs/runboo
 
 `simulate` generates the purchase attempts of the 90 days before `--today` (`simulation.days`), lets the issuer answer each one in time order, and writes `transactions`, `balance_history` and the final balances: monthly credits, debits, reversals, and cardholders who stop trying once their balance runs out. Use the same `--today` as `setup`.
 
-`etl` rebuilds `database/olap_duck/olap_corporate_benefits.duckdb` from the OLTP database: 10 dimensions, `fact_transactions` (with the network, acquirer and company of each transaction) and `fact_balance_movements`, plus analytical views (`v_approval_by_program`, `v_declines`, `v_ticket_by_category`, `v_fraud_by_scenario`, `v_daily`, `v_wallet_flows_by_month`). `export` arrives with the dataset export (`EP-10`).
+`etl` rebuilds `database/olap_duck/olap_corporate_benefits.duckdb` from the OLTP database: 10 dimensions, `fact_transactions` (with the network, acquirer and company of each transaction) and `fact_balance_movements`, plus analytical views (`v_approval_by_program`, `v_declines`, `v_ticket_by_category`, `v_fraud_by_scenario`, `v_daily`, `v_wallet_flows_by_month`).
+
+`export` runs 49 quality checks on the OLAP database (unique ids, every key resolves, the balance ledger holds, approval and fraud rates in range, no personal documents) and, only if all pass, writes `data/final_datasets/`: one Parquet file per table (10 dimensions, 2 facts, 4 reference tables with the acceptance rules), `data_dictionary.md` and `quality_report.md`. The dictionary is also in [`docs/data-dictionary.md`](docs/data-dictionary.md). The public tables carry no CNPJ, CPF, card number or cardholder name.
 
 ## Development workflow
 

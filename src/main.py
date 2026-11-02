@@ -1,10 +1,9 @@
 """Command line.
 
-    python -m src.main setup [--seed N] [--today YYYY-MM-DD] [--reset]
-    python -m src.main simulate [--seed N] [--today YYYY-MM-DD] [--days N]
-    python -m src.main etl
-
-`export` arrives with the dataset export (EP-10).
+python -m src.main setup [--seed N] [--today YYYY-MM-DD] [--reset]
+python -m src.main simulate [--seed N] [--today YYYY-MM-DD] [--days N]
+python -m src.main etl
+python -m src.main export
 """
 
 import argparse
@@ -14,6 +13,7 @@ from datetime import date
 
 from src.infrastructure.database.postgres_manager import connect_pg_db
 from src.pipeline.etl import run_etl
+from src.pipeline.export import ExportError, run_export
 from src.pipeline.setup import SetupError, run_setup
 from src.pipeline.simulate import SimulationError, run_simulation, simulation_defaults
 from src.pipeline.sources import fetch_sources
@@ -66,6 +66,19 @@ def etl(args: argparse.Namespace) -> int:
     return 0
 
 
+def export(args: argparse.Namespace) -> int:
+    try:
+        checks, counts = run_export()
+    except ExportError as error:
+        log.error("%s", error)
+        return 1
+    log.info("  %s quality checks passed", len(checks))
+    width = max(map(len, counts))
+    for table, rows in counts.items():
+        log.info("  %s %s", table.ljust(width), f"{rows:>9,}")
+    return 0
+
+
 def _common_options(parser: argparse.ArgumentParser) -> None:
     parser.add_argument("--seed", type=int, default=42, help="random seed (default 42)")
     parser.add_argument(
@@ -102,6 +115,11 @@ def main(argv: list[str] | None = None) -> int:
         "etl", help="build the DuckDB star schema from the OLTP database (full refresh)"
     )
     etl_parser.set_defaults(run=etl)
+
+    export_parser = commands.add_parser(
+        "export", help="check the OLAP database and write the dataset as Parquet"
+    )
+    export_parser.set_defaults(run=export)
 
     args = parser.parse_args(argv)
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
