@@ -224,3 +224,6 @@ __marimo__/
 !/data/raw/**/
 /data/final_datasets/*
 !/data/**/.gitkeep
+
+# macOS
+.DS_Store

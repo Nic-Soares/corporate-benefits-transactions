@@ -55,6 +55,13 @@ def generate_terminals(
             weights = {a: w for a, w in acquirer_weights.items() if models(a, kind)}
             acquirer_id = fake.weighted_key(weights)
         terminal_model = random.choice(models(acquirer_id, kind))
+        status = fake.status("terminal")
+        # A few days after the accreditation, no later than today
+        installed = min(
+            establishment["accreditation_date"]
+            + timedelta(days=random.randint(delay["min"], delay["max"])),
+            fake.reference_date,
+        )
         terminals.append(
             {
                 "id": fake.new_id("term"),
@@ -62,13 +69,9 @@ def generate_terminals(
                 "acquirer_id": acquirer_id,
                 "model": terminal_model["model"],
                 "type": terminal_model["type"],
-                "status": fake.status("terminal"),
-                # A few days after the accreditation, no later than today
-                "installation_date": min(
-                    establishment["accreditation_date"]
-                    + timedelta(days=random.randint(delay["min"], delay["max"])),
-                    fake.reference_date,
-                ),
+                "status": status,
+                "status_since": fake.status_since(status, installed),
+                "installation_date": installed,
             }
         )
 

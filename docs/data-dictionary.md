@@ -63,13 +63,14 @@ Each wallet a card holds, with its monthly credit and limits. The employer picks
 | `id` | VARCHAR | Card wallet id |
 | `card_id` | VARCHAR | Card (dim_cards) |
 | `wallet_id` | VARCHAR | Wallet type (dim_wallets) |
-| `monthly_credit` | DECIMAL(15,2) | Benefit credited on the 1st of each month, BRL |
+| `monthly_credit` | DECIMAL(15,2) | Benefit credited on the 1st of each month, BRL; a wallet activated in the period first gets a share of it, pro rata to the days left in that month, on the activation day |
 | `daily_limit` | DECIMAL(15,2) | Most that can be spent per day, BRL; 0 = no limit |
 | `monthly_limit` | DECIMAL(15,2) | Most that can be spent per month, BRL; 0 = no limit |
 | `daily_count_limit` | INTEGER | Most approved purchases per day; 0 = no limit |
 | `final_balance` | DECIMAL(15,2) | Balance at the end of the simulated period |
 | `activation_date` | DATE | Date the wallet was activated, a few days after the card's issue |
 | `status` | VARCHAR | active, suspended or cancelled |
+| `status_since` | DATE | Date the current status began; the wallet was active before it |
 
 ## `dim_cards`
 
@@ -85,6 +86,7 @@ Benefit cards. The program fixes the wallets and the network.
 | `expiration_date` | DATE | Last day of the current plastic; a card is renewed on expiry and keeps its id |
 | `issue_date` | DATE | Date first issued, a few days after the cardholder's admission |
 | `status` | VARCHAR | active, inactive (not unlocked yet), blocked or cancelled |
+| `status_since` | DATE | Date the current status began; the card was active before it (an inactive card never was: since its issue) |
 
 ## `dim_cardholders`
 
@@ -100,6 +102,7 @@ Employees who hold the cards. No names or documents.
 | `department` | VARCHAR | Department |
 | `admission_date` | DATE | Date hired |
 | `status` | VARCHAR | active, inactive or terminated |
+| `status_since` | DATE | Date the current status began; the cardholder was active before it |
 
 ## `dim_companies`
 
@@ -111,7 +114,7 @@ Employers that give the benefits. Holdings and their branches. No CNPJ.
 | `parent_id` | VARCHAR | Holding of a branch; empty for a holding |
 | `name` | VARCHAR | Legal name (synthetic) |
 | `trade_name` | VARCHAR | Trade name (synthetic) |
-| `segment` | VARCHAR | SME (1-250 employees), Middle (251-1,999), Corporate (2,000+) or Public (government) |
+| `segment` | VARCHAR | Size of the employer: SME (1-250 employees), Middle (251-1,999), Corporate (2,000+) or Public (government). The dataset holds a sample of each company's cardholders, not its whole headcount |
 | `city` | VARCHAR | Municipality (IBGE name) |
 | `state` | VARCHAR | State (UF) |
 | `status` | VARCHAR | active, inactive or suspended |
@@ -132,6 +135,7 @@ Shops, online businesses and cash machines where cards are used. No CNPJ.
 | `city` | VARCHAR | Municipality (IBGE name) |
 | `state` | VARCHAR | State (UF) |
 | `status` | VARCHAR | active, inactive, suspended or terminated |
+| `status_since` | DATE | Date the current status began; the establishment was active before it |
 | `accreditation_date` | DATE | Date accredited to accept the cards |
 
 ## `dim_terminals`
@@ -146,6 +150,7 @@ Terminals that capture the attempts.
 | `model` | VARCHAR | Terminal model |
 | `type` | VARCHAR | POS, TEF, ECOMMERCE (online gateway) or ATM |
 | `status` | VARCHAR | active, inactive or maintenance |
+| `status_since` | DATE | Date the current status began; the terminal was active before it |
 | `installation_date` | DATE | Date installed |
 
 ## `dim_wallets`

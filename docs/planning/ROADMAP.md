@@ -483,6 +483,21 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] Off-pattern attempts of proprietary-network cards never go to a cash machine (they can't withdraw)
 - [x] `balance_history.sequence_number` / `fact_balance_movements.sequence_number`: the order of the movements, so two at the same second chain correctly; the ledger checks use it
 
+### ST-08.9 — Day first, then the terminal (2026-11-02)
+
+- [x] An attempt draws its day first, then a terminal installed by that day (`TransactionGenerator._terminal`). Before, the terminal came first and pushed the day past its installation: terminals installed in the window piled extra attempts on the last months, and on a year the approval fell from 89% to 84%. Now it holds at 86–87% every month
+- [x] A branch is registered after its holding (83 were before)
+- [x] Faster on a year (2.5 million attempts): the day is drawn by bisection over cumulative weights, pools keep cumulative weights, the validators get `Table`s, the CNAE acceptance is memoized, attempts are answered in place. Generation and answers take about 1.5 minutes instead of 5
+
+### ST-08.10 — Status over time, the week per category, the first credit (2026-11-02)
+
+- [x] `status_since` on cardholders, cards, card wallets, establishments and terminals: the day the current status began; before it the record was active (`fake.status_since`; any day since the record's start, at most 30 days back for a terminal in maintenance, 180 for a suspension). A card never unlocked is inactive since its issue. Validators, credits and the attempt rates follow the status of the day; new quality check "approved attempts only on records active that day". Before, a card blocked today was blocked the whole year
+- [x] `weekday_weights_by_category`: meals on workdays, groceries on Saturday, fuel before the weekend; the default week no longer peaks on Monday
+- [x] A wallet activated in the window starts empty and gets its first credit, pro rata to the days left in the month, on the activation day. New cards approved 65% of their first month; now about 83%
+- [x] Dictionary: the segment is the employer's size; the dataset holds a sample of its cardholders
+- [x] `copy_dataframe` sends Polars CSV to `COPY`. The write still takes about 2 minutes on a year: the foreign-key checks of 4.7 million rows
+- [ ] Open: the first month approves more (90%, the starting balance plus the credit); afterwards the approval eases from 87% to 85% over the year, as records that stopped being active pile up toward the end (no record comes back to active)
+
 ---
 
 ## EP-09 — OLAP: Postgres → DuckDB

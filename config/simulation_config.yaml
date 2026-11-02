@@ -122,6 +122,11 @@ generation_settings:
     inactive: 0.05
     maintenance: 0.05
 
+  # A record not active was active until its status began (`status_since`):
+  # any day since its start, or at most these days back for a status that
+  # doesn't last
+  status_since_max_days: {maintenance: 30, suspended: 180}
+
   # Acquirer of a physical terminal: a few large ones and a tail
   acquirer_distribution:
     CIE: 0.28
@@ -220,8 +225,14 @@ usage_patterns:
                  16.0, 12.0, 5.0, 3.0, 3.0, 4.0, 6.5, 8.0, 7.5, 4.0, 1.5, 0.5]
     fuel:       [0.5, 0.3, 0.2, 0.2, 0.3, 1.5, 4.5, 8.0, 7.0, 5.5, 5.0, 5.0,
                  5.0, 5.0, 5.0, 5.5, 6.5, 8.5, 8.0, 5.5, 3.5, 2.0, 1.0, 0.7]
-  # Monday to Sunday: Monday busiest, Sunday quietest
-  weekday_weights: [1.25, 1.00, 1.00, 1.00, 1.10, 1.05, 0.95]
+  # Monday to Sunday: Friday and Saturday a little busier, Sunday quietest
+  weekday_weights: [1.00, 1.00, 1.00, 1.00, 1.10, 1.05, 0.85]
+  # Categories with their own week: meals on workdays, groceries on Saturday,
+  # fuel before the weekend
+  weekday_weights_by_category:
+    restaurant:  [1.10, 1.10, 1.10, 1.10, 1.15, 0.70, 0.55]
+    supermarket: [0.90, 0.85, 0.90, 0.95, 1.10, 1.40, 0.90]
+    fuel:        [1.00, 0.95, 0.95, 1.00, 1.20, 1.10, 0.80]
   # Weight of the first and last day of the month: spending follows the credit
   month_day_weights: {first: 1.4, last: 0.8}
 

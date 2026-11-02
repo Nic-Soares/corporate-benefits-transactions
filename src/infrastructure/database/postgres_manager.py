@@ -38,11 +38,14 @@ def count_rows(conn: psycopg.Connection, table: str) -> int:
 
 
 def copy_dataframe(conn: psycopg.Connection, table: str, df: pl.DataFrame) -> None:
-    """Append the rows with COPY (fast; fails on a duplicate key)."""
+    """Append the rows with COPY, as CSV written by Polars (fast; fails on a
+    duplicate key). An empty field is NULL, a quoted empty one an empty string."""
     columns = ", ".join(df.columns)
-    with conn.cursor() as cur, cur.copy(f"COPY {table} ({columns}) FROM STDIN") as copy:
-        for row in df.iter_rows():
-            copy.write_row(row)
+    with (
+        conn.cursor() as cur,
+        cur.copy(f"COPY {table} ({columns}) FROM STDIN (FORMAT csv)") as copy,
+    ):
+        copy.write(df.write_csv(include_header=False))
 
 
 def upsert_dataframe(

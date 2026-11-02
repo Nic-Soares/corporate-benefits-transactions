@@ -47,16 +47,23 @@ class Table:
         self.schema = df.schema
         self.rows: list[dict[str, Any]] = df.to_dicts()
         self._indexes: dict[tuple[str, ...], dict[tuple, list[dict[str, Any]]]] = {}
+        # Answers derived from the rows, kept by whoever computes them
+        self.memo: dict[Any, Any] = {}
 
     def find_all(self, **match: Any) -> list[dict[str, Any]]:
         """Rows whose columns equal `match`."""
-        columns = tuple(sorted(match))
-        if columns not in self._indexes:
-            index: dict[tuple, list[dict[str, Any]]] = {}
+        if len(match) == 1:  # most lookups: by id
+            [(column, value)] = match.items()
+            columns, key = (column,), (value,)
+        else:
+            columns = tuple(sorted(match))
+            key = tuple(match[c] for c in columns)
+        index = self._indexes.get(columns)
+        if index is None:
+            index = self._indexes[columns] = {}
             for row in self.rows:
                 index.setdefault(tuple(row[c] for c in columns), []).append(row)
-            self._indexes[columns] = index
-        return self._indexes[columns].get(tuple(match[c] for c in columns), [])
+        return index.get(key, [])
 
     def to_frame(self) -> pl.DataFrame:
         return pl.DataFrame(self.rows, schema=self.schema)
@@ -86,10 +93,17 @@ def find_all(data: pl.DataFrame | Table, **match: Any) -> list[dict[str, Any]]:
 
 def find_one(data: pl.DataFrame | Table, **match: Any) -> dict[str, Any] | None:
     """First row whose columns equal `match`, or None."""
-    rows = find_all(data, **match)
+    rows = as_table(data).find_all(**match)
     return rows[0] if rows else None
 
 
 def transaction_date(transaction: dict[str, Any]) -> date:
     value = transaction["date"]
     return value.date() if isinstance(value, datetime) else value
+
+
+def status_on(record: dict[str, Any], day: date) -> str:
+    """The record's status on `day`: active before its current status began
+    (`status_since`); the current status when that day is unknown."""
+    since = record.get("status_since")
+    return "active" if since is not None and day < since else record["status"]

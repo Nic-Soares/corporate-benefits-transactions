@@ -126,6 +126,7 @@ rm -f database/olap_duck/olap_corporate_benefits.duckdb
 | `The database already has transactions` | `simulate` ran before | `setup --reset`, then `simulate` |
 | `--today … is before the generated data` | `simulate` got a different `--today` than `setup` | Use `setup`'s `--today` |
 | `server closed the connection unexpectedly` right after `up` | Postgres still initializing | `docker compose up -d --wait` |
+| `column "…" of relation "…" does not exist` | The schema gained a column; `--reset` empties the tables but doesn't recreate them | `docker compose down -v && docker compose up -d --wait`, then `setup` |
 | `Quality checks failed: …` on `export` | The data breaks a rule (the message names it) | Look at that check's query in `src/pipeline/export.py`; a rate out of range usually means a config change |
 | `No OLAP database` on `export` | `etl` didn't run | `uv run python -m src.main etl` |
 | A source fails to download | No network, or the API is down | Run again later; once in `data/raw/` it isn't downloaded again |

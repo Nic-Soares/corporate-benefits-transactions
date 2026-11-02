@@ -114,6 +114,7 @@ Table cardholders {
   position varchar
   department varchar
   status varchar [not null, default: 'active']
+  status_since date [not null, note: 'Day the current status began; before it the record was active']
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
@@ -127,6 +128,7 @@ Table cards {
   expiration_date date [not null]
   card_type varchar [not null]
   status varchar [not null, default: 'active']
+  status_since date [not null, note: 'Day the current status began; before it the record was active']
   issue_date date [not null]
   created_at timestamp [default: `now()`]
   updated_at timestamp
@@ -143,6 +145,7 @@ Table card_wallets {
   daily_count_limit integer [default: 0, note: 'Purchases per day on the wallet; 0 = no limit']
   activation_date date [not null]
   status varchar [not null, default: 'active']
+  status_since date [not null, note: 'Day the current status began; before it the record was active']
   created_at timestamp [default: `now()`]
   updated_at timestamp
 }
@@ -158,6 +161,7 @@ Table establishments {
   city varchar [not null]
   state varchar [not null]
   status varchar [not null, default: 'active']
+  status_since date [not null, note: 'Day the current status began; before it the record was active']
   accreditation_date date [not null]
   created_at timestamp [default: `now()`]
   updated_at timestamp
@@ -170,6 +174,7 @@ Table terminals {
   model varchar
   type varchar [not null]
   status varchar [not null, default: 'active']
+  status_since date [not null, note: 'Day the current status began; before it the record was active']
   installation_date date [not null]
   created_at timestamp [default: `now()`]
   updated_at timestamp

@@ -53,6 +53,8 @@ def generate_establishments(
         main_cnae = random.choice(cnaes_by_category[category])
         municipio = municipios.draw()
         legal_name, trade_name = fake.company_names(random.choice(CATEGORIES[category]["names"]))
+        status = fake.status("establishment")
+        accredited = fake.date_in_range("establishment_opening")
         establishments.append(
             {
                 "id": fake.new_id("est"),
@@ -64,8 +66,9 @@ def generate_establishments(
                 "category": category,
                 "city": municipio["municipio_nome"],
                 "state": municipio["uf_sigla"],
-                "status": fake.status("establishment"),
-                "accreditation_date": fake.date_in_range("establishment_opening"),
+                "status": status,
+                "status_since": fake.status_since(status, accredited),
+                "accreditation_date": accredited,
             }
         )
 
