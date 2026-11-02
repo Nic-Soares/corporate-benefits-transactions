@@ -79,10 +79,11 @@ class CardholderGenerator:
         company_id: str,
         hired_from: date | None = None,
         company_city: dict[str, str] | None = None,
+        same_city_ratio: float = 0.8,
     ) -> Cardholder:
-        """Lives in `company_city` (`{municipio_nome, uf_sigla}`) most of the time
-        (`generation_settings.cardholder_same_city_ratio`)."""
-        same_city = company_city and random.random() < fake.SETTINGS["cardholder_same_city_ratio"]
+        """Lives in `company_city` (`{municipio_nome, uf_sigla}`) with `same_city_ratio`,
+        anywhere by population otherwise."""
+        same_city = company_city and random.random() < same_city_ratio
         return Cardholder(
             company_id, company_city if same_city else self.municipios.draw(), hired_from
         )
@@ -95,17 +96,20 @@ class CardholderGenerator:
         `companies_df` needs `id`, `segment`, `registration_date` (admissions
         come after it), `city` and `state`. The count is drawn from the segment's
         range in `generation_settings.company_segments`, small sizes commoner,
-        times `scale`.
+        times `scale`; the segment's `same_city` share lives in the company's city.
         """
         cardholders = []
         for company in companies_df.select(
             "id", "segment", "registration_date", "city", "state"
         ).iter_rows(named=True):
             city = {"municipio_nome": company["city"], "uf_sigla": company["state"]}
-            size = COMPANY_SEGMENTS[company["segment"]]["cardholders"]
+            segment = COMPANY_SEGMENTS[company["segment"]]
+            size = segment["cardholders"]
             count = max(round(fake.log_uniform_int(size["min"], size["max"]) * scale), 1)
             cardholders += [
-                self.generate_cardholder(company["id"], company["registration_date"], city)
+                self.generate_cardholder(
+                    company["id"], company["registration_date"], city, segment["same_city"]
+                )
                 for _ in range(count)
             ]
         return pl.DataFrame([cardholder.to_dict() for cardholder in cardholders])
