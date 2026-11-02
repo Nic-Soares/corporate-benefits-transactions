@@ -9,7 +9,7 @@ import polars as pl
 import pytest
 
 from src.data_generators.providers import fake
-from src.pipeline import export
+from src.pipeline import export, profile
 from src.pipeline.etl import OLAP_DIR, OLAP_TABLES, build_olap
 from src.pipeline.reference import build_reference_tables
 from src.simulation.fraud import FraudGenerator
@@ -74,6 +74,7 @@ def lenient(monkeypatch):
     """The rate checks are about the full dataset; a small test world only has to be sane."""
     monkeypatch.setattr(export, "APPROVAL_TOLERANCE", 0.3)
     monkeypatch.setattr(export, "FRAUD_SHARE", (0.0001, 0.1))
+    monkeypatch.setattr(export, "PROFILE_ENFORCED", False)
 
 
 def test_checks_pass_on_simulated_data(olap_file, lenient):
@@ -90,7 +91,8 @@ def test_export_writes_every_table(olap_file, lenient, tmp_path):
     for table in OLAP_TABLES:
         assert pl.read_parquet(tmp_path / f"{table}.parquet").height == counts[table]
     assert "fact_transactions" in (tmp_path / "data_dictionary.md").read_text()
-    report = (tmp_path / "quality_report.md").read_text()
+    # the checks; the profile follows, informative on a small world
+    report = (tmp_path / "quality_report.md").read_text().split("## Statistical profile")[0]
     assert "❌" not in report and len(checks) == report.count("✅")
     metadata = json.loads((tmp_path / "dataset_metadata.json").read_text())
     assert metadata["rows"] == counts and metadata["synthetic"]
@@ -115,3 +117,17 @@ def test_rates_are_checked(olap_file, monkeypatch):
     with duckdb.connect(str(olap_file), read_only=True) as duck:
         fraud = next(c for c in export.quality_checks(duck) if c.name.startswith("fraud share"))
     assert not fraud.passed
+
+
+def test_profile_is_reported_and_checked(olap_file, lenient, tmp_path, monkeypatch):
+    """The report shows the profile; a measure off its range stops the export."""
+    export.run_export(olap_file, tmp_path)
+    report = (tmp_path / "quality_report.md").read_text()
+    assert "## Statistical profile" in report and "restaurant peak hour" in report
+
+    monkeypatch.setattr(export, "PROFILE_ENFORCED", True)
+    monkeypatch.setitem(profile.PROFILE, "restaurant_peak_hours", [3, 4])
+    with duckdb.connect(str(olap_file), read_only=True) as duck:
+        checks = export.quality_checks(duck)
+    peak = next(c for c in checks if c.name == "profile: restaurant peak hour")
+    assert not peak.passed
