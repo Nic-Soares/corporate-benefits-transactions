@@ -8,6 +8,8 @@ routes the wallet and answers later (`simulator`).
 """
 
 import random
+from array import array
+from collections import defaultdict
 from datetime import date, datetime
 
 import polars as pl
@@ -34,6 +36,11 @@ OPTION_OF = {wallet: option for option, wallets in OPTIONS.items() for wallet in
 # The option a cardholder means to pick at each kind of place
 NATURAL_OPTION = {"supermarket": "FOOD", "food_retail": "FOOD", "restaurant": "MEAL"}
 PIN_CAPTURES = {"CHIP", "MAG_STRIPE"}
+CATEGORY_LIST = list(CATEGORIES)
+CATEGORY_INDEX = {category: i for i, category in enumerate(CATEGORY_LIST)}
+
+# Attempts planned for a month: slot, category and day indexes, side by side
+Plan = tuple[array, array, array]
 
 
 def pin_status(capture_type: str) -> str:
@@ -143,15 +150,46 @@ class TransactionGenerator:
         """A day of the window from `earliest` on, then an hour of the category's day."""
         return self.calendar.moment(category, earliest)
 
+    def _draw(self) -> tuple[int, int, int]:
+        """Who, what kind of place and which day: (slot, category, day) indexes."""
+        index = self.demand.draw_index()
+        card, wallet, _ = slot = self.demand.slots[index]
+        category = self._category(card, wallet)
+        day = self.demand.day(slot, category)
+        return index, CATEGORY_INDEX[category], (day.date() - self.calendar.dates[0]).days
+
+    def plan(self, n: int) -> dict[tuple[int, int], Plan]:
+        """`n` attempts drawn as indexes and kept by (year, month): a few bytes
+        each, so a long window fits in memory; `build_month` makes them."""
+        months: dict[tuple[int, int], Plan] = defaultdict(
+            lambda: (array("I"), array("B"), array("H"))
+        )
+        for _ in range(n):
+            index, category, day = self._draw()
+            date_ = self.calendar.dates[day]
+            slots, categories, days = months[date_.year, date_.month]
+            slots.append(index)
+            categories.append(category)
+            days.append(day)
+        return dict(months)
+
+    def build_month(self, plan: Plan) -> list[dict]:
+        """The attempts of a month's plan."""
+        return [self.build(*drawn) for drawn in zip(*plan, strict=True)]
+
     def generate(self) -> dict:
         """One attempt: columns of `transactions`, before the issuer answers."""
-        slot = self.demand.draw()
-        card, wallet, _ = slot
-        category = self._category(card, wallet)
+        return self.build(*self._draw())
+
+    def build(self, index: int, category_index: int, day_index: int) -> dict:
+        """The attempt of a drawn (slot, category, day): the terminal, the
+        moment, the capture, the ticket."""
+        card, wallet, _ = self.demand.slots[index]
+        category = CATEGORY_LIST[category_index]
+        day = self.calendar.days[day_index]
         # The day first (once the wallet is usable), then a terminal installed by
         # then: nearby if there is one, else anywhere in the category. A virtual
         # card goes where it can be used
-        day = self.demand.day(slot, category)
         virtual = card["card_type"] == "virtual"
         nearby = self.pools.nearby(
             category, self.home[card["cardholder_id"]], network(card), wallet

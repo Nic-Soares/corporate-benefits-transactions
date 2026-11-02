@@ -15,7 +15,7 @@ from pathlib import Path
 import duckdb
 import yaml
 
-from src.pipeline import provenance
+from src.pipeline import profile, provenance
 from src.pipeline.etl import OLAP_DIR, OLAP_FILE, OLAP_TABLES, ROOT
 from src.utils.read_yamls import load_simulation_config
 
@@ -25,6 +25,8 @@ EXPORT_DIR = ROOT / "data" / "final_datasets"
 DICTIONARY_FILE = OLAP_DIR / "dictionary.yaml"
 APPROVAL_TOLERANCE = 0.10
 FRAUD_SHARE = (0.001, 0.02)
+# The profile's ranges hold on a full dataset; a small test world turns them off
+PROFILE_ENFORCED = True
 # Never in a public dataset, even hashed or synthetic
 FORBIDDEN_COLUMNS = {"cpf", "cpf_hash", "card_number", "card_number_hash", "cnpj"}
 
@@ -168,6 +170,12 @@ def quality_checks(duck: duckdb.DuckDBPyConnection) -> list[Check]:
     checks.append(
         Check(f"fraud share in {low:.1%}–{high:.0%}", int(not low <= fraud <= high), f"{fraud:.2%}")
     )
+    # The statistical profile: off the expected range, the shape is broken
+    if PROFILE_ENFORCED:
+        checks += [
+            Check(f"profile: {m.name}", int(not m.passed), "" if m.passed else f"{m.value}")
+            for m in profile.measures(duck)
+        ]
     return checks
 
 
@@ -209,13 +217,16 @@ def render_dictionary() -> str:
     return "\n".join(lines) + "\n"
 
 
-def render_report(checks: list[Check], counts: dict[str, int]) -> str:
+def render_report(
+    checks: list[Check], counts: dict[str, int], measures: list[profile.Measure] = ()
+) -> str:
     lines = ["# Quality report", "", "| Check | Result |", "|---|---|"]
     for check in checks:
         result = "✅" if check.passed else f"❌ {check.violations}"
         lines.append(f"| {check.name} | {result} {check.detail}".rstrip() + " |")
     lines += ["", "| Table | Rows |", "|---|---:|"]
     lines += [f"| `{table}` | {rows:,} |" for table, rows in counts.items()]
+    lines += profile.render(list(measures)) if measures else []
     return "\n".join(lines) + "\n"
 
 
@@ -243,6 +254,7 @@ def run_export(path: Path = OLAP_FILE, out_dir: Path = EXPORT_DIR) -> tuple[list
             if has_run
             else {}
         )
+        measures = profile.measures(duck)
     metadata = {
         "generator": "corporate-benefits-transactions",
         "synthetic": True,
@@ -254,7 +266,7 @@ def run_export(path: Path = OLAP_FILE, out_dir: Path = EXPORT_DIR) -> tuple[list
     }
     (out_dir / "dataset_metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
     (out_dir / "data_dictionary.md").write_text(render_dictionary())
-    (out_dir / "quality_report.md").write_text(render_report(checks, counts))
+    (out_dir / "quality_report.md").write_text(render_report(checks, counts, measures))
     log.info(
         "Dataset written to %s",
         out_dir.relative_to(ROOT) if out_dir.is_relative_to(ROOT) else out_dir,

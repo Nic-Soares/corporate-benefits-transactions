@@ -70,6 +70,7 @@ def run_setup(
         setup_code_version=provenance.code_version(),
         setup_config_hash=provenance.config_hash(),
         config_dir=provenance.config_dir(),
+        data_volumes=volumes,
         sources=provenance.source_hashes(),
     )
 

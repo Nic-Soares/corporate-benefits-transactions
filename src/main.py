@@ -1,6 +1,6 @@
 """Command line.
 
-python -m src.main [--config DIR] setup [--seed N] [--today YYYY-MM-DD] [--reset]
+python -m src.main [--config DIR] setup [--seed N] [--today YYYY-MM-DD] [--reset] [--scale N]
 python -m src.main [--config DIR] simulate [--seed N] [--today YYYY-MM-DD] [--days N]
 python -m src.main etl
 python -m src.main export
@@ -18,6 +18,14 @@ from pathlib import Path
 
 log = logging.getLogger("src.main")
 
+# The counts `--scale` multiplies; cardholders follow the companies
+SCALED_VOLUMES = ("companies", "establishments", "terminals")
+
+
+def scaled(volumes: dict, scale: float) -> dict:
+    """`data_volumes` with the world `scale` times as big."""
+    return volumes | {key: max(1, round(volumes[key] * scale)) for key in SCALED_VOLUMES}
+
 
 def setup(args: argparse.Namespace) -> int:
     from src.infrastructure.database.postgres_manager import connect_pg_db
@@ -26,7 +34,7 @@ def setup(args: argparse.Namespace) -> int:
     from src.utils.read_yamls import load_simulation_config
 
     sources = fetch_sources()
-    volumes = load_simulation_config()["data_volumes"]
+    volumes = scaled(load_simulation_config()["data_volumes"], args.scale)
     with connect_pg_db() as conn:
         try:
             counts = run_setup(conn, sources, volumes, args.seed, args.today, args.reset)
@@ -112,6 +120,12 @@ def main(argv: list[str] | None = None) -> int:
     _common_options(setup_parser)
     setup_parser.add_argument(
         "--reset", action="store_true", help="replace the entities already in the database"
+    )
+    setup_parser.add_argument(
+        "--scale",
+        type=float,
+        default=1.0,
+        help="world size: companies, establishments and terminals × N (default 1)",
     )
     setup_parser.set_defaults(run=setup)
 
