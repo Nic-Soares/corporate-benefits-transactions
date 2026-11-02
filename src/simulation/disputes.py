@@ -16,12 +16,20 @@ from src.utils.read_yamls import load_simulation_config
 FRAUD = load_simulation_config()["fraud"]
 
 
-def mark_disputes(transactions: pl.DataFrame) -> pl.DataFrame:
+def mark_disputes(
+    transactions: pl.DataFrame, reporting_of: dict[str, bool] | None = None
+) -> pl.DataFrame:
+    """`disputed` set. `reporting_of` keeps, across calls (one per month), whether
+    each card's cardholder reports its fraud."""
+    reporting_of = {} if reporting_of is None else reporting_of
     approved = pl.col("response_code") == "00"
     fraud_cards = (
         transactions.filter(approved, pl.col("is_fraud"))["card_id"].unique().sort().to_list()
     )
-    reporting = [card for card in fraud_cards if random.random() < FRAUD["report_ratio"]]
+    for card in fraud_cards:
+        if card not in reporting_of:
+            reporting_of[card] = random.random() < FRAUD["report_ratio"]
+    reporting = [card for card in fraud_cards if reporting_of[card]]
     reported = approved & pl.col("is_fraud") & pl.col("card_id").is_in(reporting)
 
     n_friendly = round(

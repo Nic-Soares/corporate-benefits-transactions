@@ -579,9 +579,12 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] Config read once per file, from `config/` or the folder `python -m src.main --config DIR` names (a variant of the rules); `run_metadata.config_dir` records it. Modules still read it when imported, so one process runs one config: enough for runs, and a test of another config runs in a subprocess
 
 ### ST-12.7 — Volume
-- [ ] Simulate month by month (balances carried over), so memory follows a month, not the window: years and tens of millions of attempts on a laptop
-- [ ] A `--scale` for the world (companies, cardholders, establishments, terminals) to pick the volume
-- [ ] Faster writes to Postgres at volume
+- [x] Simulate month by month: the generator plans every attempt as three small indexes (slot, kind of place, day; `TransactionGenerator.plan`), then each month is built, answered (`TransactionSimulator.start` / `advance`, balances and pending reversals carried over) and written. A year at scale 1: peak memory 6 GB → 1.6 GB
+- [x] `setup --scale N` multiplies companies (so cardholders), establishments and terminals; `run_metadata.data_volumes` records them
+- [x] `bulk_load`: foreign keys and secondary indexes of `transactions` and `balance_history` dropped during the load and built back at the end, in the same transaction. A year at scale 1: `simulate` 5.5 min → 2.4 min
+- [x] `etl` copies `transactions` and `balance_history` to DuckDB in chunks (`read_chunks`, server-side cursor), with column types from the database; a year at scale 4 needed 7 GB before
+- [x] Found at scale 4: with more than 100 holdings, Polars guessed `parent_id` from the first rows (all empty) and failed; fixed, with a test
+- [x] Result: a year at scale 4, 5.7 million transactions, `simulate` 7 min and 2.9 GB, every check passed
 
 ### ST-12.8 — Statistical profile
 - [ ] The quality report gains a profile: tickets per category (median, p90), hour and weekday curves, monthly approval and its range, decline mix, fraud share, geography, cards per cardholder; each against the expected range from the config, so a change that breaks the shape fails the export

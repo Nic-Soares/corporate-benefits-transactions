@@ -48,8 +48,11 @@ uv run python -m src.main simulate --seed 42 --today 2026-10-30 # 90 days of tra
 
 A full year, from 2025-09-01 to 2026-08-31: the window is the `--days` before
 `--today`, so `--today 2026-09-01 --days 365` (same `--today` in `setup`).
-About 5 minutes for `simulate` and 4 GB of memory; 2.5 million transactions
-and about 280 MB of Parquet.
+About 2.5 minutes for `simulate` and 1.6 GB of memory; 2.5 million transactions
+and about 280 MB of Parquet. For more volume, `setup --scale 4` (4× the companies,
+establishments and terminals): 5.7 million transactions, about 7 minutes and
+3 GB, 840 MB of Parquet. `simulate` works a month at a time, so memory follows
+a month, not the window; prefix long runs with `caffeinate -i` on a Mac.
 
 ```bash
 uv run python -m src.main setup --seed 42 --today 2026-09-01 --reset
@@ -67,12 +70,13 @@ same dataset anywhere; a missing file is downloaded.
 | `--seed N` | Random seed (default 42) |
 | `--today YYYY-MM-DD` | Reference day of every generated date (default today); with the seed, fixes the data |
 | `--reset` | Drop and recreate every table, then generate again (replaces entities and transactions) |
+| `--scale N` | World size: companies (so cardholders), establishments and terminals × N (default 1) |
 
 Without `--reset`, a second run stops: `The database already has entities`.
 
 `simulate` takes `--seed`, `--today` (the same as `setup`'s) and `--days`
-(default `simulation.days`, 90). It prints the rows written, the approval rate
-and the commonest answers. It runs once per setup: the balances move, so
+(default `simulation.days`, 90). It prints each month as it goes, then the rows
+written, the approval rate and the commonest answers. It runs once per setup: the balances move, so
 another run starts with `setup --reset`.
 
 ```bash

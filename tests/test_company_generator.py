@@ -36,3 +36,10 @@ def test_segments(municipios_df):
     # a branch belongs to its holding's segment
     pairs = df.join(df, left_on="parent_id", right_on="id", suffix="_holding")
     assert (pairs["segment"] == pairs["segment_holding"]).all()
+
+
+def test_many_holdings(municipios_df):
+    """More holdings than Polars reads to guess a type: parent_id stays a string."""
+    df = CompanyGenerator(municipios_df=municipios_df).generate_companies_as_dataframe(800)
+    assert df["parent_id"].dtype == pl.String
+    assert df["parent_id"].null_count() == 160

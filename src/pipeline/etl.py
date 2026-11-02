@@ -6,13 +6,14 @@ analytical views. Full refresh: a new database file each run.
 """
 
 import logging
+from collections.abc import Iterable
 from pathlib import Path
 
 import duckdb
 import polars as pl
 import psycopg
 
-from src.infrastructure.database.postgres_manager import read_table
+from src.infrastructure.database.postgres_manager import read_chunks, read_table, table_schema
 from src.utils.read_yamls import ROOT, load_database
 
 log = logging.getLogger(__name__)
@@ -63,27 +64,52 @@ OLAP_TABLES = [
 
 
 def build_olap(duck: duckdb.DuckDBPyConnection, oltp: dict[str, pl.DataFrame]) -> dict[str, int]:
-    """Create the star schema in `duck` and load it from the OLTP tables.
+    """Create the star schema in `duck` and load it from the OLTP tables: the
+    DataFrames in `oltp`, or `stg_<table>` tables already in `duck` (`stage`).
     Returns the row count of every OLAP table."""
-    for table in STAGED:
+    registered = [table for table in STAGED if table in oltp]
+    for table in registered:
         duck.register(f"stg_{table}", oltp[table])
     for name in OLAP_SQL:
         duck.execute((OLAP_DIR / name).read_text())
-    for table in STAGED:
+    for table in registered:
         duck.unregister(f"stg_{table}")
+    for table in set(STAGED) - set(registered):
+        duck.execute(f"DROP TABLE stg_{table}")
     return {
         table: duck.sql(f"SELECT count(*) FROM {table}").fetchall()[0][0] for table in OLAP_TABLES
     }
 
 
+# The big tables: copied to DuckDB a chunk at a time, not held in memory
+STREAMED = ["transactions", "balance_history"]
+
+
+def stage(
+    duck: duckdb.DuckDBPyConnection,
+    table: str,
+    chunks: Iterable[pl.DataFrame],
+    schema: dict[str, pl.DataType],
+) -> None:
+    """`stg_<table>` in DuckDB, filled chunk by chunk."""
+    duck.register("chunk", pl.DataFrame(schema=schema))
+    duck.execute(f"CREATE TABLE stg_{table} AS SELECT * FROM chunk")
+    for chunk in chunks:
+        duck.register("chunk", chunk)
+        duck.execute(f"INSERT INTO stg_{table} SELECT * FROM chunk")
+    duck.unregister("chunk")
+
+
 def run_etl(pg: psycopg.Connection, path: Path = OLAP_FILE) -> dict[str, int]:
     """Read the OLTP database and write a fresh DuckDB file at `path`."""
-    oltp = {table: read_table(pg, table) for table in STAGED}
-    if not oltp["transactions"].height:
-        log.warning("No transactions yet: run simulate first for the facts")
+    oltp = {table: read_table(pg, table) for table in STAGED if table not in STREAMED}
     metadata = read_table(pg, "run_metadata")
     path.unlink(missing_ok=True)
     with duckdb.connect(str(path)) as duck:
+        for table in STREAMED:
+            stage(duck, table, read_chunks(pg, table), table_schema(pg, table))
+        if not duck.sql("SELECT count(*) FROM stg_transactions").fetchall()[0][0]:
+            log.warning("No transactions yet: run simulate first for the facts")
         counts = build_olap(duck, oltp)
         # How the data was made, for the export's dataset_metadata.json
         duck.register("stg_run_metadata", metadata)
