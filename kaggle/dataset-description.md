@@ -39,6 +39,13 @@ An open-source pipeline (Python, Polars, PostgreSQL, DuckDB) generates the world
 
 The reference data is public — IBGE (CNAE, municipalities, population, municipal GDP) and the public MCC list. Every weight, balance, limit, ticket and acceptance rule is synthetic, shaped after how the Brazilian benefits market works, not taken from any company's data.
 
+## Limitations
+
+- **Synthetic rates.** Approval, decline mix, tickets and fraud share have a realistic shape but are not statistics of the real market; don't draw conclusions about it from them.
+- **Snapshot dimensions.** Each record carries its current status and the day it began (`status_since`; active before that day), not a full history of changes.
+- **One fact for attempts and reversals.** Reversals are rows of `fact_transactions` with `transaction_type = 'reversal'`, pointing to the purchase they undo; filter them out for attempt-level rates.
+- **Simplified world.** Acceptance rules, fraud scenarios and the calendar follow how the market works in broad strokes; acquirer integrations, chargebacks, fees and settlement are out of scope.
+
 ## Ideas
 
 - Predict declines (and which reason) from the attempt alone
