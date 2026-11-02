@@ -14,8 +14,9 @@ from datetime import date, datetime
 
 import polars as pl
 
-from src.data_generators.entities.establishment_generator import CATEGORIES
-from src.data_generators.providers import fake
+from src.config import load_simulation_config, load_validation_rules
+from src.entities import fake
+from src.entities.establishments import CATEGORIES
 from src.simulation.demand import (
     ACCEPTANCE,
     CATEGORY_WALLETS,
@@ -26,7 +27,6 @@ from src.simulation.demand import (
 )
 from src.simulation.pools import PHYSICAL_CAPTURES, TerminalPools
 from src.simulation.seasons import Calendar
-from src.utils.read_yamls import load_simulation_config, load_validation_rules
 
 USAGE = load_simulation_config()["usage_patterns"]
 ROUTING = load_validation_rules()["business_rules_validations"]["wallet_routing"]

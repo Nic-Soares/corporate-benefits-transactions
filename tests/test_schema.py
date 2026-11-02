@@ -11,8 +11,8 @@ import duckdb
 import polars as pl
 import pytest
 
-from src.data_generators.providers import fake
-from src.pipeline.reference import build_reference_tables
+from src.entities import fake
+from src.reference import build_reference_tables
 
 DATABASE = Path(__file__).parent.parent / "database"
 OLTP_SCHEMA = DATABASE / "oltp_postgres" / "oltp_schema.sql"
@@ -111,7 +111,7 @@ def test_olap_schema_and_reference_dimensions(reference_tables):
 @pytest.mark.db
 def test_oltp_schema_on_postgres():
     """Needs `docker compose up -d` and a filled-in .env. Rolls back."""
-    from src.infrastructure.database.postgres_manager import connect_pg_db
+    from src.postgres import connect_pg_db
 
     conn = connect_pg_db()
     assert conn

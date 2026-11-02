@@ -13,7 +13,7 @@ import polars as pl
 import psycopg
 from dotenv import load_dotenv
 
-from src.utils.read_yamls import load_database
+from src.config import load_database
 
 load_dotenv()
 

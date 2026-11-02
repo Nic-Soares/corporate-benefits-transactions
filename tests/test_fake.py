@@ -2,7 +2,7 @@ import random
 
 import polars as pl
 
-from src.data_generators.providers import fake
+from src.entities import fake
 
 
 def test_municipalities_follow_population():

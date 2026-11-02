@@ -10,11 +10,11 @@ cards: the wallets the issuer can charge at the establishment's MCC
 from collections.abc import Iterable
 from typing import Any
 
-from src.data_generators.reference_data.card_program_loader import (
+from src.config import load_pre_populated_data
+from src.reference import (
     load_cnae_wallets,
     load_mcc_wallets,
 )
-from src.utils.read_yamls import load_pre_populated_data
 
 OPEN_WALLET = "GIFT"  # on a brand card, takes any MCC (and cash)
 

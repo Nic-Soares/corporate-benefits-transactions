@@ -13,7 +13,7 @@ TODAY = date(2026, 10, 30)
 
 @pytest.fixture
 def conn():
-    from src.infrastructure.database.postgres_manager import connect_pg_db
+    from src.postgres import connect_pg_db
 
     conn = connect_pg_db()
     conn.execute("CREATE SCHEMA setup_check")

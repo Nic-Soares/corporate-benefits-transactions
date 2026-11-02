@@ -10,11 +10,11 @@ from pathlib import Path
 
 import polars as pl
 
-from src.extractors.ibge_cnae import fetch_cnae
-from src.extractors.ibge_gdp import fetch_gdp
-from src.extractors.ibge_municipalities import fetch_municipios
-from src.extractors.ibge_population import fetch_population
-from src.extractors.mcc_extractor import fetch_mcc_codes
+from src.sources.ibge_cnae import fetch_cnae
+from src.sources.ibge_gdp import fetch_gdp
+from src.sources.ibge_municipalities import fetch_municipios
+from src.sources.ibge_population import fetch_population
+from src.sources.mcc import fetch_mcc_codes
 
 log = logging.getLogger(__name__)
 

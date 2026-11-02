@@ -15,9 +15,9 @@ from pathlib import Path
 import duckdb
 import yaml
 
+from src.config import load_simulation_config
 from src.pipeline import profile, provenance
 from src.pipeline.etl import OLAP_DIR, OLAP_FILE, OLAP_TABLES, ROOT
-from src.utils.read_yamls import load_simulation_config
 
 log = logging.getLogger(__name__)
 

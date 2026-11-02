@@ -2,8 +2,8 @@ from datetime import date
 
 import polars as pl
 
-from src.data_generators.entities.cardholder_generator import CardholderGenerator
-from src.data_generators.entities.company_generator import COMPANY_SEGMENTS
+from src.entities.cardholders import CardholderGenerator
+from src.entities.companies import COMPANY_SEGMENTS
 
 
 def test_cardholder_fields(municipios_df):

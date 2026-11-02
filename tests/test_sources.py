@@ -1,10 +1,10 @@
 import polars as pl
 import pytest
 
-from src.extractors.ibge_cnae import fetch_cnae
-from src.extractors.ibge_gdp import fetch_gdp
-from src.extractors.ibge_municipalities import fetch_municipios
-from src.extractors.ibge_population import fetch_population
+from src.sources.ibge_cnae import fetch_cnae
+from src.sources.ibge_gdp import fetch_gdp
+from src.sources.ibge_municipalities import fetch_municipios
+from src.sources.ibge_population import fetch_population
 
 
 @pytest.fixture(scope="module")
