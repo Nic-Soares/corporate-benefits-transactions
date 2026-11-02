@@ -87,7 +87,7 @@ establishments               category by weight → a CNAE of it → the MCC of 
 2. Upsert the reference tables: running again leaves the same rows.
 3. Generate the entities at `simulation_config.yaml → data_volumes` and write them parents first. With entities already in the database it stops unless `--reset`; `--seed` and `--today` fix the result.
 
-The public sources (CNAE, municipalities and population from IBGE, the MCC list) are downloaded once into `data/raw/` (git-ignored). Municipalities are drawn by population, and 80% of cardholders live in their company's city (`cardholder_same_city_ratio`).
+The public sources (CNAE, municipalities and population from IBGE, the MCC list) are downloaded once into `data/raw/` (git-ignored). Companies are drawn by municipal GDP (IBGE, [ADR-018](adr/018-company-geography.md)); establishments and the cardholders who don't live in their company's city, by population. The share in the company's city depends on the segment (`company_segments.*.same_city`): 90% for SME down to 35% for Corporate, whose staff is spread across branches.
 
 `python -m src.main simulate` reads the database, simulates `simulation.days` before `--today` (the volume follows the credits: `TransactionGenerator.expected_attempts`) and writes the transactions, the balance movements and the final balances in one transaction. It stops if transactions are already there (start over with `setup --reset`) or if `--today` is before the generated data.
 
