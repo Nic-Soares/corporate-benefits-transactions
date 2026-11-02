@@ -571,7 +571,7 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] `setup --reset` drops and recreates the tables, so a schema change needs no `docker compose down -v`
 
 ### ST-12.5 — CI runs the pipeline
-- [ ] CI starts Postgres as a service and runs the `db` tests: setup → simulate → etl → export on a small world, with the quality checks
+- [x] CI starts Postgres 18 as a service, runs the `db` tests, then setup → simulate (30 days) → etl → export with the quality checks (about 25 s locally); first run on GitHub after the first push
 
 ### ST-12.6 — Structure
 - [ ] `TransactionGenerator` split by job: terminal pools and geography, demand (slots and rates), calendar, opening balances; the simulation's demand model leaves `data_generators/entities`
