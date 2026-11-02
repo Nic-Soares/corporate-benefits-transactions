@@ -9,7 +9,7 @@ credit adds its own slots. Also the balance each wallet opens the window with.
 import calendar
 import math
 import random
-from bisect import bisect_left
+from bisect import bisect_left, bisect_right
 from collections.abc import Callable
 from datetime import date, timedelta
 from itertools import accumulate
@@ -203,8 +203,10 @@ class Demand:
         activated = self.activation.get((card["id"], wallet))
         return max(card["issue_date"], activated) if activated else card["issue_date"]
 
-    def draw(self) -> Slot:
-        return random.choices(self.slots, cum_weights=self.cum_weights)[0]
+    def draw_index(self) -> int:
+        """A slot, by weight: its index in `slots`."""
+        point = random.random() * self.cum_weights[-1]
+        return min(bisect_right(self.cum_weights, point), len(self.slots) - 1)
 
     def day(self, slot: Slot, category: str):
         """A day once the wallet is usable (within the slot's window, if any);

@@ -61,7 +61,7 @@ TABLES = [
 class SimulationResult:
     transactions: pl.DataFrame
     balance_history: pl.DataFrame
-    card_wallets: pl.DataFrame  # with the balances at the end
+    card_wallets: pl.DataFrame | None = None  # with the balances at the end (`run`)
 
 
 def _status_on(day: pl.Expr, status: str = "status", since: str = "status_since") -> pl.Expr:
@@ -280,36 +280,42 @@ class TransactionSimulator:
         self.history.append(reverse(self.card_wallets, reversal))
         return reversal
 
-    def run(
-        self,
-        attempts: list[dict[str, Any]],
-        start: datetime,
-        end: datetime,
-        opening: dict[str, float] | None = None,
-    ) -> SimulationResult:
-        """Credits, attempts and reversals in time order within [start, end).
-        `opening`: balances at the start by card wallet id (else the tables')."""
+    def start(
+        self, start: datetime, end: datetime, opening: dict[str, float] | None = None
+    ) -> None:
+        """Open the window [start, end): the balances (`opening`, by card wallet
+        id, else the tables'), and the credits scheduled."""
         for row in self.card_wallets.rows:
             if opening and row["id"] in opening:
                 row["current_balance"] = opening[row["id"]]
-        events: list[tuple[datetime, int, str, Any]] = []
+        self.end = end
+        self.events: list[tuple[datetime, int, str, Any]] = []
         for moment in credit_moments(start, end):
-            events.append((moment, 0, "credit", None))
+            self.events.append((moment, 0, "credit", None))
         for year in range(start.year, end.year + 1):
             moment = datetime.combine(seasons.year_end_credit_day(year), time(CREDIT_HOUR))
             if start <= moment < end:
-                events.append((moment, 0, "year_end_credit", None))
+                self.events.append((moment, 0, "year_end_credit", None))
         for moment, card_wallet_id in self._first_credits(start, end):
-            events.append((moment, 0, "first_credit", card_wallet_id))
-        for seq, tx in enumerate(sorted(attempts, key=lambda tx: tx["date"]), start=1):
-            events.append((tx["date"], seq, "attempt", tx))
-        heapq.heapify(events)
-        seq = len(events)
+            self.events.append((moment, 0, "first_credit", card_wallet_id))
+        heapq.heapify(self.events)
+        self.seq = 0
+        self.sequence = 0  # balance movements answered so far
+        self.reporting: dict[str, bool] = {}  # card → the cardholder reports its fraud
+
+    def advance(self, attempts: list[dict[str, Any]], until: datetime) -> SimulationResult:
+        """Add `attempts` and answer every event before `until` in time order:
+        credits, attempts and reversals. Returns the period's transactions and
+        balance movements; later events wait for the next call."""
+        for tx in sorted(attempts, key=lambda tx: tx["date"]):
+            self.seq += 1
+            heapq.heappush(self.events, (tx["date"], self.seq, "attempt", tx))
 
         delay = SIMULATION["reversal_delay_minutes"]
         answered = []
-        while events:
-            moment, _, kind, payload = heapq.heappop(events)
+        self.history = []
+        while self.events and self.events[0][0] < until:
+            moment, _, kind, payload = heapq.heappop(self.events)
             if kind == "credit":
                 self.credit(moment)
                 continue
@@ -341,16 +347,45 @@ class TransactionSimulator:
                 and random.random() < SIMULATION["reversal_ratio"]
             ):
                 when = moment + timedelta(minutes=random.randint(delay["min"], delay["max"]))
-                if when < end:
-                    seq += 1
-                    heapq.heappush(events, (when, seq, "reversal", tx))
+                if when < self.end:
+                    self.seq += 1
+                    heapq.heappush(self.events, (when, self.seq, "reversal", tx))
+        self._forget(until)
 
         # In the order they happened: the sequence breaks ties of the same second
         history = pl.DataFrame(self.history, schema=HISTORY_SCHEMA).with_columns(
-            sequence_number=pl.int_range(1, pl.len() + 1, dtype=pl.Int64)
+            sequence_number=pl.int_range(
+                self.sequence + 1, self.sequence + pl.len() + 1, dtype=pl.Int64
+            )
         )
-        return SimulationResult(
-            transactions=mark_disputes(pl.DataFrame(answered, infer_schema_length=None)),
-            balance_history=history,
-            card_wallets=self.card_wallets.to_frame(),
+        self.sequence += history.height
+        transactions = pl.DataFrame(answered, infer_schema_length=None)
+        if transactions.height:
+            transactions = mark_disputes(transactions, self.reporting)
+        return SimulationResult(transactions=transactions, balance_history=history)
+
+    def _forget(self, before: datetime) -> None:
+        """Drop the limit counters of the days and months before `before`."""
+        day, month = before.date(), (before.year, before.month)
+        self.daily_amount = defaultdict(
+            float, {k: v for k, v in self.daily_amount.items() if k[1] >= day}
         )
+        self.daily_count = defaultdict(
+            int, {k: v for k, v in self.daily_count.items() if k[1] >= day}
+        )
+        self.monthly_amount = defaultdict(
+            float, {k: v for k, v in self.monthly_amount.items() if (k[1], k[2]) >= month}
+        )
+
+    def run(
+        self,
+        attempts: list[dict[str, Any]],
+        start: datetime,
+        end: datetime,
+        opening: dict[str, float] | None = None,
+    ) -> SimulationResult:
+        """The whole window [start, end) at once (`start`, then `advance`)."""
+        self.start(start, end, opening)
+        result = self.advance(attempts, end)
+        result.card_wallets = self.card_wallets.to_frame()
+        return result

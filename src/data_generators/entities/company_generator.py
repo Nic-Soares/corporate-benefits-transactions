@@ -88,4 +88,5 @@ class CompanyGenerator:
 
     def generate_companies_as_dataframe(self, n_companies: int) -> pl.DataFrame:
         companies = self.generate_hierarchical_companies(n_companies)
-        return pl.DataFrame([company.to_dict() for company in companies])
+        # Holdings come first, without parent: read every row for the types
+        return pl.DataFrame([company.to_dict() for company in companies], infer_schema_length=None)
