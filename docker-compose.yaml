@@ -1,3 +1,6 @@
+# Same project (and container) from any checkout or worktree
+name: corporate-benefits-transactions
+
 services:
   db:
     image: postgres:18
