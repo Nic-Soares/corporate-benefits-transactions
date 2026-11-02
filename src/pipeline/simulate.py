@@ -7,7 +7,7 @@ from datetime import date, datetime, time, timedelta
 import polars as pl
 import psycopg
 
-from src.config import load_simulation_config
+from src.config import load_simulation
 from src.entities import fake
 from src.pipeline import provenance
 from src.postgres import (
@@ -151,5 +151,5 @@ def _months(start: datetime, end: datetime) -> list[tuple[int, int]]:
 
 def simulation_defaults() -> int:
     """`simulation.days` from the config."""
-    config = load_simulation_config()
+    config = load_simulation()
     return config["simulation"]["days"]

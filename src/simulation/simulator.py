@@ -4,7 +4,7 @@ Attempts, monthly credits and reversals run in time order. A wallet activated
 in the window starts empty and gets its first credit, pro rata to the days
 left in the month, on the activation day. Some employers add a one-off
 year-end credit (`seasons.year_end_credit`). Each attempt goes
-through the validators in `validation_rules.yaml → validation_order`; the
+through the validators in `authorization.yaml → validation_order`; the
 first failure declines it with its ISO code and reason, an approval debits the
 routed card wallet. The daily amount, daily count and monthly amount of each
 wallet are tracked for the limits.
@@ -22,7 +22,7 @@ from typing import Any
 
 import polars as pl
 
-from src.config import load_simulation_config
+from src.config import load_simulation
 from src.entities import fake
 from src.simulation import seasons
 from src.simulation.balance import HISTORY_SCHEMA, credit, debit, reverse
@@ -36,7 +36,7 @@ from src.validators import status_validators as status
 from src.validators import temporal_validators as temporal
 from src.validators._common import RULES
 
-SIMULATION = load_simulation_config()["simulation"]
+SIMULATION = load_simulation()["simulation"]
 CREDIT_DAY: int = fake.SETTINGS["benefit_credit_day"]
 CREDIT_HOUR = 6
 APPROVED = "00"

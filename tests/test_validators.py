@@ -431,7 +431,7 @@ def test_capture_type_support(tx, data):
 
 def test_codes_are_documented():
     """Every code a validator can return is an ISO 8583 code described in response_codes."""
-    from src.config import load_pre_populated_data, load_validation_rules
+    from src.config import load_authorization, load_reference
 
     def codes(node):
         if isinstance(node, dict):
@@ -440,10 +440,10 @@ def test_codes_are_documented():
         elif isinstance(node, str) and len(node) == 2 and node.isdigit():
             yield node
 
-    rules = load_validation_rules()
+    rules = load_authorization()
     sections = [*rules["validation_order"], "not_found", "unknown_status"]
     used = {code for section in sections for code in codes(rules[section])}
-    described = set(load_pre_populated_data()["response_codes"])
+    described = set(load_reference()["response_codes"])
     assert used <= described, used - described
 
 

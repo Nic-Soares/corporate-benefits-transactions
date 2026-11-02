@@ -3,7 +3,7 @@
 The dataset labels every transaction with the ground truth (`is_fraud`), how
 the fraud happened (`fraud_scenario`) and whether the cardholder contested it
 (`disputed`). The scenarios follow common typologies of the Brazilian
-benefits-card market; every number is synthetic (`config/simulation_config.yaml
+benefits-card market; every number is synthetic (`config/simulation.yaml
 → fraud`). Generator: `src/simulation/fraud.py`.
 
 Fraud attempts go through the same issuer as the legit ones, so some are

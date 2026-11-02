@@ -1,5 +1,5 @@
 # =====================================
-# simulation_config.yaml
+# simulation.yaml
 # Parameters of the data generation and the transaction simulation.
 # Every number here is synthetic: shaped like a benefits-card market (lunch
 # and evening peaks, small tickets, spending that follows the credit), not
@@ -89,7 +89,7 @@ generation_settings:
   # Day of the month the monthly credit lands (balance_history 'credit')
   benefit_credit_day: 1
 
-  # Status weights (valid statuses: business_rules.yaml → status_options)
+  # Status weights (valid statuses: reference.yaml → status_options)
   company_status_distribution:
     active: 0.90
     inactive: 0.07
@@ -164,7 +164,7 @@ generation_settings:
 # =====================================
 # Establishments: what kinds exist, how many, and what they sell.
 # cnae: CNAE prefixes of the category (the MCC comes from
-#   pre_populated_data.yaml → cnae_mcc). online: sells through an e-commerce
+#   reference.yaml → cnae_mcc). online: sells through an e-commerce
 #   gateway, no physical terminal. atm: cash withdrawal.
 # names: words for the trade name (with a Brazilian surname).
 # amount: a log-normal ticket — median, 90th percentile and cap (R$).
@@ -312,9 +312,9 @@ usage_patterns:
   # Share of PIN-verified captures (CHIP, MAG_STRIPE) where the PIN is wrong
   wrong_pin_ratio: 0.02
 
-  # Capture per terminal type (codes: pre_populated_data.yaml →
+  # Capture per terminal type (codes: reference.yaml →
   # transaction_technologies). A virtual card only uses the captures that
-  # don't need the physical card (business_rules.yaml).
+  # don't need the physical card (reference.yaml).
   capture_by_terminal_type:
     POS: {CONTACTLESS: 0.50, CHIP: 0.30, GOOGLE_PAY: 0.06, APPLE_PAY: 0.04, MOBILE_NFC: 0.05, MAG_STRIPE: 0.05}
     TEF: {CHIP: 0.90, MAG_STRIPE: 0.10}

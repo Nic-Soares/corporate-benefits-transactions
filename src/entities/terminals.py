@@ -32,7 +32,7 @@ def generate_terminals(
     Args:
         establishments_df: needs `id`, `category` and `accreditation_date`
             (installation comes after it)
-        business_data: `pre_populated_data.yaml` — reads `terminal_models_by_acquirer`,
+        business_data: `reference.yaml` — reads `terminal_models_by_acquirer`,
             acquirer id → list of `{model, type}`
     """
     models_by_acquirer = business_data["terminal_models_by_acquirer"]

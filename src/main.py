@@ -28,13 +28,13 @@ def scaled(volumes: dict, scale: float) -> dict:
 
 
 def setup(args: argparse.Namespace) -> int:
-    from src.config import load_simulation_config
+    from src.config import load_simulation
     from src.pipeline.setup import SetupError, run_setup
     from src.postgres import connect_pg_db
     from src.sources import fetch_sources
 
     sources = fetch_sources()
-    volumes = scaled(load_simulation_config()["data_volumes"], args.scale)
+    volumes = scaled(load_simulation()["data_volumes"], args.scale)
     with connect_pg_db() as conn:
         try:
             counts = run_setup(conn, sources, volumes, args.seed, args.today, args.reset)

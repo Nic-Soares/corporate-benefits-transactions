@@ -3,11 +3,11 @@ from datetime import date, timedelta
 
 import polars as pl
 
-from src.config import load_pre_populated_data
+from src.config import load_reference
 from src.entities import fake
 
 WALLETS_BY_PROGRAM = {
-    program["id"]: program["wallets"] for program in load_pre_populated_data()["card_programs"]
+    program["id"]: program["wallets"] for program in load_reference()["card_programs"]
 }
 WALLET_SETTINGS: dict[str, dict] = fake.SETTINGS["wallets"]
 
