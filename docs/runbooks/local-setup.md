@@ -72,6 +72,19 @@ uv run python -m src.main etl   # DuckDB star schema from the OLTP database
 (git-ignored) every run. Open it with `duckdb` or Python and start from the
 views: `SELECT * FROM v_declines`.
 
+```bash
+uv run python -m src.main export   # quality checks, then data/final_datasets/
+```
+
+`export` writes one Parquet file per table, `data_dictionary.md` and
+`quality_report.md` into `data/final_datasets/` (git-ignored). If a check
+fails it writes nothing and names the check. After changing
+`database/olap_duck/dictionary.yaml`, regenerate the copy in `docs/`:
+
+```bash
+uv run python -c "from src.pipeline.export import render_dictionary; open('docs/data-dictionary.md', 'w').write(render_dictionary())"
+```
+
 ## 5. Network sources (optional)
 
 ```bash
@@ -103,4 +116,6 @@ rm -f database/olap_duck/olap_corporate_benefits.duckdb
 | `The database already has transactions` | `simulate` ran before | `setup --reset`, then `simulate` |
 | `--today … is before the generated data` | `simulate` got a different `--today` than `setup` | Use `setup`'s `--today` |
 | `server closed the connection unexpectedly` right after `up` | Postgres still initializing | `docker compose up -d --wait` |
+| `Quality checks failed: …` on `export` | The data breaks a rule (the message names it) | Look at that check's query in `src/pipeline/export.py`; a rate out of range usually means a config change |
+| `No OLAP database` on `export` | `etl` didn't run | `uv run python -m src.main etl` |
 | A source fails to download | No network, or the API is down | Run again later; once in `data/raw/` it isn't downloaded again |

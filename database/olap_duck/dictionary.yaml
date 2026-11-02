@@ -1,0 +1,182 @@
+# Data dictionary of the exported dataset: one line per table and column.
+# tests/test_export.py checks it covers every OLAP column; the export renders
+# it as data_dictionary.md (docs/data-dictionary.md keeps a copy).
+
+fact_transactions:
+  description: "Every attempt to pay, withdraw or reverse with a benefit card, and the issuer's answer. One row per attempt."
+  columns:
+    id: "Transaction id"
+    related_transaction_id: "For a reversal, the purchase it undoes"
+    card_id: "Card used (dim_cards)"
+    cardholder_id: "Card's holder (dim_cardholders)"
+    company_id: "Cardholder's employer (dim_companies)"
+    program_id: "Card program (dim_card_programs)"
+    modality_id: "Network the card runs on: OWN (issuer's proprietary network, 3-party) or VISA, MASTERCARD, ELO (4-party)"
+    card_wallet_id: "Wallet of the card the issuer charged (dim_card_wallets); empty when none could be routed"
+    wallet_id: "Type of that wallet: FOOD, MEAL, MOBILITY, HEALTH, HOME_OFFICE, EDUCATION, GIFT, PREMIUM"
+    transaction_type: "purchase, withdrawal (cash, brand cards, GIFT wallet) or reversal"
+    wallet_option: "Proprietary network: the option picked on the terminal (FOOD, MEAL, OTHERS); empty on brand cards"
+    establishment_id: "Where (dim_establishments)"
+    terminal_id: "Terminal that captured it (dim_terminals)"
+    acquirer_id: "Terminal's acquirer (dim_acquirers)"
+    amount: "Amount in BRL"
+    date: "Date and time of the attempt"
+    capture_type: "How the card was read: CHIP, MAG_STRIPE, CONTACTLESS, MOBILE_NFC, APPLE_PAY, GOOGLE_PAY, ECOMMERCE"
+    pin_status: "ok, wrong or not_required (contactless, wallets, online)"
+    response_code: "ISO 8583 response code; 00 is approved (ref_response_codes)"
+    response_message: "Description of the response code"
+    decline_reason: "Specific cause of a decline (one ISO code covers several); empty when approved"
+    nsu: "Sequence number the terminal gave the attempt"
+    authorization_code: "Issuer's authorization code; empty when declined"
+    is_fraud: "Ground truth: made by someone other than the cardholder"
+    fraud_scenario: "How the fraud happened: account_takeover_wallet, card_not_present, intercepted_card, point_of_compromise; empty when not fraud"
+    disputed: "The cardholder contested it; true for most approved fraud and for a few legit purchases contested by mistake"
+
+fact_balance_movements:
+  description: "Every change of a wallet's balance: the monthly credit, debits of approved purchases and withdrawals, reversals. One row per movement."
+  columns:
+    id: "Movement id"
+    card_wallet_id: "Wallet of the card (dim_card_wallets)"
+    card_id: "Card (dim_cards)"
+    wallet_id: "Wallet type (dim_wallets)"
+    transaction_id: "Transaction that moved it (fact_transactions); empty for the monthly credit"
+    operation_type: "credit, purchase, withdrawal or reversal"
+    operation_amount: "Amount moved in BRL, always positive"
+    previous_balance: "Balance before the movement"
+    posterior_balance: "Balance after the movement"
+    operation_date: "Date and time of the movement"
+
+dim_card_wallets:
+  description: "Each wallet a card holds, with its monthly credit and limits."
+  columns:
+    id: "Card wallet id"
+    card_id: "Card (dim_cards)"
+    wallet_id: "Wallet type (dim_wallets)"
+    monthly_credit: "Benefit credited on the 1st of each month, BRL"
+    daily_limit: "Most that can be spent per day, BRL; 0 = no limit"
+    monthly_limit: "Most that can be spent per month, BRL; 0 = no limit"
+    daily_count_limit: "Most approved purchases per day; 0 = no limit"
+    final_balance: "Balance at the end of the simulated period"
+    activation_date: "Date the wallet was activated"
+    status: "active, suspended or cancelled"
+
+dim_cards:
+  description: "Benefit cards. The program fixes the wallets and the network."
+  columns:
+    id: "Card id"
+    cardholder_id: "Holder (dim_cardholders)"
+    program_id: "Program (dim_card_programs)"
+    modality_id: "Network: OWN or a brand (dim_transaction_modalities)"
+    card_type: "physical or virtual"
+    expiration_date: "Last day the card is valid"
+    issue_date: "Date issued"
+    status: "active, inactive (not unlocked yet), blocked or cancelled"
+
+dim_cardholders:
+  description: "Employees who hold the cards. No names or documents."
+  columns:
+    id: "Cardholder id"
+    company_id: "Employer (dim_companies)"
+    city: "Municipality where they live (IBGE name)"
+    state: "State (UF)"
+    position: "Job position"
+    department: "Department"
+    admission_date: "Date hired"
+    status: "active, inactive or terminated"
+
+dim_companies:
+  description: "Employers that give the benefits. Holdings and their branches. No CNPJ."
+  columns:
+    id: "Company id"
+    parent_id: "Holding of a branch; empty for a holding"
+    name: "Legal name (synthetic)"
+    trade_name: "Trade name (synthetic)"
+    segment: "SME (1-250 employees), Middle (251-1,999), Corporate (2,000+) or Public (government)"
+    city: "Municipality (IBGE name)"
+    state: "State (UF)"
+    status: "active, inactive or suspended"
+    registration_date: "Date registered"
+
+dim_establishments:
+  description: "Shops, online businesses and cash machines where cards are used. No CNPJ."
+  columns:
+    id: "Establishment id"
+    name: "Legal name (synthetic)"
+    trade_name: "Trade name (synthetic); says the kind of business"
+    main_cnae: "Main economic activity, CNAE 2.3 subclass (7 digits); decides the proprietary network's acceptance"
+    mcc_code: "Merchant Category Code; decides the brands' acceptance"
+    category: "Kind of place: supermarket, food_retail, restaurant, fuel, health, home_office, education, retail, ride_hailing, digital_services, atm"
+    city: "Municipality (IBGE name)"
+    state: "State (UF)"
+    status: "active, inactive, suspended or terminated"
+    accreditation_date: "Date accredited to accept the cards"
+
+dim_terminals:
+  description: "Terminals that capture the attempts."
+  columns:
+    id: "Terminal id"
+    establishment_id: "Establishment (dim_establishments)"
+    acquirer_id: "Acquirer (dim_acquirers)"
+    model: "Terminal model"
+    type: "POS, TEF, ECOMMERCE (online gateway) or ATM"
+    status: "active, inactive or maintenance"
+    installation_date: "Date installed"
+
+dim_wallets:
+  description: "Wallet types: what each balance can be spent on."
+  columns:
+    id: "Wallet id"
+    name: "Name in Portuguese"
+    category: "Beneficio (benefit) or Incentivo (incentive)"
+    active: "Enabled"
+
+dim_card_programs:
+  description: "Card programs: the wallets a card holds and the network it runs on."
+  columns:
+    id: "Program id"
+    name: "Name in Portuguese"
+    network_type: "proprietary_network (3-party) or brand (4-party)"
+    active: "Enabled"
+
+dim_transaction_modalities:
+  description: "Networks: the issuer's proprietary network and the card brands."
+  columns:
+    id: "OWN, VISA, MASTERCARD or ELO"
+    name: "Name"
+    type: "proprietary_network or brand"
+    active: "Enabled"
+
+dim_acquirers:
+  description: "Acquirers that run the terminals, and the ATM network."
+  columns:
+    id: "Acquirer id"
+    name: "Name"
+    active: "Enabled"
+
+ref_response_codes:
+  description: "ISO 8583 response codes used in the dataset."
+  columns:
+    id: "Code"
+    description: "Meaning, in Portuguese"
+
+ref_cnae_wallets:
+  description: "Proprietary network: which wallets an establishment's CNAE accepts. The longest matching prefix of the CNAE decides. Synthetic rules."
+  columns:
+    cnae_code: "CNAE prefix (class, 4 digits, or subclass, 7 digits)"
+    wallet_id: "Wallet accepted (dim_wallets)"
+    cnae_description: "Description of the CNAE code (IBGE)"
+    active: "Rule in force"
+
+ref_mcc_wallets:
+  description: "Brand cards: which wallets the issuer can charge at each MCC. GIFT takes any MCC and has no rows. Synthetic rules."
+  columns:
+    mcc_code: "Merchant Category Code"
+    wallet_id: "Wallet the issuer can charge (dim_wallets)"
+
+ref_mcc_modalities:
+  description: "Which brands accept each MCC. Synthetic rules, not the brands' official tables."
+  columns:
+    mcc_code: "Merchant Category Code"
+    modality_id: "Brand that accepts it (dim_transaction_modalities)"
+    mcc_description: "MCC description (public MCC list)"
+    active: "Rule in force"
