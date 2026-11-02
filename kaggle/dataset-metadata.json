@@ -1,0 +1,784 @@
+{
+  "id": "nicolasssoares/brazilian-benefit-card-transactions-synthetic",
+  "title": "Brazilian Benefit-Card Transactions (Synthetic)",
+  "subtitle": "5.7M benefit-card purchases answered by a simulated issuer, with fraud labels",
+  "description": "## Context\n\nIn Brazil, employers give employees benefit cards — meal (*refeição*), food (*alimentação*), mobility, multi-benefit, incentive — whose balances can only be spent on certain things. A card belongs to a **program** that fixes its **wallets** (one balance each) and its network: the issuer's **proprietary network**, where the shop's CNAE (economic activity code) decides which wallet it accepts, or a **brand** (Visa, Mastercard, Elo), where the MCC decides. Each wallet is credited every month and spent until it runs out.\n\nReal transaction data from this market isn't public. This dataset is **synthetic**: no row is real. But every row went through what a real one goes through — a simulated issuer checks the card, the cardholder, the shop, the terminal, the PIN, which wallet the shop accepts and whether there is balance, then approves or declines with an ISO 8583 response code and a specific reason. The result behaves like the market: relationships that hold, distributions that look right, business rules followed everywhere.\n\n## Content\n\nOne simulated year, **September 2025 to August 2026**, as a star schema in Parquet:\n\n| File | Rows | What it holds |\n|---|---:|---|\n| `fact_transactions.parquet` | 5,689,874 | Every purchase, withdrawal or reversal attempt and the issuer's answer |\n| `fact_balance_movements.parquet` | 5,608,434 | The ledger: monthly credits, debits and reversals, chained per wallet |\n| `dim_card_wallets.parquet` | 79,517 | Each wallet of each card: monthly credit, limits, final balance |\n| `dim_cards.parquet` | 45,847 | Cards: program, network, physical or virtual |\n| `dim_cardholders.parquet` | 34,432 | Employees: employer, municipality, admission |\n| `dim_companies.parquet` | 800 | Employers by segment (SME, Middle, Corporate, Public) and their branches |\n| `dim_establishments.parquet` | 8,000 | Shops, online businesses and cash machines: category, CNAE, MCC, municipality |\n| `dim_terminals.parquet` | 12,000 | POS, TEF, e-commerce gateways and ATMs, with their acquirer |\n| `dim_wallets`, `dim_card_programs`, `dim_transaction_modalities`, `dim_acquirers` | small | The catalogues |\n| `ref_response_codes`, `ref_program_wallets`, `ref_cnae_wallets`, `ref_mcc_wallets`, `ref_mcc_modalities` | small | The rules behind each answer: codes, which wallets a program holds, which wallet a CNAE or MCC accepts, which brand accepts an MCC |\n\nAlso included: `data_dictionary.md` (every column described), `quality_report.md` (the checks the data passed) and `dataset_metadata.json` (seed, window, code version, row counts).\n\nKey columns of `fact_transactions`: `amount` (BRL), `date`, `response_code` (`00` = approved), `decline_reason` (e.g. `insufficient_balance`, `wallet_not_accepted_at_cnae`, `wrong_pin`), `wallet_id` (the wallet the issuer charged), `capture_type`, `is_fraud`, `fraud_scenario` and `disputed`. The ids join every table; there is no CPF, CNPJ, card number or person name.\n\n## What the data looks like\n\n- **85–90% approved each month**, varying with no trend; about half the declines are for lack of balance.\n- **Spending follows the credit:** most cardholders spend their whole monthly benefit, a few let it build up; the credit lands on the 1st and spending jumps that day.\n- **Time:** restaurants peak at lunch and dip on weekends, supermarkets peak on Saturday, fuel before and after work; national holidays, Christmas Eve and Black Friday move the volume; one company in three gives a year-end credit in December.\n- **Place:** real IBGE municipalities; companies where the economy is, shops where people live; most in-person purchases in the cardholder's state.\n- **Fraud (~0.5%)** labelled by scenario — mobile wallet after an account takeover, card not present, card intercepted before delivery, skimming at a point of compromise — and **disputes**, including legit purchases contested by mistake: `is_fraud` is the truth, `disputed` is what an issuer would see.\n\n## How it was made\n\nAn open-source pipeline (Python, Polars, PostgreSQL, DuckDB) generates the world, simulates the attempts month by month in time order — balances move, daily limits count, reversals come later — and exports only if 83 quality checks and a statistical profile pass. The same seed reproduces the same dataset: [github.com/Nic-Soares/corporate-benefits-transactions](https://github.com/Nic-Soares/corporate-benefits-transactions).\n\nThe reference data is public — IBGE (CNAE, municipalities, population, municipal GDP) and the public MCC list. Every weight, balance, limit, ticket and acceptance rule is synthetic, shaped after how the Brazilian benefits market works, not taken from any company's data.\n\n## Limitations\n\n- **Synthetic rates.** Approval, decline mix, tickets and fraud share have a realistic shape but are not statistics of the real market; don't draw conclusions about it from them.\n- **Snapshot dimensions.** Each record carries its current status and the day it began (`status_since`; active before that day), not a full history of changes.\n- **One fact for attempts and reversals.** Reversals are rows of `fact_transactions` with `transaction_type = 'reversal'`, pointing to the purchase they undo; filter them out for attempt-level rates.\n- **Simplified world.** Acceptance rules, fraud scenarios and the calendar follow how the market works in broad strokes; acquirer integrations, chargebacks, fees and settlement are out of scope.\n\n## Ideas\n\n- Predict declines (and which reason) from the attempt alone\n- Fraud detection with label noise: train on `disputed`, evaluate on `is_fraud`\n- Spending and seasonality by category, segment or state\n- Data engineering: incremental loads, slowly changing dimensions (`status_since`), ledger reconciliation, dashboards\n\n## License and citation\n\n[CC BY 4.0](https://creativecommons.org/licenses/by/4.0/): use it for anything, including commercially, crediting:\n\n> Nicolas Santos, *Brazilian Benefit-Card Transactions (synthetic)*, v1.0.0, 2026. https://github.com/Nic-Soares/corporate-benefits-transactions\n",
+  "licenses": [
+    {
+      "name": "CC-BY-4.0"
+    }
+  ],
+  "keywords": [
+    "finance",
+    "banking",
+    "tabular",
+    "time series analysis",
+    "fraud detection",
+    "brazil"
+  ],
+  "resources": [
+    {
+      "path": "fact_transactions.parquet",
+      "description": "Every attempt to pay, withdraw or reverse with a benefit card, and the issuer's answer. One row per attempt.",
+      "schema": {
+        "fields": [
+          {
+            "name": "id",
+            "description": "Transaction id",
+            "type": "string"
+          },
+          {
+            "name": "related_transaction_id",
+            "description": "For a reversal, the purchase it undoes",
+            "type": "string"
+          },
+          {
+            "name": "card_id",
+            "description": "Card used (dim_cards)",
+            "type": "string"
+          },
+          {
+            "name": "cardholder_id",
+            "description": "Card's holder (dim_cardholders)",
+            "type": "string"
+          },
+          {
+            "name": "company_id",
+            "description": "Cardholder's employer (dim_companies)",
+            "type": "string"
+          },
+          {
+            "name": "program_id",
+            "description": "Card program (dim_card_programs)",
+            "type": "string"
+          },
+          {
+            "name": "modality_id",
+            "description": "Network the card runs on: OWN (issuer's proprietary network, 3-party) or VISA, MASTERCARD, ELO (4-party)",
+            "type": "string"
+          },
+          {
+            "name": "card_wallet_id",
+            "description": "Wallet of the card the issuer charged (dim_card_wallets); on a decline for balance, the wallet it would have charged; empty when the decline came before a wallet was chosen",
+            "type": "string"
+          },
+          {
+            "name": "wallet_id",
+            "description": "Type of that wallet: FOOD, MEAL, MOBILITY, HEALTH, HOME_OFFICE, EDUCATION, GIFT, PREMIUM",
+            "type": "string"
+          },
+          {
+            "name": "transaction_type",
+            "description": "purchase, withdrawal (cash, brand cards, GIFT wallet) or reversal",
+            "type": "string"
+          },
+          {
+            "name": "wallet_option",
+            "description": "Proprietary network: the option picked on the terminal (FOOD, MEAL, OTHERS); empty on brand cards",
+            "type": "string"
+          },
+          {
+            "name": "establishment_id",
+            "description": "Where (dim_establishments)",
+            "type": "string"
+          },
+          {
+            "name": "terminal_id",
+            "description": "Terminal that captured it (dim_terminals)",
+            "type": "string"
+          },
+          {
+            "name": "acquirer_id",
+            "description": "Terminal's acquirer (dim_acquirers)",
+            "type": "string"
+          },
+          {
+            "name": "amount",
+            "description": "Amount in BRL",
+            "type": "numeric"
+          },
+          {
+            "name": "date",
+            "description": "Date and time of the attempt; volume follows the week, the month, national holidays and their eves, Christmas, New Year's Eve and Black Friday",
+            "type": "datetime"
+          },
+          {
+            "name": "capture_type",
+            "description": "How the card was read: CHIP, MAG_STRIPE, CONTACTLESS, MOBILE_NFC, APPLE_PAY, GOOGLE_PAY, ECOMMERCE",
+            "type": "string"
+          },
+          {
+            "name": "pin_status",
+            "description": "ok, wrong or not_required (contactless, wallets, online)",
+            "type": "string"
+          },
+          {
+            "name": "response_code",
+            "description": "ISO 8583 response code; 00 is approved (ref_response_codes)",
+            "type": "string"
+          },
+          {
+            "name": "response_message",
+            "description": "Description of the response code",
+            "type": "string"
+          },
+          {
+            "name": "decline_reason",
+            "description": "Specific cause of a decline (one ISO code covers several); empty when approved",
+            "type": "string"
+          },
+          {
+            "name": "nsu",
+            "description": "Sequence number the terminal gave the attempt",
+            "type": "string"
+          },
+          {
+            "name": "authorization_code",
+            "description": "Issuer's authorization code; empty when declined",
+            "type": "string"
+          },
+          {
+            "name": "is_fraud",
+            "description": "Ground truth: made by someone other than the cardholder",
+            "type": "boolean"
+          },
+          {
+            "name": "fraud_scenario",
+            "description": "How the fraud happened: account_takeover_wallet, card_not_present, intercepted_card, point_of_compromise; empty when not fraud",
+            "type": "string"
+          },
+          {
+            "name": "disputed",
+            "description": "The cardholder contested it; true for most approved fraud and for a few legit purchases contested by mistake",
+            "type": "boolean"
+          }
+        ]
+      }
+    },
+    {
+      "path": "fact_balance_movements.parquet",
+      "description": "Every change of a wallet's balance: the monthly credit, debits of approved purchases and withdrawals, reversals. One row per movement.",
+      "schema": {
+        "fields": [
+          {
+            "name": "id",
+            "description": "Movement id",
+            "type": "string"
+          },
+          {
+            "name": "card_wallet_id",
+            "description": "Wallet of the card (dim_card_wallets)",
+            "type": "string"
+          },
+          {
+            "name": "card_id",
+            "description": "Card (dim_cards)",
+            "type": "string"
+          },
+          {
+            "name": "wallet_id",
+            "description": "Wallet type (dim_wallets)",
+            "type": "string"
+          },
+          {
+            "name": "transaction_id",
+            "description": "Transaction that moved it (fact_transactions); empty for the monthly credit",
+            "type": "string"
+          },
+          {
+            "name": "operation_type",
+            "description": "credit (the monthly benefit; the first, pro rata, on activation; a year-end extra some employers give on 10 December), purchase, withdrawal or reversal",
+            "type": "string"
+          },
+          {
+            "name": "operation_amount",
+            "description": "Amount moved in BRL, always positive",
+            "type": "numeric"
+          },
+          {
+            "name": "previous_balance",
+            "description": "Balance before the movement",
+            "type": "numeric"
+          },
+          {
+            "name": "posterior_balance",
+            "description": "Balance after the movement",
+            "type": "numeric"
+          },
+          {
+            "name": "operation_date",
+            "description": "Date and time of the movement",
+            "type": "datetime"
+          },
+          {
+            "name": "sequence_number",
+            "description": "Order of the movements, 1 = first; breaks ties of movements at the same second",
+            "type": "integer"
+          }
+        ]
+      }
+    },
+    {
+      "path": "dim_card_wallets.parquet",
+      "description": "Each wallet a card holds, with its monthly credit and limits. The employer picks, per program, which of the program's wallets (ref_program_wallets) its employees get.",
+      "schema": {
+        "fields": [
+          {
+            "name": "id",
+            "description": "Card wallet id",
+            "type": "string"
+          },
+          {
+            "name": "card_id",
+            "description": "Card (dim_cards)",
+            "type": "string"
+          },
+          {
+            "name": "wallet_id",
+            "description": "Wallet type (dim_wallets)",
+            "type": "string"
+          },
+          {
+            "name": "monthly_credit",
+            "description": "Benefit credited on the 1st of each month, BRL; a wallet activated in the period first gets a share of it, pro rata to the days left in that month, on the activation day",
+            "type": "numeric"
+          },
+          {
+            "name": "daily_limit",
+            "description": "Most that can be spent per day, BRL; 0 = no limit",
+            "type": "numeric"
+          },
+          {
+            "name": "monthly_limit",
+            "description": "Most that can be spent per month, BRL; 0 = no limit",
+            "type": "numeric"
+          },
+          {
+            "name": "daily_count_limit",
+            "description": "Most approved purchases per day; 0 = no limit",
+            "type": "integer"
+          },
+          {
+            "name": "final_balance",
+            "description": "Balance at the end of the simulated period",
+            "type": "numeric"
+          },
+          {
+            "name": "activation_date",
+            "description": "Date the wallet was activated, a few days after the card's issue",
+            "type": "datetime"
+          },
+          {
+            "name": "status",
+            "description": "active, suspended or cancelled",
+            "type": "string"
+          },
+          {
+            "name": "status_since",
+            "description": "Date the current status began; the wallet was active before it",
+            "type": "datetime"
+          }
+        ]
+      }
+    },
+    {
+      "path": "dim_cards.parquet",
+      "description": "Benefit cards. The program fixes the wallets and the network.",
+      "schema": {
+        "fields": [
+          {
+            "name": "id",
+            "description": "Card id",
+            "type": "string"
+          },
+          {
+            "name": "cardholder_id",
+            "description": "Holder (dim_cardholders)",
+            "type": "string"
+          },
+          {
+            "name": "program_id",
+            "description": "Program (dim_card_programs)",
+            "type": "string"
+          },
+          {
+            "name": "modality_id",
+            "description": "Network: OWN or a brand (dim_transaction_modalities)",
+            "type": "string"
+          },
+          {
+            "name": "card_type",
+            "description": "physical or virtual",
+            "type": "string"
+          },
+          {
+            "name": "expiration_date",
+            "description": "Last day of the current plastic; a card is renewed on expiry and keeps its id",
+            "type": "datetime"
+          },
+          {
+            "name": "issue_date",
+            "description": "Date first issued, a few days after the cardholder's admission",
+            "type": "datetime"
+          },
+          {
+            "name": "status",
+            "description": "active, inactive (not unlocked yet), blocked or cancelled",
+            "type": "string"
+          },
+          {
+            "name": "status_since",
+            "description": "Date the current status began; the card was active before it (an inactive card never was: since its issue)",
+            "type": "datetime"
+          }
+        ]
+      }
+    },
+    {
+      "path": "dim_cardholders.parquet",
+      "description": "Employees who hold the cards. No names or documents.",
+      "schema": {
+        "fields": [
+          {
+            "name": "id",
+            "description": "Cardholder id",
+            "type": "string"
+          },
+          {
+            "name": "company_id",
+            "description": "Employer (dim_companies)",
+            "type": "string"
+          },
+          {
+            "name": "city",
+            "description": "Municipality where they live (IBGE name)",
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "description": "State (UF)",
+            "type": "string"
+          },
+          {
+            "name": "position",
+            "description": "Job position",
+            "type": "string"
+          },
+          {
+            "name": "department",
+            "description": "Department",
+            "type": "string"
+          },
+          {
+            "name": "admission_date",
+            "description": "Date hired",
+            "type": "datetime"
+          },
+          {
+            "name": "status",
+            "description": "active, inactive or terminated",
+            "type": "string"
+          },
+          {
+            "name": "status_since",
+            "description": "Date the current status began; the cardholder was active before it",
+            "type": "datetime"
+          }
+        ]
+      }
+    },
+    {
+      "path": "dim_companies.parquet",
+      "description": "Employers that give the benefits. Holdings and their branches. No CNPJ.",
+      "schema": {
+        "fields": [
+          {
+            "name": "id",
+            "description": "Company id",
+            "type": "string"
+          },
+          {
+            "name": "parent_id",
+            "description": "Holding of a branch; empty for a holding",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "description": "Legal name (synthetic)",
+            "type": "string"
+          },
+          {
+            "name": "trade_name",
+            "description": "Trade name (synthetic)",
+            "type": "string"
+          },
+          {
+            "name": "segment",
+            "description": "Size of the employer: SME (1-250 employees), Middle (251-1,999), Corporate (2,000+) or Public (government). The dataset holds a sample of each company's cardholders, not its whole headcount",
+            "type": "string"
+          },
+          {
+            "name": "city",
+            "description": "Municipality (IBGE name)",
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "description": "State (UF)",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "description": "active, inactive or suspended",
+            "type": "string"
+          },
+          {
+            "name": "registration_date",
+            "description": "Date registered",
+            "type": "datetime"
+          }
+        ]
+      }
+    },
+    {
+      "path": "dim_establishments.parquet",
+      "description": "Shops, online businesses and cash machines where cards are used. No CNPJ.",
+      "schema": {
+        "fields": [
+          {
+            "name": "id",
+            "description": "Establishment id",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "description": "Legal name (synthetic)",
+            "type": "string"
+          },
+          {
+            "name": "trade_name",
+            "description": "Trade name (synthetic); says the kind of business",
+            "type": "string"
+          },
+          {
+            "name": "main_cnae",
+            "description": "Main economic activity, CNAE 2.3 subclass (7 digits); decides the proprietary network's acceptance",
+            "type": "string"
+          },
+          {
+            "name": "mcc_code",
+            "description": "Merchant Category Code; decides the brands' acceptance",
+            "type": "string"
+          },
+          {
+            "name": "category",
+            "description": "Kind of place: supermarket, food_retail, restaurant, fuel, health, home_office, education, retail, ride_hailing, digital_services, atm",
+            "type": "string"
+          },
+          {
+            "name": "city",
+            "description": "Municipality (IBGE name)",
+            "type": "string"
+          },
+          {
+            "name": "state",
+            "description": "State (UF)",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "description": "active, inactive, suspended or terminated",
+            "type": "string"
+          },
+          {
+            "name": "status_since",
+            "description": "Date the current status began; the establishment was active before it",
+            "type": "datetime"
+          },
+          {
+            "name": "accreditation_date",
+            "description": "Date accredited to accept the cards",
+            "type": "datetime"
+          }
+        ]
+      }
+    },
+    {
+      "path": "dim_terminals.parquet",
+      "description": "Terminals that capture the attempts.",
+      "schema": {
+        "fields": [
+          {
+            "name": "id",
+            "description": "Terminal id",
+            "type": "string"
+          },
+          {
+            "name": "establishment_id",
+            "description": "Establishment (dim_establishments)",
+            "type": "string"
+          },
+          {
+            "name": "acquirer_id",
+            "description": "Acquirer (dim_acquirers)",
+            "type": "string"
+          },
+          {
+            "name": "model",
+            "description": "Terminal model",
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "POS, TEF, ECOMMERCE (online gateway) or ATM",
+            "type": "string"
+          },
+          {
+            "name": "status",
+            "description": "active, inactive or maintenance",
+            "type": "string"
+          },
+          {
+            "name": "status_since",
+            "description": "Date the current status began; the terminal was active before it",
+            "type": "datetime"
+          },
+          {
+            "name": "installation_date",
+            "description": "Date installed",
+            "type": "datetime"
+          }
+        ]
+      }
+    },
+    {
+      "path": "dim_wallets.parquet",
+      "description": "Wallet types: what each balance can be spent on.",
+      "schema": {
+        "fields": [
+          {
+            "name": "id",
+            "description": "Wallet id",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "description": "Name in Portuguese",
+            "type": "string"
+          },
+          {
+            "name": "category",
+            "description": "Beneficio (benefit) or Incentivo (incentive)",
+            "type": "string"
+          },
+          {
+            "name": "active",
+            "description": "Enabled",
+            "type": "boolean"
+          }
+        ]
+      }
+    },
+    {
+      "path": "dim_card_programs.parquet",
+      "description": "Card programs: the wallets a card holds and the network it runs on.",
+      "schema": {
+        "fields": [
+          {
+            "name": "id",
+            "description": "Program id",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "description": "Name in Portuguese",
+            "type": "string"
+          },
+          {
+            "name": "network_type",
+            "description": "proprietary_network (3-party) or brand (4-party)",
+            "type": "string"
+          },
+          {
+            "name": "active",
+            "description": "Enabled",
+            "type": "boolean"
+          }
+        ]
+      }
+    },
+    {
+      "path": "dim_transaction_modalities.parquet",
+      "description": "Networks: the issuer's proprietary network and the card brands.",
+      "schema": {
+        "fields": [
+          {
+            "name": "id",
+            "description": "OWN, VISA, MASTERCARD or ELO",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "description": "Name",
+            "type": "string"
+          },
+          {
+            "name": "type",
+            "description": "proprietary_network or brand",
+            "type": "string"
+          },
+          {
+            "name": "active",
+            "description": "Enabled",
+            "type": "boolean"
+          }
+        ]
+      }
+    },
+    {
+      "path": "dim_acquirers.parquet",
+      "description": "Acquirers that run the terminals, and the ATM network.",
+      "schema": {
+        "fields": [
+          {
+            "name": "id",
+            "description": "Acquirer id",
+            "type": "string"
+          },
+          {
+            "name": "name",
+            "description": "Name",
+            "type": "string"
+          },
+          {
+            "name": "active",
+            "description": "Enabled",
+            "type": "boolean"
+          }
+        ]
+      }
+    },
+    {
+      "path": "ref_response_codes.parquet",
+      "description": "ISO 8583 response codes used in the dataset.",
+      "schema": {
+        "fields": [
+          {
+            "name": "id",
+            "description": "Code",
+            "type": "string"
+          },
+          {
+            "name": "description",
+            "description": "Meaning, in Portuguese",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "path": "ref_program_wallets.parquet",
+      "description": "Wallets each card program allows. A multi-benefit card holds the ones its employer picked out of these.",
+      "schema": {
+        "fields": [
+          {
+            "name": "program_id",
+            "description": "Program (dim_card_programs)",
+            "type": "string"
+          },
+          {
+            "name": "wallet_id",
+            "description": "Wallet the program allows (dim_wallets)",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "path": "ref_cnae_wallets.parquet",
+      "description": "Proprietary network: which wallets an establishment's CNAE accepts. The longest matching prefix of the CNAE decides. Synthetic rules.",
+      "schema": {
+        "fields": [
+          {
+            "name": "cnae_code",
+            "description": "CNAE prefix (class, 4 digits, or subclass, 7 digits)",
+            "type": "string"
+          },
+          {
+            "name": "wallet_id",
+            "description": "Wallet accepted (dim_wallets)",
+            "type": "string"
+          },
+          {
+            "name": "cnae_description",
+            "description": "Description of the CNAE code (IBGE)",
+            "type": "string"
+          },
+          {
+            "name": "active",
+            "description": "Rule in force",
+            "type": "boolean"
+          }
+        ]
+      }
+    },
+    {
+      "path": "ref_mcc_wallets.parquet",
+      "description": "Brand cards: which wallets the issuer can charge at each MCC. GIFT takes any MCC and has no rows. Synthetic rules.",
+      "schema": {
+        "fields": [
+          {
+            "name": "mcc_code",
+            "description": "Merchant Category Code",
+            "type": "string"
+          },
+          {
+            "name": "wallet_id",
+            "description": "Wallet the issuer can charge (dim_wallets)",
+            "type": "string"
+          }
+        ]
+      }
+    },
+    {
+      "path": "ref_mcc_modalities.parquet",
+      "description": "Which brands accept each MCC. Synthetic rules, not the brands' official tables.",
+      "schema": {
+        "fields": [
+          {
+            "name": "mcc_code",
+            "description": "Merchant Category Code",
+            "type": "string"
+          },
+          {
+            "name": "modality_id",
+            "description": "Brand that accepts it (dim_transaction_modalities)",
+            "type": "string"
+          },
+          {
+            "name": "mcc_description",
+            "description": "MCC description (public MCC list)",
+            "type": "string"
+          },
+          {
+            "name": "active",
+            "description": "Rule in force",
+            "type": "boolean"
+          }
+        ]
+      }
+    },
+    {
+      "path": "data_dictionary.md",
+      "description": "Every table and column, with its type and meaning"
+    },
+    {
+      "path": "quality_report.md",
+      "description": "The checks the data passed before export and its statistical profile (monthly approval, tickets, hours, geography)"
+    },
+    {
+      "path": "dataset_metadata.json",
+      "description": "How the data was made: seed, window, code commit, config and source hashes, row counts"
+    }
+  ]
+}

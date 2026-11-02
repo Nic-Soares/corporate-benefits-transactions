@@ -13,6 +13,9 @@ What goes on the Kaggle dataset page, and how to publish a new version.
 | Tags | finance, banking, tabular, time series analysis, fraud detection, brazil |
 | Files | everything in `data/dataset/` except `.gitkeep` (17 Parquet, `data_dictionary.md`, `quality_report.md`, `dataset_metadata.json`) |
 | Notebook | `getting-started.ipynb`, attached to the dataset |
+| Metadata | `dataset-metadata.json`: the fields above plus a description of every file and column, from `database/olap/dictionary.yaml` (`uvx kaggle datasets metadata --update -p kaggle nicolasssoares/brazilian-benefit-card-transactions-synthetic`) |
+| Dataset | https://www.kaggle.com/datasets/nicolasssoares/brazilian-benefit-card-transactions-synthetic |
+| Notebook URL | https://www.kaggle.com/code/nicolasssoares/getting-started-brazilian-benefit-card-transactio |
 
 ## A new version
 
