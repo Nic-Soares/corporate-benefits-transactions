@@ -447,7 +447,7 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] Fraudsters don't give up after a balance decline, pick shops the card works at, and are never reversed
 - [x] Brazilian company and shop names from surnames, activity and legal type (mimesis pt-BR returned real companies' names); the shop's trade name says its business
 - [x] Done earlier: MCC drawn from the CNAE (`ST-06.5`)
-- [ ] Idea, not done: acquirer × network acceptance (an acquirer takes the proprietary network only once integrated with it); blocking the card after a dispute
+- [ ] Idea, not done: acquirer × network acceptance (an acquirer takes the proprietary network only once integrated with it). Blocking the card after a dispute dropped: the dataset is not an anti-fraud system
 
 ### ST-08.4 — Spending follows the credit (2026-11-01, ADR-013)
 
