@@ -15,7 +15,7 @@
 | `EP-04` Config and model consistency | ✅ Done — merged into `develop` 2026-10-30 | `config/`, `database/` |
 | `EP-05` Documentation | ✅ Done — merged into `develop` 2026-10-30 | `README.md`, `docs/` |
 | `EP-06` Transaction core review | ✅ Done — merged into `develop` 2026-10-31 (ADR-007, 008, 009) | `docs/`, then `config/`, `database/`, `src/` |
-| `EP-07` Setup pipeline (reference data + entities) | ✅ Done — merged into `develop` 2026-10-31 | code (`src/main.py`, `src/processors/`) |
+| `EP-07` Setup pipeline (reference data + entities) | ✅ Done — merged into `develop` 2026-10-31; ST-07.5 2026-11-01 (ADR-018) | code (`src/main.py`, `src/processors/`) |
 | `EP-08` Transaction simulator | ✅ Done — merged into `develop` 2026-11-01 (ADR-010, 011, 013, 015, 016, 017) | code (`src/processors/transaction_simulator.py`) |
 | `EP-09` OLAP: Postgres → DuckDB | ✅ Done — merged into `develop` 2026-11-01 (ADR-012) | code + `database/olap_duck/` |
 | `EP-10` Dataset export and quality | ✅ Done — merged into `develop` 2026-11-01 (ADR-014) | code + `data/final_datasets/` |
@@ -400,6 +400,14 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] CNAE from the official IBGE API instead of a Kaggle copy; `kagglehub` and the downloader removed
 - [x] Municipalities weighted by the IBGE population estimate (table 6579); 80% of cardholders live in their company's city
 - [x] Sources and what is synthetic listed in the README (`mcc_acceptance_rules` marked synthetic: the brands don't publish their tables)
+
+---
+
+### ST-07.5 — Company geography (2026-11-01, ADR-018)
+
+- [x] Companies drawn by IBGE municipal GDP (`src/extractors/ibge_gdp.py`); establishments stay by population
+- [x] Share of cardholders in the company's city per segment (`company_segments.*.same_city`): SME 90% to Corporate 35%
+- [x] Result (seeds 42 and 7): São Paulo 21–24% of the transactions, then Rio de Janeiro and Minas Gerais
 
 ---
 
