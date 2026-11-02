@@ -44,7 +44,7 @@ Every record is synthetic. The generators draw on public reference data, version
 | Municipal GDP | [IBGE aggregates API](https://servicodados.ibge.gov.br/api/docs/agregados), table 5938, official | Weighting municipalities: companies where the economy is |
 | Merchant Category Codes | [greggles/mcc-codes](https://github.com/greggles/mcc-codes) (Unlicense), compiled from the card brands' public manuals; the ISO 18245 list itself isn't free | MCC codes and descriptions |
 
-**Synthetic by design:** which brand accepts each MCC (`validation_rules.yaml → mcc_acceptance_rules`), which wallet each CNAE and MCC takes, the CNAE → MCC mapping, and every weight, balance, limit and ticket in `config/simulation_config.yaml`. They follow how the Brazilian benefits market works, not any company's data.
+**Synthetic by design:** which brand accepts each MCC (`reference.yaml → mcc_acceptance_rules`), which wallet each CNAE and MCC takes, the CNAE → MCC mapping, and every weight, balance, limit and ticket in `config/simulation.yaml`. They follow how the Brazilian benefits market works, not any company's data.
 
 ## How it works
 
@@ -56,8 +56,8 @@ generators (seeded) ──► entities ──┤
 transactions ──► validators ───────┘   approved / declined with a response code
 ```
 
-- **Generators** (`src/data_generators/`) create companies (by segment and size), cardholders, cards (the programs the company contracts, with their wallets), establishments (CNAE and the matching MCC) and terminals (POS, TEF, e-commerce gateway, ATM) with real IBGE municipalities, statuses weighted as configured, and dates that follow their parent records; then purchase attempts with the usage patterns in `config/simulation_config.yaml`. One seed reproduces a whole run.
-- **Validators** (`src/validators/`) check status, dates, PIN, network rules and wallet routing (CNAE for the proprietary network, MCC for brands), balance and limits (amount and purchases per day), and capture technology. Each returns the ISO 8583 code configured in `config/validation_rules.yaml` and a `decline_reason`.
+- **Generators** (`src/data_generators/`) create companies (by segment and size), cardholders, cards (the programs the company contracts, with their wallets), establishments (CNAE and the matching MCC) and terminals (POS, TEF, e-commerce gateway, ATM) with real IBGE municipalities, statuses weighted as configured, and dates that follow their parent records; then purchase attempts with the usage patterns in `config/simulation.yaml`. One seed reproduces a whole run.
+- **Validators** (`src/validators/`) check status, dates, PIN, network rules and wallet routing (CNAE for the proprietary network, MCC for brands), balance and limits (amount and purchases per day), and capture technology. Each returns the ISO 8583 code configured in `config/authorization.yaml` and a `decline_reason`.
 - **Config** (`config/`) is the source of truth for business rules; the **OLTP schema** is the source of truth for table and column names.
 
 Architecture: [`docs/technical-architecture.md`](docs/technical-architecture.md). Decisions: [`docs/adr/`](docs/adr/).

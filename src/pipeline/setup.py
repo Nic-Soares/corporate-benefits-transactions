@@ -7,7 +7,7 @@ from datetime import date
 import polars as pl
 import psycopg
 
-from src.config import ROOT, load_database, load_pre_populated_data
+from src.config import ROOT, load_database, load_reference
 from src.entities import fake
 from src.entities.card_wallets import generate_card_wallets
 from src.entities.cardholders import CardholderGenerator
@@ -34,7 +34,7 @@ ENTITY_TABLES = ["companies", "cardholders", "cards", "card_wallets", "establish
 def build_entities(
     volumes: dict, municipios: pl.DataFrame, cnae: pl.DataFrame
 ) -> dict[str, pl.DataFrame]:
-    """Every entity table at `volumes` (`simulation_config.yaml → data_volumes`)."""
+    """Every entity table at `volumes` (`simulation.yaml → data_volumes`)."""
     companies = CompanyGenerator(municipios).generate_companies_as_dataframe(volumes["companies"])
     cardholders = CardholderGenerator(municipios).generate_cardholders_as_dataframe(
         companies, scale=volumes["cardholder_scale"]
@@ -47,9 +47,7 @@ def build_entities(
         "cards": cards,
         "card_wallets": generate_card_wallets(cards, cardholders),
         "establishments": establishments,
-        "terminals": generate_terminals(
-            volumes["terminals"], establishments, load_pre_populated_data()
-        ),
+        "terminals": generate_terminals(volumes["terminals"], establishments, load_reference()),
     }
 
 

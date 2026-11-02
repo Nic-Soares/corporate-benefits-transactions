@@ -1,7 +1,7 @@
 import polars as pl
 import pytest
 
-from src.config import load_pre_populated_data
+from src.config import load_reference
 from src.entities.card_wallets import generate_card_wallets
 from src.entities.cardholders import CardholderGenerator
 from src.entities.cards import CardGenerator
@@ -11,7 +11,7 @@ from src.entities.terminals import generate_terminals
 from src.simulation.generator import TransactionGenerator
 from src.sources import Sources
 
-REFERENCE = load_pre_populated_data()
+REFERENCE = load_reference()
 
 
 @pytest.fixture(scope="session")

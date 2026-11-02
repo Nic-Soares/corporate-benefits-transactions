@@ -5,7 +5,7 @@ import polars as pl
 
 from src.entities import fake
 
-# Segment → {weight, cardholders: {min, max}} (simulation_config.yaml)
+# Segment → {weight, cardholders: {min, max}} (simulation.yaml)
 COMPANY_SEGMENTS: dict[str, dict] = fake.SETTINGS["company_segments"]
 
 

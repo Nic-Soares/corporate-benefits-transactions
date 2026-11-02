@@ -16,16 +16,16 @@ from itertools import accumulate
 
 import polars as pl
 
-from src.config import load_pre_populated_data, load_simulation_config
+from src.config import load_reference, load_simulation
 from src.domain.acceptance import OPEN_WALLET, Acceptance
 from src.domain.status import earliest, out_from
 from src.entities import fake
 from src.entities.establishments import CATEGORIES
 from src.simulation import seasons
 
-USAGE = load_simulation_config()["usage_patterns"]
+USAGE = load_simulation()["usage_patterns"]
 ACCEPTANCE = Acceptance.from_config()
-_REFERENCE = load_pre_populated_data()
+_REFERENCE = load_reference()
 PROPRIETARY_MODALITIES = {
     m["id"] for m in _REFERENCE["transaction_modalities"] if m["type"] == "proprietary_network"
 }

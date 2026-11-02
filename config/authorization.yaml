@@ -1,0 +1,185 @@
+# =====================================
+# authorization.yaml
+# The issuer's authorization rules
+# Every check that approves or declines a transaction (src/validators/).
+# error_code: the ISO 8583 response code returned to the terminal
+#   (reference.yaml → response_codes). The validator also returns a
+#   specific reason (transactions.decline_reason), since one ISO code covers
+#   several causes.
+# =====================================
+
+# Order the validation groups run in; the first failure declines
+validation_order:
+  - "status_validations"
+  - "temporal_validations"
+  - "security_validations"
+  - "business_rules_validations"
+  - "balance_and_limits_validations"
+  - "infrastructure_validations"
+
+# =====================================
+# Status validations
+# =====================================
+status_validations:
+  card_status:
+    description: "Card must be active"
+    required_value: "active"
+    error_codes:
+      inactive: "78"    # not unlocked yet
+      blocked: "62"     # restricted card
+      cancelled: "46"   # closed account
+
+  cardholder_status:
+    description: "Cardholder must be active"
+    required_value: "active"
+    error_codes:
+      inactive: "62"
+      terminated: "62"
+
+  establishment_status:
+    description: "Establishment must be active"
+    required_value: "active"
+    error_codes:
+      inactive: "03"
+      suspended: "03"
+      terminated: "03"
+
+  terminal_status:
+    description: "Terminal must be active"
+    required_value: "active"
+    error_codes:
+      inactive: "58"
+      maintenance: "58"
+
+  modality_active:
+    description: "Modality must be enabled"
+    error_codes:
+      false: "57"
+
+  acquirer_active:
+    description: "Acquirer must be enabled"
+    error_codes:
+      false: "58"
+
+# =====================================
+# Temporal validations
+# =====================================
+temporal_validations:
+  card_expiration:
+    description: "Card must not be expired"
+    rule: "transaction_date <= expiration_date"
+    error_code: "54"
+
+  cardholder_admission:
+    description: "Cardholder must already be hired"
+    rule: "transaction_date >= admission_date"
+    error_code: "62"
+
+  establishment_accreditation:
+    description: "Establishment must already be accredited"
+    rule: "transaction_date >= accreditation_date"
+    error_code: "03"
+
+  terminal_installation:
+    description: "Terminal must already be installed"
+    rule: "transaction_date >= installation_date"
+    error_code: "58"
+
+# =====================================
+# Security validations
+# =====================================
+security_validations:
+  pin:
+    description: "The PIN must be right when the capture asks for one"
+    # transactions.pin_status: "ok", "wrong" or "not_required"
+    error_code: "55"
+
+# =====================================
+# Business-rule validations: where each wallet can be used
+# =====================================
+business_rules_validations:
+  mcc_brand:
+    description: "Brand network: the brand accepts the establishment's MCC"
+    applies_to: "brand"
+    validation:
+      - "MCC × brand exists in mcc_modalities"
+      - "mcc_modalities.active = true"
+    error_code: "57"
+
+  wallet_routing:
+    description: "The issuer picks the wallet to charge"
+    # Candidates, in order: the wallets the card holds, active (card wallet
+    # and wallet), accepted at the establishment, with enough balance; the
+    # first wins. Accepted: proprietary network — the establishment's CNAE
+    # (longest prefix in cnae_wallets, active rule); brand — the MCC
+    # (mcc_wallets; GIFT takes any MCC). No candidate → 57; candidates
+    # without enough balance → 51.
+    #
+    # Proprietary network: the cardholder picks an option on the terminal
+    # and the issuer routes inside it.
+    proprietary_options:
+      FOOD: ["FOOD"]
+      MEAL: ["MEAL"]
+      OTHERS: ["MOBILITY", "HEALTH", "HOME_OFFICE", "EDUCATION", "GIFT", "PREMIUM"]
+    # Brand network: the issuer routes by MCC in this order
+    wallet_priority: ["MEAL", "FOOD", "MOBILITY", "HEALTH", "HOME_OFFICE", "EDUCATION", "GIFT"]
+    # Cash withdrawal: brand cards only, from these wallets
+    withdrawal_wallets: ["GIFT"]
+    error_code: "57"
+
+# =====================================
+# Balance and limit validations
+# =====================================
+balance_and_limits_validations:
+  current_balance:
+    description: "Enough balance on the wallet"
+    rule: "current_balance >= transaction_amount"
+    error_code: "51"
+
+  daily_limit:
+    description: "Daily limit not exceeded"
+    rule: "daily_usage + transaction_amount <= daily_limit"
+    condition: "daily_limit > 0"  # a limit of 0 means no limit
+    error_code: "61"
+
+  monthly_limit:
+    description: "Monthly limit not exceeded"
+    rule: "monthly_usage + transaction_amount <= monthly_limit"
+    condition: "monthly_limit > 0"  # a limit of 0 means no limit
+    error_code: "61"
+
+  daily_count_limit:
+    description: "Purchases per day on the wallet not exceeded"
+    rule: "daily_count + 1 <= daily_count_limit"
+    condition: "daily_count_limit > 0"  # 0 means no limit
+    error_code: "65"
+
+# =====================================
+# Infrastructure validations
+# =====================================
+infrastructure_validations:
+  capture_type_support:
+    description: "The terminal type must support the capture technology"
+    # transactions.capture_type holds a code from reference.yaml → transaction_technologies
+    supported_by_terminal_type:
+      POS: ["CHIP", "MAG_STRIPE", "CONTACTLESS", "MOBILE_NFC", "APPLE_PAY", "GOOGLE_PAY"]
+      TEF: ["CHIP", "MAG_STRIPE"]
+      ECOMMERCE: ["ECOMMERCE"]
+      ATM: ["CHIP"]
+    error_code: "58"
+
+# =====================================
+# A referenced record is missing
+# (the schema's foreign keys prevent it; guards against inconsistent data)
+# =====================================
+not_found:
+  card: "14"
+  cardholder: "14"
+  card_wallet: "57"   # the card doesn't hold the wallet
+  modality: "15"
+  establishment: "03"
+  terminal: "58"
+  acquirer: "92"
+
+# A status missing from the rule's error_codes
+unknown_status: "96"

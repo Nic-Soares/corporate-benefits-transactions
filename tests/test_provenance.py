@@ -33,8 +33,8 @@ def test_another_config_folder(tmp_path):
 
     shutil.copytree(CONFIG_DIR, tmp_path / "cfg")
     code = (
-        "from src.config import CONFIG_DIR, load_simulation_config;"
-        "print(CONFIG_DIR, load_simulation_config()['data_volumes']['companies'])"
+        "from src.config import CONFIG_DIR, load_simulation;"
+        "print(CONFIG_DIR, load_simulation()['data_volumes']['companies'])"
     )
     out = subprocess.run(
         [sys.executable, "-c", code],
