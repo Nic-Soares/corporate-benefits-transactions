@@ -1,0 +1,159 @@
+"""Command line.
+
+python -m src.main [--config DIR] setup [--seed N] [--today YYYY-MM-DD] [--reset] [--scale N]
+python -m src.main [--config DIR] simulate [--seed N] [--today YYYY-MM-DD] [--days N]
+python -m src.main etl
+python -m src.main export
+
+The pipeline is imported by each command, after `--config` picks the folder
+the modules read (`src/config.py`).
+"""
+
+import argparse
+import logging
+import os
+import sys
+from datetime import date
+from pathlib import Path
+
+log = logging.getLogger("src.main")
+
+# The counts `--scale` multiplies; cardholders follow the companies
+SCALED_VOLUMES = ("companies", "establishments", "terminals")
+
+
+def scaled(volumes: dict, scale: float) -> dict:
+    """`data_volumes` with the world `scale` times as big."""
+    return volumes | {key: max(1, round(volumes[key] * scale)) for key in SCALED_VOLUMES}
+
+
+def setup(args: argparse.Namespace) -> int:
+    from src.config import load_simulation
+    from src.pipeline.setup import SetupError, run_setup
+    from src.postgres import connect_pg_db
+    from src.sources import fetch_sources
+
+    sources = fetch_sources()
+    volumes = scaled(load_simulation()["data_volumes"], args.scale)
+    with connect_pg_db() as conn:
+        try:
+            counts = run_setup(conn, sources, volumes, args.seed, args.today, args.reset)
+        except SetupError as error:
+            log.error("%s", error)
+            return 1
+        conn.commit()
+    width = max(map(len, counts))
+    for table, rows in counts.items():
+        log.info("  %s %s", table.ljust(width), f"{rows:>9,}")
+    return 0
+
+
+def simulate(args: argparse.Namespace) -> int:
+    from src.pipeline.simulate import SimulationError, run_simulation, simulation_defaults
+    from src.postgres import connect_pg_db
+
+    days = simulation_defaults()
+    with connect_pg_db() as conn:
+        try:
+            summary = run_simulation(conn, args.seed, args.today, args.days or days)
+        except SimulationError as error:
+            log.error("%s", error)
+            return 1
+        conn.commit()
+    log.info("  transactions    %9s", f"{summary['transactions']:,}")
+    log.info("  balance_history %9s", f"{summary['balance_history']:,}")
+    log.info("  approved        %8.1f%%", 100 * summary["approval_rate"])
+    log.info("  fraud           %9s", f"{summary['fraud']:,}")
+    log.info("  disputed        %9s", f"{summary['disputed']:,}")
+    for code, reason, rows in summary["answers"].head(8).iter_rows():
+        log.info("    %s %-30s %7s", code, reason or "approved", f"{rows:,}")
+    return 0
+
+
+def etl(args: argparse.Namespace) -> int:
+    from src.pipeline.etl import run_etl
+    from src.postgres import connect_pg_db
+
+    with connect_pg_db() as conn:
+        counts = run_etl(conn)
+    width = max(map(len, counts))
+    for table, rows in counts.items():
+        log.info("  %s %s", table.ljust(width), f"{rows:>9,}")
+    return 0
+
+
+def export(args: argparse.Namespace) -> int:
+    from src.pipeline.export import ExportError, run_export
+
+    try:
+        checks, counts = run_export()
+    except ExportError as error:
+        log.error("%s", error)
+        return 1
+    log.info("  %s quality checks passed", len(checks))
+    width = max(map(len, counts))
+    for table, rows in counts.items():
+        log.info("  %s %s", table.ljust(width), f"{rows:>9,}")
+    return 0
+
+
+def _common_options(parser: argparse.ArgumentParser) -> None:
+    parser.add_argument("--seed", type=int, default=42, help="random seed (default 42)")
+    parser.add_argument(
+        "--today",
+        type=date.fromisoformat,
+        default=date.today(),
+        help="reference day (default: today); use the same for setup and simulate",
+    )
+
+
+def main(argv: list[str] | None = None) -> int:
+    parser = argparse.ArgumentParser(prog="benefits")
+    parser.add_argument(
+        "--config", type=Path, help="config folder (default: config/); a variant of the rules"
+    )
+    commands = parser.add_subparsers(dest="command", required=True)
+
+    setup_parser = commands.add_parser(
+        "setup", help="create the OLTP schema, load the reference tables and the entities"
+    )
+    _common_options(setup_parser)
+    setup_parser.add_argument(
+        "--reset", action="store_true", help="replace the entities already in the database"
+    )
+    setup_parser.add_argument(
+        "--scale",
+        type=float,
+        default=1.0,
+        help="world size: companies, establishments and terminals × N (default 1)",
+    )
+    setup_parser.set_defaults(run=setup)
+
+    simulate_parser = commands.add_parser(
+        "simulate", help="answer purchase attempts over the days before --today"
+    )
+    _common_options(simulate_parser)
+    simulate_parser.add_argument(
+        "--days", type=int, help="length of the window (default: simulation.days in the config)"
+    )
+    simulate_parser.set_defaults(run=simulate)
+
+    etl_parser = commands.add_parser(
+        "etl", help="build the DuckDB star schema from the OLTP database (full refresh)"
+    )
+    etl_parser.set_defaults(run=etl)
+
+    export_parser = commands.add_parser(
+        "export", help="check the OLAP database and write the dataset as Parquet"
+    )
+    export_parser.set_defaults(run=export)
+
+    args = parser.parse_args(argv)
+    if args.config:
+        os.environ["BENEFITS_CONFIG_DIR"] = str(args.config.resolve())
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
+    return args.run(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
