@@ -1,20 +1,88 @@
-"""Reference tables: the config's rules, in the columns of the OLTP schema."""
+"""Reference tables: the config's rules (`pre_populated_data.yaml`,
+`validation_rules.yaml → mcc_acceptance_rules`) in the columns of the OLTP
+schema, and their load into Postgres."""
+
+from typing import Any
 
 import polars as pl
 import psycopg
 
-from src.data_generators.reference_data.acquirer_loader import load_acquirers
-from src.data_generators.reference_data.card_program_loader import (
-    load_card_program_wallets,
-    load_card_programs,
-    load_cnae_wallets,
-    load_mcc_wallets,
-)
-from src.data_generators.reference_data.modalities_loader import load_transaction_modalities
-from src.data_generators.reference_data.response_codes_loader import load_response_codes
-from src.data_generators.reference_data.wallet_loader import load_wallets
-from src.infrastructure.database.postgres_manager import upsert_dataframe
-from src.utils.read_yamls import load_pre_populated_data, load_validation_rules
+from src.config import load_pre_populated_data, load_validation_rules
+from src.postgres import upsert_dataframe
+
+
+def load_wallets(data: dict[str, Any]) -> pl.DataFrame:
+    return pl.DataFrame(
+        [
+            {"id": w["id"], "name": w["name"], "category": w["category"], "active": True}
+            for w in data["wallets"]
+        ]
+    )
+
+
+def load_transaction_modalities(data: dict[str, Any]) -> pl.DataFrame:
+    return pl.DataFrame(
+        [
+            {"id": m["id"], "name": m["name"], "type": m["type"], "active": True}
+            for m in data["transaction_modalities"]
+        ]
+    )
+
+
+def load_acquirers(data: dict[str, Any]) -> pl.DataFrame:
+    return pl.DataFrame(
+        [{"id": a["id"], "name": a["name"], "active": True} for a in data["acquirers"]]
+    )
+
+
+def load_response_codes(data: dict[str, Any]) -> pl.DataFrame:
+    return pl.DataFrame(
+        [{"id": code, "description": text} for code, text in data["response_codes"].items()]
+    )
+
+
+def load_card_programs(data: dict[str, Any]) -> pl.DataFrame:
+    return pl.DataFrame(
+        [
+            {"id": p["id"], "name": p["name"], "network_type": p["network_type"], "active": True}
+            for p in data["card_programs"]
+        ]
+    )
+
+
+def load_card_program_wallets(data: dict[str, Any]) -> pl.DataFrame:
+    """Which wallets each program holds (`card_program_wallets`)."""
+    return pl.DataFrame(
+        [
+            {"program_id": p["id"], "wallet_id": wallet}
+            for p in data["card_programs"]
+            for wallet in p["wallets"]
+        ]
+    )
+
+
+def load_mcc_wallets(data: dict[str, Any]) -> pl.DataFrame:
+    """MCC × wallet for brand cards (`mcc_wallets`); the open GIFT wallet has no rows."""
+    return pl.DataFrame(
+        [
+            {"mcc_code": mcc, "wallet_id": wallet}
+            for wallet, mccs in data["mcc_wallets"].items()
+            if isinstance(mccs, list)
+            for mcc in mccs
+        ]
+    )
+
+
+def load_cnae_wallets(data: dict[str, Any]) -> pl.DataFrame:
+    """CNAE prefix × wallet for the proprietary network (`cnae_wallets`)."""
+    return pl.DataFrame(
+        [
+            {"cnae_code": cnae, "wallet_id": wallet, "active": True}
+            for cnae, wallets in data["cnae_wallets"].items()
+            for wallet in wallets
+        ]
+    )
+
 
 # Brand letters of `mcc_acceptance_rules` → modality id
 BRANDS = {"E": "ELO", "M": "MASTERCARD", "V": "VISA"}
@@ -83,9 +151,4 @@ def build_reference_tables(cnae_df: pl.DataFrame, mcc_df: pl.DataFrame) -> dict[
 def load_reference_tables(conn: psycopg.Connection, tables: dict[str, pl.DataFrame]) -> None:
     """Upsert: a second run leaves the same rows."""
     for table, df in tables.items():
-        upsert_dataframe(
-            conn,
-            table,
-            df.with_columns(pl.col(pl.Categorical).cast(pl.String)),
-            REFERENCE_KEYS[table],
-        )
+        upsert_dataframe(conn, table, df, REFERENCE_KEYS[table])

@@ -1,6 +1,6 @@
 import re
 
-from src.data_generators.providers.brazil_provider import BrazilProvider
+from src.entities.brazil import BrazilProvider
 
 
 def _check_digit(digits: list[int], weights: list[int]) -> int:

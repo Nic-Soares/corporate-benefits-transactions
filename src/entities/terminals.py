@@ -3,8 +3,8 @@ from datetime import timedelta
 
 import polars as pl
 
-from src.data_generators.entities.establishment_generator import CATEGORIES
-from src.data_generators.providers import fake
+from src.entities import fake
+from src.entities.establishments import CATEGORIES
 
 PHYSICAL_TYPES = ("POS", "TEF")
 ATM_NETWORK = "ATM"  # acquirer id of the cash machines

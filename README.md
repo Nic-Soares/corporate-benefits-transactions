@@ -76,18 +76,17 @@ corporate-benefits-transactions/
 │   ├── planning/           # Roadmap
 │   └── runbooks/           # Local setup, dependency upgrades
 ├── src/
-│   ├── data_generators/
-│   │   ├── entities/       # Companies, cardholders, cards, card wallets, establishments, terminals
-│   │   ├── providers/      # Seeded fake-data sources, CPF/CNPJ
-│   │   └── reference_data/ # Loaders for the config's reference tables
-│   ├── domain/             # Rules shared by generator and issuer: acceptance, status over time
-│   ├── extractors/         # IBGE (CNAE, municipalities, population, GDP), MCC list
-│   ├── infrastructure/     # PostgreSQL connection and COPY
-│   ├── pipeline/           # Commands: setup, simulate, etl, export; provenance
+│   ├── main.py             # Command line: setup, simulate, etl, export
+│   ├── config.py           # The YAML config, read once
+│   ├── postgres.py         # Connection, COPY, bulk loads
+│   ├── reference.py        # Reference tables from the config
+│   ├── table.py            # Rows indexed by column (constant-time lookups)
+│   ├── sources/            # Public data: IBGE (CNAE, municipalities, population, GDP), MCC list
+│   ├── entities/           # Companies, cardholders, cards, wallets, establishments, terminals; seeded fake data
+│   ├── domain/             # Rules the generator and the issuer share: acceptance, status over time
 │   ├── simulation/         # Calendar, demand, terminal pools, attempts, fraud, the issuer over time
-│   ├── main.py             # Command line (python -m src.main setup)
-│   ├── utils/              # YAML loading, indexed tables
-│   └── validators/         # Authorization rules
+│   ├── validators/         # The issuer's authorization checks
+│   └── pipeline/           # The commands, provenance, statistical profile
 ├── tests/
 └── docker-compose.yaml     # PostgreSQL 18
 ```

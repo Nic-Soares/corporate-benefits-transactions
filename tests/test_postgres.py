@@ -1,6 +1,6 @@
 import pytest
 
-from src.infrastructure.database.postgres_manager import connect_pg_db
+from src.postgres import connect_pg_db
 
 
 @pytest.mark.db

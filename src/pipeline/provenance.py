@@ -14,7 +14,7 @@ from typing import Any
 
 import psycopg
 
-from src.utils.read_yamls import CONFIG_DIR, ROOT
+from src.config import CONFIG_DIR, ROOT
 
 RAW_DIR = ROOT / "data" / "raw"
 

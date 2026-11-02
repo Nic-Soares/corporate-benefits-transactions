@@ -6,9 +6,9 @@ import duckdb
 import polars as pl
 import pytest
 
-from src.data_generators.providers import fake
+from src.entities import fake
 from src.pipeline.etl import OLAP_TABLES, build_olap
-from src.pipeline.reference import build_reference_tables
+from src.reference import build_reference_tables
 from src.simulation.simulator import TransactionSimulator
 
 TODAY = date(2026, 10, 30)

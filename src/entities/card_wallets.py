@@ -3,8 +3,8 @@ from datetime import date, timedelta
 
 import polars as pl
 
-from src.data_generators.providers import fake
-from src.utils.read_yamls import load_pre_populated_data
+from src.config import load_pre_populated_data
+from src.entities import fake
 
 WALLETS_BY_PROGRAM = {
     program["id"]: program["wallets"] for program in load_pre_populated_data()["card_programs"]

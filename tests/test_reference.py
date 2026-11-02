@@ -2,17 +2,17 @@
 
 import pytest
 
-from src.data_generators.reference_data.acquirer_loader import load_acquirers
-from src.data_generators.reference_data.card_program_loader import (
+from src.config import load_pre_populated_data
+from src.reference import (
+    load_acquirers,
     load_card_program_wallets,
     load_card_programs,
     load_cnae_wallets,
     load_mcc_wallets,
+    load_response_codes,
+    load_transaction_modalities,
+    load_wallets,
 )
-from src.data_generators.reference_data.modalities_loader import load_transaction_modalities
-from src.data_generators.reference_data.response_codes_loader import load_response_codes
-from src.data_generators.reference_data.wallet_loader import load_wallets
-from src.utils.read_yamls import load_pre_populated_data
 
 DATA = load_pre_populated_data()
 

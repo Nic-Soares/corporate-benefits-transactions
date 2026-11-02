@@ -22,7 +22,7 @@ data_volumes:
 approval_rates:
   overall: 0.80
 
-# Data generation (read by src/data_generators/providers/fake.py)
+# Data generation (read by src/entities/fake.py)
 generation_settings:
   # Company segment: its weight and how many employees (cardholders) it has.
   # SME, Middle and Corporate are cut by headcount; Public is the kind of
@@ -223,7 +223,7 @@ quality_profile:
   christmas_eve_lift: 1.30
 
 # =====================================
-# Fraud (read by src/data_generators/entities/fraud_generator.py). Typologies
+# Fraud (read by src/entities/fraud_generator.py). Typologies
 # of the benefits market; every number synthetic.
 # =====================================
 fraud:

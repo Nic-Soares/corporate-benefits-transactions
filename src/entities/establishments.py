@@ -2,8 +2,8 @@ import random
 
 import polars as pl
 
-from src.data_generators.providers import fake
-from src.utils.read_yamls import load_pre_populated_data, load_simulation_config
+from src.config import load_pre_populated_data, load_simulation_config
+from src.entities import fake
 
 # Category → {weight, cnae prefixes, online, atm, amount} (simulation_config.yaml)
 CATEGORIES: dict[str, dict] = load_simulation_config()["establishment_categories"]
