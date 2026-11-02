@@ -6,17 +6,16 @@ import polars as pl
 import pytest
 
 from src.config import (
-    load_business_rules,
-    load_pre_populated_data,
-    load_validation_rules,
+    load_authorization,
+    load_reference,
 )
 from src.domain.acceptance import Acceptance
 from src.entities import fake
 from src.entities.card_wallets import draw_program_wallets
 from src.entities.establishments import CATEGORIES, mcc_for
 
-STATUS_OPTIONS = load_business_rules()["status_options"]
-REFERENCE = load_pre_populated_data()
+STATUS_OPTIONS = load_reference()["status_options"]
+REFERENCE = load_reference()
 
 
 def _schema_columns(table: str) -> list[str]:
@@ -232,7 +231,7 @@ def test_transactions_are_coherent(tables, transactions):
     # the routed wallet and the answer come later
     assert tx["card_wallet_id"].is_null().all() and tx["response_code"].is_null().all()
     # captures the terminal takes; a virtual card never uses the physical ones
-    supported = load_validation_rules()["infrastructure_validations"]["capture_type_support"][
+    supported = load_authorization()["infrastructure_validations"]["capture_type_support"][
         "supported_by_terminal_type"
     ]
     physical = tx.filter(card_type="physical")

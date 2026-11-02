@@ -11,9 +11,9 @@ import random
 
 import polars as pl
 
-from src.config import load_simulation_config
+from src.config import load_simulation
 
-FRAUD = load_simulation_config()["fraud"]
+FRAUD = load_simulation()["fraud"]
 
 
 def mark_disputes(

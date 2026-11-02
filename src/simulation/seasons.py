@@ -1,4 +1,4 @@
-"""The calendar that moves spending (`simulation_config.yaml → usage_patterns.seasonality`
+"""The calendar that moves spending (`simulation.yaml → usage_patterns.seasonality`
 and `simulation.year_end_credit`).
 
 National holidays, fixed and the ones that follow Easter (Carnival, Good
@@ -15,9 +15,9 @@ from datetime import date, datetime, timedelta
 from functools import cache
 from itertools import accumulate
 
-from src.config import load_simulation_config
+from src.config import load_simulation
 
-_CONFIG = load_simulation_config()
+_CONFIG = load_simulation()
 USAGE: dict = _CONFIG["usage_patterns"]
 SEASONALITY: dict = USAGE["seasonality"]
 YEAR_END_CREDIT: dict = _CONFIG["simulation"]["year_end_credit"]

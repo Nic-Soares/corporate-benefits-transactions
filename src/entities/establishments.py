@@ -2,12 +2,12 @@ import random
 
 import polars as pl
 
-from src.config import load_pre_populated_data, load_simulation_config
+from src.config import load_reference, load_simulation
 from src.entities import fake
 
-# Category → {weight, cnae prefixes, online, atm, amount} (simulation_config.yaml)
-CATEGORIES: dict[str, dict] = load_simulation_config()["establishment_categories"]
-CNAE_MCC: dict[str, str] = load_pre_populated_data()["cnae_mcc"]
+# Category → {weight, cnae prefixes, online, atm, amount} (simulation.yaml)
+CATEGORIES: dict[str, dict] = load_simulation()["establishment_categories"]
+CNAE_MCC: dict[str, str] = load_reference()["cnae_mcc"]
 
 
 def longest_prefix(code: str, mapping: dict[str, object]) -> str | None:

@@ -28,21 +28,20 @@ def load_yaml(yaml_path: str | Path) -> dict[str, Any]:
     return deepcopy(_read(Path(yaml_path).resolve()))
 
 
-def load_business_rules(yaml_path: str | Path | None = None) -> dict[str, Any]:
-    return load_yaml(yaml_path or CONFIG_DIR / "business_rules.yaml")
+def load_reference(yaml_path: str | Path | None = None) -> dict[str, Any]:
+    """Wallets, programs, networks, acquirers, acceptance rules, codes, statuses."""
+    return load_yaml(yaml_path or CONFIG_DIR / "reference.yaml")
 
 
-def load_pre_populated_data(yaml_path: str | Path | None = None) -> dict[str, Any]:
-    return load_yaml(yaml_path or CONFIG_DIR / "pre_populated_data.yaml")
+def load_authorization(yaml_path: str | Path | None = None) -> dict[str, Any]:
+    """The issuer's checks, their order and response codes."""
+    return load_yaml(yaml_path or CONFIG_DIR / "authorization.yaml")
 
 
-def load_validation_rules(yaml_path: str | Path | None = None) -> dict[str, Any]:
-    return load_yaml(yaml_path or CONFIG_DIR / "validation_rules.yaml")
+def load_simulation(yaml_path: str | Path | None = None) -> dict[str, Any]:
+    """Volumes, behaviour, calendar, fraud and the expected profile."""
+    return load_yaml(yaml_path or CONFIG_DIR / "simulation.yaml")
 
 
 def load_database(yaml_path: str | Path | None = None) -> dict[str, Any]:
     return load_yaml(yaml_path or CONFIG_DIR / "database.yaml")
-
-
-def load_simulation_config(yaml_path: str | Path | None = None) -> dict[str, Any]:
-    return load_yaml(yaml_path or CONFIG_DIR / "simulation_config.yaml")

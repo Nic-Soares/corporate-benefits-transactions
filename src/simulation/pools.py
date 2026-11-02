@@ -9,15 +9,15 @@ from typing import NamedTuple
 
 import polars as pl
 
-from src.config import load_business_rules, load_simulation_config
+from src.config import load_reference, load_simulation
 from src.domain.acceptance import Acceptance
 from src.domain.status import earliest, out_from
 from src.entities.establishments import CATEGORIES
 
-USAGE = load_simulation_config()["usage_patterns"]
+USAGE = load_simulation()["usage_patterns"]
 PHYSICAL_CAPTURES = {
     code
-    for code, rule in load_business_rules()["transaction_technology_rules"].items()
+    for code, rule in load_reference()["transaction_technology_rules"].items()
     if rule["requires_physical_card"]
 }
 # Terminal types a virtual card can't use: every capture needs the plastic

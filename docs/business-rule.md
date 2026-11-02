@@ -1,6 +1,6 @@
 # Business Rules
 
-How a transaction is authorized. The rules live in `config/`; this page explains them. Response codes follow ISO 8583 (`config/pre_populated_data.yaml → response_codes`); every decline also records a specific `decline_reason`.
+How a transaction is authorized. The rules live in `config/`; this page explains them. Response codes follow ISO 8583 (`config/reference.yaml → response_codes`); every decline also records a specific `decline_reason`.
 
 ## Programs and wallets
 
@@ -26,7 +26,7 @@ flowchart LR
     CARD -->|holds one balance per| WALLETS
 ```
 
-Source: `config/pre_populated_data.yaml → wallets`, `card_programs`.
+Source: `config/reference.yaml → wallets`, `card_programs`.
 
 ## The two networks
 
@@ -39,7 +39,7 @@ Source: `config/pre_populated_data.yaml → wallets`, `card_programs`.
 
 ### Options and CNAE rule (proprietary network)
 
-The terminal offers three options (`validation_rules.yaml → wallet_routing.proprietary_options`):
+The terminal offers three options (`authorization.yaml → wallet_routing.proprietary_options`):
 
 | Option | Wallets, in routing order |
 |---|---|
@@ -56,7 +56,7 @@ The issuer takes the first wallet of the option that the card holds, is active, 
 
 ### MCC rules (brand network)
 
-1. The brand must accept the MCC (`validation_rules.yaml → mcc_acceptance_rules`, `E` Elo, `M` Mastercard, `V` Visa — a synthetic rule set; the brands don't publish theirs). Otherwise `57`, `mcc_not_accepted_by_brand`.
+1. The brand must accept the MCC (`reference.yaml → mcc_acceptance_rules`, `E` Elo, `M` Mastercard, `V` Visa — a synthetic rule set; the brands don't publish theirs). Otherwise `57`, `mcc_not_accepted_by_brand`.
 2. The issuer **routes the wallet**: it walks `wallet_priority` (MEAL → FOOD → MOBILITY → HEALTH → HOME_OFFICE → EDUCATION → GIFT) and takes the first wallet that the card holds, is active, accepts the MCC (`mcc_wallets`; GIFT accepts any MCC) and has enough balance. The declines are those of the proprietary network, with `no_wallet_for_mcc` when no wallet accepts the MCC.
 
 ### Cash withdrawal
@@ -67,7 +67,7 @@ Example: a Visa multi-benefit card at a restaurant (MCC `5812`) with MEAL 20.00 
 
 ## Authorization
 
-`config/validation_rules.yaml → validation_order`; the first failure declines.
+`config/authorization.yaml → validation_order`; the first failure declines.
 
 ```mermaid
 flowchart TD
@@ -111,13 +111,13 @@ A referenced record that doesn't exist declines with the ISO code for that party
 
 ## Balance
 
-Each card wallet has a **monthly credit** (`card_wallets.monthly_credit`, drawn from `simulation_config.yaml → generation_settings.wallets`) and starts the simulation with a share of it. On the credit day (`benefit_credit_day`) the credit lands (`balance.credit`, `balance_history.operation_type = credit`); an approved purchase or withdrawal debits the charged wallet (`balance.debit`); a reversal gives the amount back (`balance.reverse`) and its transaction points to the purchase (`related_transaction_id`). Spending follows the credit — more early in the month, more `51` declines late. Only active cardholders are credited (on cards not cancelled), and most spend nearly all of it. How the employer orders and pays the credit is out of scope.
+Each card wallet has a **monthly credit** (`card_wallets.monthly_credit`, drawn from `simulation.yaml → generation_settings.wallets`) and starts the simulation with a share of it. On the credit day (`benefit_credit_day`) the credit lands (`balance.credit`, `balance_history.operation_type = credit`); an approved purchase or withdrawal debits the charged wallet (`balance.debit`); a reversal gives the amount back (`balance.reverse`) and its transaction points to the purchase (`related_transaction_id`). Spending follows the credit — more early in the month, more `51` declines late. Only active cardholders are credited (on cards not cancelled), and most spend nearly all of it. How the employer orders and pays the credit is out of scope.
 
 Limits per wallet are in the same section: Meal has the lowest daily amount; Food and Meal cap the purchases per day; the other wallets have none.
 
 ## Statuses
 
-Valid statuses per entity are in `config/business_rules.yaml → status_options`; the generators draw them with the weights in `config/simulation_config.yaml → generation_settings`.
+Valid statuses per entity are in `config/reference.yaml → status_options`; the generators draw them with the weights in `config/simulation.yaml → generation_settings`.
 
 | Entity | Statuses |
 |---|---|
