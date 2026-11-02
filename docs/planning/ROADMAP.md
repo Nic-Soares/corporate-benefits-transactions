@@ -557,7 +557,7 @@ Second pass against how benefits cards are used in the market. The model held; t
 **Goal:** not random rows but a statistically coherent dataset: relationships that hold, distributions that look like the market, business rules followed everywhere, reproducible, at a volume that tests dashboards, metrics and data pipelines.
 
 ### ST-12.1 — Dead code
-- [ ] Remove `infrastructure/schema/schema_creator.py`, `infrastructure/database/duckdb_manager.py`, `utils/csv_utils.py`, `utils/parquet_utils.py`, the loaders used only by tests (`capture_technologies`, `segment`) and the unused keys of `config/database.yaml`
+- [x] Removed `infrastructure/schema/schema_creator.py`, `infrastructure/database/duckdb_manager.py`, `utils/csv_utils.py`, `utils/parquet_utils.py`, the loaders used only by tests (`capture_technologies`, `segment`), the unused `segments` list and the unused keys of `config/database.yaml`
 
 ### ST-12.2 — Reproducible dataset
 - [ ] The export writes `dataset_metadata.json`: seed, reference day, window, code commit, config hash, source files and their hashes, row counts
