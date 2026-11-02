@@ -49,7 +49,7 @@ uv run python -m src.main simulate --seed 42 --today 2026-10-30 # 90 days of tra
 `setup` creates the 17 OLTP tables, upserts the reference tables from
 `config/` and writes the generated entities, then prints the rows per table.
 The first run downloads the public sources into `data/raw/` (CNAE from
-the IBGE API, the MCC list from GitHub, municipalities and population from the IBGE API).
+the IBGE API, the MCC list from GitHub, municipalities, population and municipal GDP from the IBGE API).
 
 | Option | Effect |
 |---|---|
@@ -91,7 +91,7 @@ uv run python -c "from src.pipeline.export import render_dictionary; open('docs/
 uv run pytest -m network
 ```
 
-Calls the IBGE CNAE, municipalities and population APIs. No credentials
+Calls the IBGE CNAE, municipalities, population and GDP APIs. No credentials
 needed. To download a source again, delete its file in `data/raw/`.
 
 ## 6. Reset
