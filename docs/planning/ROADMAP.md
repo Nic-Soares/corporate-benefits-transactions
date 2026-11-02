@@ -16,7 +16,7 @@
 | `EP-05` Documentation | ✅ Done — merged into `develop` 2026-10-30 | `README.md`, `docs/` |
 | `EP-06` Transaction core review | ✅ Done — merged into `develop` 2026-10-31 (ADR-007, 008, 009) | `docs/`, then `config/`, `database/`, `src/` |
 | `EP-07` Setup pipeline (reference data + entities) | ✅ Done — merged into `develop` 2026-10-31 | code (`src/main.py`, `src/processors/`) |
-| `EP-08` Transaction simulator | ✅ Done — merged into `develop` 2026-11-01 (ADR-010, ADR-011) | code (`src/processors/transaction_simulator.py`) |
+| `EP-08` Transaction simulator | ✅ Done — merged into `develop` 2026-11-01 (ADR-010, 011, 013, 015) | code (`src/processors/transaction_simulator.py`) |
 | `EP-09` OLAP: Postgres → DuckDB | ✅ Done — merged into `develop` 2026-11-01 (ADR-012) | code + `database/olap_duck/` |
 | `EP-10` Dataset export and quality | ✅ Done — merged into `develop` 2026-11-01 (ADR-014) | code + `data/final_datasets/` |
 | `EP-11` Kaggle release | Not started | Kaggle |
@@ -441,6 +441,14 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] Giving up after a balance decline per option or kind of place, not per card
 - [x] Credit only to active cardholders; fewer inactive and blocked cards; virtual cards look for a usable terminal beyond their city
 - [x] Result (three seeds): active cards spend 74–90% of Food and Meal; approval 81–82%
+
+### ST-08.5 — Program wallets per company (2026-11-01, ADR-015)
+
+- [x] Each company picks, per program, which of the program's wallets its cards hold (`program_wallet_shares`)
+- [x] `ref_program_wallets` in the OLAP and the export; check: cards hold only wallets their program allows
+- [x] Wallets activated 0–15 days after the card's issue (`wallet_activation_days`), so the credited cards follow the issues
+- [x] Declines for balance keep the wallet that fell short; check: none without it
+- [x] Result (seed 42): 2–6 wallets per multi-benefit company; approval 87.5%; 53 checks, 17 tables
 
 ---
 

@@ -119,7 +119,7 @@ Step by step, with troubleshooting: [`docs/runbooks/local-setup.md`](docs/runboo
 
 `etl` rebuilds `database/olap_duck/olap_corporate_benefits.duckdb` from the OLTP database: 10 dimensions, `fact_transactions` (with the network, acquirer and company of each transaction) and `fact_balance_movements`, plus analytical views (`v_approval_by_program`, `v_declines`, `v_ticket_by_category`, `v_fraud_by_scenario`, `v_daily`, `v_wallet_flows_by_month`).
 
-`export` runs 49 quality checks on the OLAP database (unique ids, every key resolves, the balance ledger holds, approval and fraud rates in range, no personal documents) and, only if all pass, writes `data/final_datasets/`: one Parquet file per table (10 dimensions, 2 facts, 4 reference tables with the acceptance rules), `data_dictionary.md` and `quality_report.md`. The dictionary is also in [`docs/data-dictionary.md`](docs/data-dictionary.md). The public tables carry no CNPJ, CPF, card number or cardholder name.
+`export` runs 53 quality checks on the OLAP database (unique ids, every key resolves, the balance ledger holds, approval and fraud rates in range, no personal documents) and, only if all pass, writes `data/final_datasets/`: one Parquet file per table (10 dimensions, 2 facts, 5 reference tables with the program wallets and the acceptance rules), `data_dictionary.md` and `quality_report.md`. The dictionary is also in [`docs/data-dictionary.md`](docs/data-dictionary.md). The public tables carry no CNPJ, CPF, card number or cardholder name.
 
 ## Development workflow
 
