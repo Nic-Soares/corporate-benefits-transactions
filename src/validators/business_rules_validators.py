@@ -12,17 +12,14 @@ from typing import Any
 import polars as pl
 
 from src.domain.acceptance import Acceptance
+from src.domain.status import status_on
+from src.utils.table import Table, as_table, find_all, find_one
 from src.validators._common import (
     PASS,
     PROPRIETARY_MODALITIES,
     RULES,
-    Table,
-    as_table,
     fail,
-    find_all,
-    find_one,
     not_found,
-    status_on,
     transaction_date,
 )
 

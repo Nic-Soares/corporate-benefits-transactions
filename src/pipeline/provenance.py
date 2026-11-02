@@ -14,9 +14,8 @@ from typing import Any
 
 import psycopg
 
-from src.utils.read_yamls import CONFIG_DIR
+from src.utils.read_yamls import CONFIG_DIR, ROOT
 
-ROOT = CONFIG_DIR.parent
 RAW_DIR = ROOT / "data" / "raw"
 
 
@@ -47,6 +46,11 @@ def code_version() -> str:
 def config_hash() -> str:
     """Hash of every `config/*.yaml`."""
     return _digest(sorted(CONFIG_DIR.glob("*.yaml")))
+
+
+def config_dir() -> str:
+    """The config folder of the run, relative to the repository when inside it."""
+    return str(CONFIG_DIR.relative_to(ROOT) if CONFIG_DIR.is_relative_to(ROOT) else CONFIG_DIR)
 
 
 def source_hashes() -> dict[str, str]:

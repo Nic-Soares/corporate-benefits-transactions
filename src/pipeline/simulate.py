@@ -5,8 +5,6 @@ from datetime import date, datetime, time, timedelta
 
 import psycopg
 
-from src.data_generators.entities.fraud_generator import FRAUD, FraudGenerator
-from src.data_generators.entities.transaction_generator import TransactionGenerator
 from src.data_generators.providers import fake
 from src.infrastructure.database.postgres_manager import (
     copy_dataframe,
@@ -14,7 +12,9 @@ from src.infrastructure.database.postgres_manager import (
     read_table,
 )
 from src.pipeline import provenance
-from src.processors.transaction_simulator import TABLES, TransactionSimulator
+from src.simulation.fraud import FRAUD, FraudGenerator
+from src.simulation.generator import TransactionGenerator
+from src.simulation.simulator import TABLES, TransactionSimulator
 from src.utils.read_yamls import load_simulation_config
 
 log = logging.getLogger(__name__)

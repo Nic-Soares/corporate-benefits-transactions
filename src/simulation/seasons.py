@@ -3,18 +3,23 @@ and `simulation.year_end_credit`).
 
 National holidays, fixed and the ones that follow Easter (Carnival, Good
 Friday, Corpus Christi); the eve of each; a few shopping days (Christmas Eve,
-New Year's Eve, Black Friday); a weight per month; and the one-off credit some
-employers add at the end of the year (a Christmas basket).
+New Year's Eve, Black Friday); a weight per month; the one-off credit some
+employers add at the end of the year (a Christmas basket); and the `Calendar`
+of a window, which draws the day of each attempt.
 """
 
 import hashlib
-from datetime import date, timedelta
+import random
+from bisect import bisect_left, bisect_right
+from datetime import date, datetime, timedelta
 from functools import cache
+from itertools import accumulate
 
 from src.utils.read_yamls import load_simulation_config
 
 _CONFIG = load_simulation_config()
-SEASONALITY: dict = _CONFIG["usage_patterns"]["seasonality"]
+USAGE: dict = _CONFIG["usage_patterns"]
+SEASONALITY: dict = USAGE["seasonality"]
 YEAR_END_CREDIT: dict = _CONFIG["simulation"]["year_end_credit"]
 
 # Month and day of the national holidays with a fixed date
@@ -107,3 +112,67 @@ def year_end_credit(company_id: str, year: int) -> float:
     amount = YEAR_END_CREDIT["amount"]
     share = int.from_bytes(digest[4:8]) / 2**32
     return round((amount["min"] + share * (amount["max"] - amount["min"])) / 10) * 10.0
+
+
+class Calendar:
+    """The days of a window and how much each sells, per category: its week
+    (a holiday takes Saturday's weight), the day of the month (spending follows
+    the credit), the calendar above (`day_factor`) and an intensity each month
+    draws (`seasonality.month_noise_sigma`)."""
+
+    def __init__(self, end: date, days_back: int, categories: list[str]) -> None:
+        """The `days_back` days before `end`; `categories` with their own curve."""
+        start = datetime.combine(end, datetime.min.time())
+        self.days = [start - timedelta(days=d) for d in range(days_back, 0, -1)]
+        self.dates = [day.date() for day in self.days]
+        intensity = {
+            month: random.lognormvariate(0, SEASONALITY["month_noise_sigma"])
+            for month in sorted({(day.year, day.month) for day in self.dates})
+        }
+        weeks = USAGE["weekday_weights_by_category"]
+        self.cum = {
+            category: list(
+                accumulate(
+                    _day_weight(day, weeks.get(category, USAGE["weekday_weights"]), category)
+                    * intensity[day.year, day.month]
+                    for day in self.days
+                )
+            )
+            for category in [None, *categories]
+        }
+
+    def day(self, earliest: date, category: str | None, latest: date | None = None) -> datetime:
+        """A day of the window from `earliest` on (to `latest`), by the category's
+        day weights (the nearest day when none is left)."""
+        first = bisect_left(self.dates, earliest)
+        stop = bisect_right(self.dates, latest) if latest else len(self.days)
+        if first >= stop:
+            return self.days[min(first, len(self.days) - 1)]
+        cum = self.cum.get(category) or self.cum[None]
+        low = cum[first - 1] if first else 0.0
+        point = low + random.random() * (cum[stop - 1] - low)
+        return self.days[min(bisect_right(cum, point, first, stop), stop - 1)]
+
+    @staticmethod
+    def at(day: datetime, category: str) -> datetime:
+        """A moment of `day` at an hour of the category's day."""
+        hours = USAGE["hour_weights_by_category"].get(category, USAGE["hour_weights"])
+        hour = random.choices(range(24), weights=hours)[0]
+        return day + timedelta(hours=hour, seconds=random.randint(0, 3599))
+
+    def moment(self, category: str, earliest: date) -> datetime:
+        """A day of the window from `earliest` on, then an hour of the category's day."""
+        return self.at(self.day(earliest, category), category)
+
+
+def _day_weight(day: datetime, week: list[float], category: str | None) -> float:
+    """The weekday's weight (a holiday's is Saturday's), higher early in the
+    month (the credit lands), times the calendar's (`day_factor`)."""
+    month = USAGE["month_day_weights"]
+    progress = (day.day - 1) / 30
+    weekday = 5 if is_holiday(day.date()) else day.weekday()
+    return (
+        week[weekday]
+        * (month["first"] + (month["last"] - month["first"]) * progress)
+        * day_factor(day.date(), category)
+    )

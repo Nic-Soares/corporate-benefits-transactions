@@ -22,17 +22,19 @@ from typing import Any
 
 import polars as pl
 
-from src.data_generators.providers import fake, seasons
-from src.processors.balance import HISTORY_SCHEMA, credit, debit, reverse
-from src.processors.disputes import mark_disputes
+from src.data_generators.providers import fake
+from src.simulation import seasons
+from src.simulation.balance import HISTORY_SCHEMA, credit, debit, reverse
+from src.simulation.disputes import mark_disputes
 from src.utils.read_yamls import load_simulation_config
-from src.validators import balance_and_limits_validations as balance
+from src.utils.table import Table, find_one
+from src.validators import balance_validators as balance
 from src.validators import business_rules_validators as business
-from src.validators import infrastructure_validations as infrastructure
+from src.validators import infrastructure_validators as infrastructure
 from src.validators import security_validators as security
 from src.validators import status_validators as status
 from src.validators import temporal_validators as temporal
-from src.validators._common import RULES, Table, find_one
+from src.validators._common import RULES
 
 SIMULATION = load_simulation_config()["simulation"]
 CREDIT_DAY: int = fake.SETTINGS["benefit_credit_day"]

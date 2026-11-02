@@ -13,11 +13,10 @@ import polars as pl
 import psycopg
 
 from src.infrastructure.database.postgres_manager import read_table
-from src.utils.read_yamls import CONFIG_DIR, load_database
+from src.utils.read_yamls import ROOT, load_database
 
 log = logging.getLogger(__name__)
 
-ROOT = CONFIG_DIR.parent
 OLAP_DIR = ROOT / "database" / "olap_duck"
 OLAP_SQL = ["01_dimensions.sql", "02_facts.sql", "03_load.sql", "04_views.sql"]
 OLAP_FILE = ROOT / load_database()["olap_duck"]["file_path"]

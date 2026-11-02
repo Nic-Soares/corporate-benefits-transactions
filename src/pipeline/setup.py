@@ -12,11 +12,11 @@ from src.pipeline import provenance
 from src.pipeline.entities import ENTITY_TABLES, build_entities, load_entities
 from src.pipeline.reference import REFERENCE_KEYS, build_reference_tables, load_reference_tables
 from src.pipeline.sources import Sources
-from src.utils.read_yamls import CONFIG_DIR, load_database
+from src.utils.read_yamls import ROOT, load_database
 
 log = logging.getLogger(__name__)
 
-OLTP_SCHEMA = CONFIG_DIR.parent / load_database()["oltp_postgres"]["schema"]
+OLTP_SCHEMA = ROOT / load_database()["oltp_postgres"]["schema"]
 # Filled by simulate (counted in the summary)
 SIMULATED_TABLES = ["balance_history", "transactions"]
 
@@ -69,6 +69,7 @@ def run_setup(
         reference_date=today,
         setup_code_version=provenance.code_version(),
         setup_config_hash=provenance.config_hash(),
+        config_dir=provenance.config_dir(),
         sources=provenance.source_hashes(),
     )
 
