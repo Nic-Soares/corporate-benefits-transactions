@@ -66,7 +66,7 @@ same dataset anywhere; a missing file is downloaded.
 |---|---|
 | `--seed N` | Random seed (default 42) |
 | `--today YYYY-MM-DD` | Reference day of every generated date (default today); with the seed, fixes the data |
-| `--reset` | Replace the entities (and any simulated transactions) already in the database |
+| `--reset` | Drop and recreate every table, then generate again (replaces entities and transactions) |
 
 Without `--reset`, a second run stops: `The database already has entities`.
 
@@ -129,7 +129,7 @@ rm -f database/olap_duck/olap_corporate_benefits.duckdb
 | `--today … is before the generated data` | `simulate` got a different `--today` than `setup` | Use `setup`'s `--today` |
 | `server closed the connection unexpectedly` right after `up` | Postgres still initializing | `docker compose up -d --wait` |
 | A long run (a year) stalls for minutes | The Mac slept (on battery, idle) | Prefix the command with `caffeinate -i` |
-| `column "…" of relation "…" does not exist` | The schema gained a column; `--reset` empties the tables but doesn't recreate them | `docker compose down -v && docker compose up -d --wait`, then `setup` |
+| `column "…" of relation "…" does not exist` | The schema changed since the tables were created | `setup --reset` (it recreates the tables) |
 | `Quality checks failed: …` on `export` | The data breaks a rule (the message names it) | Look at that check's query in `src/pipeline/export.py`; a rate out of range usually means a config change |
 | `No OLAP database` on `export` | `etl` didn't run | `uv run python -m src.main etl` |
 | A source fails to download | No network, or the API is down | Run again later; once in `data/raw/` it isn't downloaded again |

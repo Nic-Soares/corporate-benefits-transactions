@@ -55,6 +55,11 @@ def test_setup_twice(conn, sources):
     assert counts["wallets"] == 8
     assert _fingerprint(conn) == first
 
+    # a reset recreates the tables: a database from an older schema catches up
+    conn.execute("ALTER TABLE cards DROP COLUMN status_since")
+    run_setup(conn, sources, VOLUMES, seed=1, today=TODAY, reset=True)
+    assert _fingerprint(conn) == first
+
 
 @pytest.mark.db
 def test_simulate_after_setup(conn, sources):

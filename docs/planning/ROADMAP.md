@@ -567,8 +567,8 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] `src/domain/acceptance.py` answers "which wallets does this establishment take on this network", for the generator (from the config) and the issuer (from the reference tables); inactive rules count in both; `OPEN_WALLET` defined once; a test checks both read the same rule for every CNAE and MCC
 
 ### ST-12.4 — One schema contract
-- [ ] Tests keep the DBML files in line with the SQL schemas
-- [ ] `setup --reset` recreates the tables, so a schema change needs no `docker compose down -v`
+- [x] Tests keep the DBML files in line with the SQL schemas (`tests/test_dbml.py`: same tables, same columns in the same order)
+- [x] `setup --reset` drops and recreates the tables, so a schema change needs no `docker compose down -v`
 
 ### ST-12.5 — CI runs the pipeline
 - [ ] CI starts Postgres as a service and runs the `db` tests: setup → simulate → etl → export on a small world, with the quality checks
