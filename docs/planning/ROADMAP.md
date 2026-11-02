@@ -491,12 +491,12 @@ Second pass against how benefits cards are used in the market. The model held; t
 
 ### ST-08.10 — Status over time, the week per category, the first credit (2026-11-02)
 
-- [x] `status_since` on cardholders, cards, card wallets, establishments and terminals: the day the current status began; before it the record was active (`fake.status_since`; any day since the record's start, at most 30 days back for a terminal in maintenance, 180 for a suspension). A card never unlocked is inactive since its issue. Validators, credits and the attempt rates follow the status of the day; new quality check "approved attempts only on records active that day". Before, a card blocked today was blocked the whole year
+- [x] `status_since` on cardholders, cards, card wallets, establishments and terminals: the day the current status began; before it the record was active (`fake.status_since`; a day since the record's start, leaning to early in its life since ST-08.12). A card never unlocked is inactive since its issue. Validators, credits and the attempt rates follow the status of the day; new quality check "approved attempts only on records active that day". Before, a card blocked today was blocked the whole year
 - [x] `weekday_weights_by_category`: meals on workdays, groceries on Saturday, fuel before the weekend; the default week no longer peaks on Monday
 - [x] A wallet activated in the window starts empty and gets its first credit, pro rata to the days left in the month, on the activation day. New cards approved 65% of their first month; now about 83%
 - [x] Dictionary: the segment is the employer's size; the dataset holds a sample of its cardholders
 - [x] `copy_dataframe` sends Polars CSV to `COPY`. The write still takes about 2 minutes on a year: the foreign-key checks of 4.7 million rows
-- [x] Accepted as is: the first month approves more (90%, the starting balance plus the credit); afterwards the approval eases from 87% to 85% over the year, as records that stopped being active pile up toward the end (no record comes back to active)
+- [x] Fixed in ST-08.12: the first month approves more (90%, the starting balance plus the credit); afterwards the approval eases from 87% to 85% over the year, as records that stopped being active pile up toward the end (no record comes back to active)
 
 ### ST-08.11 — Seasonality (2026-11-03)
 
@@ -504,6 +504,14 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] `simulation.year_end_credit`: a third of the employers (`company_share`) add a one-off credit to the FOOD wallet on 10 December, spent over the next 30 days; the generator adds the attempts it pays for
 - [x] Result (seed 42, a year): December about 12% more attempts and 8% more approved BRL than November, January the quietest; on a holiday 1.0–1.6× the attempts of the same weekday, BRL up to 2×; Christmas Day spends less (Christmas Eve takes it: supermarkets +50%); Black Friday doubles retail
 
+
+### ST-08.12 — Monthly approval varies, no drift (2026-11-03)
+
+- [x] Each month of the window draws an intensity (`seasonality.month_noise_sigma`): some months spend more and approve less
+- [x] Opening balance in line with the cardholder's spending (`TransactionGenerator.opening_balances`, `usage_patterns.opening_balance`): a spender keeps 10–40% of a credit from past months, a saver what built up over up to 12 months. Before, every wallet started with 0–100% of a credit, so the first month approved about 90% and the cushion drained over the year
+- [x] `status_since` leans to early in a record's life (`status_since_skew`; the 30- and 180-day caps are gone): records out of use no longer pile up toward the end of the window
+- [x] Spenders spend 1.00–1.35× their credit (was 1.50)
+- [x] Result (a year, seeds 42, 7, 3): months between 85% and 90% approved, up and down with no trend; December below the average (more attempts)
 ---
 
 ## EP-09 — OLAP: Postgres → DuckDB

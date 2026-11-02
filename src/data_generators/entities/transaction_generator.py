@@ -9,6 +9,7 @@ month, small tickets with a long tail. The attempt isn't validated here: the iss
 the wallet and answers later (`src/validators/`).
 """
 
+import calendar
 import math
 import random
 from bisect import bisect_left, bisect_right
@@ -180,12 +181,19 @@ class TransactionGenerator:
         end = datetime.combine(fake.reference_date, datetime.min.time())
         self.days = [end - timedelta(days=d) for d in range(days_back, 0, -1)]
         self.dates = [day.date() for day in self.days]
-        # Cumulative day weights per category (None: any): its week and the calendar
+        # Cumulative day weights per category (None: any): its week, the
+        # calendar, and the intensity each month draws
+        sigma = USAGE["seasonality"]["month_noise_sigma"]
+        intensity = {
+            month: random.lognormvariate(0, sigma)
+            for month in sorted({(day.year, day.month) for day in self.dates})
+        }
         weeks = USAGE["weekday_weights_by_category"]
         self.day_cum = {
             category: list(
                 accumulate(
                     self._day_weight(day, weeks.get(category, USAGE["weekday_weights"]), category)
+                    * intensity[day.year, day.month]
                     for day in self.days
                 )
             )
@@ -256,14 +264,22 @@ class TransactionGenerator:
         # month it makes and the days of the window it is in use: from its
         # activation, at full rate until the card, cardholder or wallet stops
         # being active (`slot_out`), then now and then (`inactive_usage_factor`)
-        credit = {}
+        credit = self.credit = {}
         wallet_out = {}
         self.activation: dict[tuple[str, str], date] = {}
+        self.card_wallet_id: dict[tuple[str, str], str] = {}
         for row in card_wallets_df.select(
-            "card_id", "wallet_id", "monthly_credit", "status", "status_since", "activation_date"
+            "id",
+            "card_id",
+            "wallet_id",
+            "monthly_credit",
+            "status",
+            "status_since",
+            "activation_date",
         ).iter_rows(named=True):
             key = row["card_id"], row["wallet_id"]
             self.activation[key] = row["activation_date"]
+            self.card_wallet_id[key] = row["id"]
             credit[key] = row["monthly_credit"]
             wallet_out[key] = _out_from(row)
         self.slot_out: dict[tuple[str, str], date] = {}
@@ -271,7 +287,7 @@ class TransactionGenerator:
         # A slot can be bound to a window of days (first, last): the year-end credit
         self.slots: list[tuple[dict, str, tuple[date, date] | None]] = []
         weights = []
-        ratio_of = {}
+        ratio_of = self.ratio_of = {}
         for card in self.cards:
             card_out = _earliest(_out_from(card), holder_out[card["cardholder_id"]])
             ratio = ratio_of[card["id"]] = spending_ratio()
@@ -324,6 +340,31 @@ class TransactionGenerator:
         """The card's issue, or the wallet's activation when later."""
         activated = self.activation.get((card["id"], wallet))
         return max(card["issue_date"], activated) if activated else card["issue_date"]
+
+    def opening_balances(self) -> dict[str, float]:
+        """The balance at the window's start of each wallet activated before it,
+        in line with how its cardholder spends (`usage_patterns.opening_balance`):
+        a spender keeps a little of past months, a saver what built up. When the
+        window starts after the month's credit, what is left of it too."""
+        opening = USAGE["opening_balance"]
+        leftover = opening["spender_leftover"]
+        start = self.dates[0]
+        credit_day = fake.SETTINGS["benefit_credit_day"]
+        days = calendar.monthrange(start.year, start.month)[1]
+        elapsed = (start.day - credit_day) / days if start.day > credit_day else None
+        balances = {}
+        for (card_id, wallet), activated in self.activation.items():
+            if activated >= start:
+                continue
+            credit, ratio = self.credit[card_id, wallet], self.ratio_of.get(card_id, 1.0)
+            if ratio >= 1:
+                past = random.uniform(leftover["min"], leftover["max"])
+            else:
+                months = (start.year - activated.year) * 12 + start.month - activated.month
+                past = (1 - ratio) * min(months, opening["saver_months"])
+            this_month = max(0.0, 1 - ratio * elapsed) if elapsed is not None else 0.0
+            balances[self.card_wallet_id[card_id, wallet]] = round(credit * (past + this_month), 2)
+        return balances
 
     def expected_attempts(self) -> float:
         """Attempts the window should hold: the slots' monthly attempts over its days."""
