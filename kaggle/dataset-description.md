@@ -21,7 +21,7 @@ One simulated year, **September 2025 to August 2026**, as a star schema in Parqu
 | `dim_wallets`, `dim_card_programs`, `dim_transaction_modalities`, `dim_acquirers` | small | The catalogues |
 | `ref_response_codes`, `ref_program_wallets`, `ref_cnae_wallets`, `ref_mcc_wallets`, `ref_mcc_modalities` | small | The rules behind each answer: codes, which wallets a program holds, which wallet a CNAE or MCC accepts, which brand accepts an MCC |
 
-Also included: `data_dictionary.md` (every column described), `quality_report.md` (the checks the data passed) and `dataset_metadata.json` (seed, window, code version, row counts).
+Also included: `fact_transactions_sample.csv` (10,000 random rows of the transactions, to look at without loading the whole fact; read `response_code` as text, `00` is approved), `data_dictionary.md` (every column described), `quality_report.md` (the checks the data passed) and `dataset_metadata.json` (seed, window, code version, row counts).
 
 Key columns of `fact_transactions`: `amount` (BRL), `date`, `response_code` (`00` = approved), `decline_reason` (e.g. `insufficient_balance`, `wallet_not_accepted_at_cnae`, `wrong_pin`), `wallet_id` (the wallet the issuer charged), `capture_type`, `is_fraud`, `fraud_scenario` and `disputed`. The ids join every table; there is no CPF, CNPJ, card number or person name.
 
