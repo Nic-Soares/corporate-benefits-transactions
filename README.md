@@ -271,7 +271,7 @@ Suggestions and fixes are welcome.
 4. Run `make check` (and `make test-db` when touching the database)
 5. Open a pull request to `develop`
 
-`main` holds released code; `develop` integrates every story with a `merge(<scope>): …` commit. Dependencies: [`docs/runbooks/dependency-upgrades.md`](docs/runbooks/dependency-upgrades.md).
+`main` holds released code; `develop` integrates every story with a `merge(<scope>): …` commit. Releases are versioned by release-please from the commit types ([`CHANGELOG.md`](CHANGELOG.md), [`docs/runbooks/releases.md`](docs/runbooks/releases.md)). Dependencies: [`docs/runbooks/dependency-upgrades.md`](docs/runbooks/dependency-upgrades.md).
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
