@@ -1,17 +1,21 @@
 """`export`: quality checks on the OLAP database, then one Parquet file per table.
 
 Writes `data/final_datasets/`: `<table>.parquet`, `data_dictionary.md` (from
-`database/olap_duck/dictionary.yaml`) and `quality_report.md`. A failed check
-stops the export.
+`database/olap_duck/dictionary.yaml`), `quality_report.md` and
+`dataset_metadata.json` (how the data was made: `src/pipeline/provenance.py`).
+A failed check stops the export.
 """
 
+import json
 import logging
 from dataclasses import dataclass
+from datetime import UTC, datetime
 from pathlib import Path
 
 import duckdb
 import yaml
 
+from src.pipeline import provenance
 from src.pipeline.etl import OLAP_DIR, OLAP_FILE, OLAP_TABLES, ROOT
 from src.utils.read_yamls import load_simulation_config
 
@@ -231,6 +235,24 @@ def run_export(path: Path = OLAP_FILE, out_dir: Path = EXPORT_DIR) -> tuple[list
             target = out_dir / f"{table}.parquet"
             duck.execute(f"COPY {table} TO '{target}' (FORMAT parquet, COMPRESSION zstd)")
             counts[table] = _count(duck, f"SELECT count(*) FROM {table}")
+        has_run = duck.sql(
+            "SELECT count(*) FROM information_schema.tables WHERE table_name = 'run_metadata'"
+        ).fetchall()[0][0]
+        run = (
+            provenance.read(duck.sql("SELECT key, value FROM run_metadata").fetchall())
+            if has_run
+            else {}
+        )
+    metadata = {
+        "generator": "corporate-benefits-transactions",
+        "synthetic": True,
+        "run": run,
+        "export_code_version": provenance.code_version(),
+        "exported_at": datetime.now(UTC).isoformat(timespec="seconds"),
+        "quality_checks_passed": len(checks),
+        "rows": counts,
+    }
+    (out_dir / "dataset_metadata.json").write_text(json.dumps(metadata, indent=2) + "\n")
     (out_dir / "data_dictionary.md").write_text(render_dictionary())
     (out_dir / "quality_report.md").write_text(render_report(checks, counts))
     log.info(

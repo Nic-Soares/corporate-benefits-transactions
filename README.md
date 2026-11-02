@@ -34,7 +34,7 @@ Details in [`docs/business-rule.md`](docs/business-rule.md).
 
 ## Data sources
 
-Every record is synthetic. The generators draw on public reference data, downloaded once into `data/raw/`:
+Every record is synthetic. The generators draw on public reference data, versioned in `data/raw/` so the same seed gives the same dataset (`dataset_metadata.json` records the seed, the code commit and the hashes of the config and the sources):
 
 | Data | Source | Used for |
 |---|---|---|

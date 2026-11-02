@@ -1,5 +1,6 @@
 """The export: dictionary coverage, quality checks, Parquet files."""
 
+import json
 from datetime import date, datetime, timedelta
 from pathlib import Path
 
@@ -91,6 +92,9 @@ def test_export_writes_every_table(olap_file, lenient, tmp_path):
     assert "fact_transactions" in (tmp_path / "data_dictionary.md").read_text()
     report = (tmp_path / "quality_report.md").read_text()
     assert "❌" not in report and len(checks) == report.count("✅")
+    metadata = json.loads((tmp_path / "dataset_metadata.json").read_text())
+    assert metadata["rows"] == counts and metadata["synthetic"]
+    assert metadata["quality_checks_passed"] == len(checks)
 
 
 def test_a_broken_dataset_is_not_exported(olap_file, lenient, tmp_path):

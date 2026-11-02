@@ -219,6 +219,12 @@ Table balance_history {
   created_at timestamp [default: `now()`]
 }
 
+// RUN METADATA (provenance)
+Table run_metadata {
+  key varchar [primary key]
+  value varchar [not null, note: 'JSON value']
+}
+
 // RELATIONSHIPS
 Ref: companies.parent_id > companies.id
 Ref: cardholders.company_id > companies.id
