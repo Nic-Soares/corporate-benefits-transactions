@@ -7,6 +7,7 @@ from pathlib import Path
 import polars as pl
 
 from src.extractors.ibge_cnae import fetch_cnae
+from src.extractors.ibge_gdp import fetch_gdp
 from src.extractors.ibge_municipalities import fetch_municipios
 from src.extractors.ibge_population import fetch_population
 from src.extractors.mcc_extractor import fetch_mcc_codes
@@ -20,7 +21,7 @@ RAW_DIR = Path(__file__).parents[2] / "data" / "raw"
 class Sources:
     cnae: pl.DataFrame  # IBGE CNAE: classe_id, classe, subclasse_id, subclasse
     mcc: pl.DataFrame  # public MCC list: mcc_code, description
-    municipios: pl.DataFrame  # IBGE: municipio_nome, uf_sigla, population
+    municipios: pl.DataFrame  # IBGE: municipio_nome, uf_sigla, population, gdp
 
 
 def _cached(name: str, fetch) -> pl.DataFrame:
@@ -35,7 +36,7 @@ def _cached(name: str, fetch) -> pl.DataFrame:
 
 
 def fetch_sources() -> Sources:
-    """CNAE, municipalities and population (IBGE APIs) and the MCC list (GitHub)."""
+    """CNAE, municipalities, population and GDP (IBGE APIs) and the MCC list (GitHub)."""
     cnae = _cached("ibge_cnae", fetch_cnae)
     mcc = _cached(
         "mcc_codes",
@@ -44,7 +45,10 @@ def fetch_sources() -> Sources:
         ),
     )
     population = _cached("ibge_population", fetch_population)
-    municipios = _cached("ibge_municipios", fetch_municipios).join(
-        population, on="municipio_id", how="left"
+    gdp = _cached("ibge_gdp", fetch_gdp)
+    municipios = (
+        _cached("ibge_municipios", fetch_municipios)
+        .join(population, on="municipio_id", how="left")
+        .join(gdp, on="municipio_id", how="left")
     )
     return Sources(cnae=cnae, mcc=mcc, municipios=municipios)

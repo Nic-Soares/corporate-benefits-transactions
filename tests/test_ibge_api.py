@@ -2,6 +2,7 @@ import polars as pl
 import pytest
 
 from src.extractors.ibge_cnae import fetch_cnae
+from src.extractors.ibge_gdp import fetch_gdp
 from src.extractors.ibge_municipalities import fetch_municipios
 from src.extractors.ibge_population import fetch_population
 
@@ -42,3 +43,12 @@ def test_fetch_population(municipios):
     assert set(population["municipio_id"]) == set(municipios["municipio_id"])
     sao_paulo = population.filter(municipio_id="3550308")["population"].item()
     assert sao_paulo > 10_000_000
+
+
+@pytest.mark.network
+def test_fetch_gdp(municipios):
+    gdp = fetch_gdp()
+    assert set(gdp["municipio_id"]) <= set(municipios["municipio_id"])
+    assert gdp["gdp"].null_count() < 50
+    sao_paulo = gdp.filter(municipio_id="3550308")["gdp"].item()
+    assert sao_paulo == gdp["gdp"].max()

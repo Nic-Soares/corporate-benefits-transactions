@@ -8,7 +8,7 @@
 
 # Volumes of the setup. Cardholders follow each company's segment and cards
 # follow its program bundle: with seed 42, about 9 thousand cardholders, 12
-# thousand cards and 530 thousand attempts in 90 days.
+# thousand cards and about 600 thousand attempts in 90 days.
 data_volumes:
   companies: 200
   # Share of each company's headcount that is generated: a Corporate client
@@ -27,12 +27,15 @@ generation_settings:
   # Company segment: its weight and how many employees (cardholders) it has.
   # SME, Middle and Corporate are cut by headcount; Public is the kind of
   # client (government bodies), of any size. Sizes are log-uniform in the
-  # range, so small companies are the commonest.
+  # range, so small companies are the commonest. Companies sit where the GDP
+  # is (IBGE municipal GDP). `same_city`: share of the employees who live in
+  # the company's municipality; the others anywhere, by population (a big
+  # employer has branches and staff across the country).
   company_segments:
-    SME:       {weight: 0.70, cardholders: {min: 1,    max: 250}}
-    Middle:    {weight: 0.18, cardholders: {min: 251,  max: 1999}}
-    Corporate: {weight: 0.05, cardholders: {min: 2000, max: 10000}}
-    Public:    {weight: 0.07, cardholders: {min: 50,   max: 5000}}
+    SME:       {weight: 0.70, cardholders: {min: 1,    max: 250},   same_city: 0.90}
+    Middle:    {weight: 0.18, cardholders: {min: 251,  max: 1999},  same_city: 0.70}
+    Corporate: {weight: 0.05, cardholders: {min: 2000, max: 10000}, same_city: 0.35}
+    Public:    {weight: 0.07, cardholders: {min: 50,   max: 5000},  same_city: 0.60}
 
   # Programs a company contracts; every cardholder gets one card per program.
   # The 3-party multi-benefit card replaces the separate Food, Meal and Gift
@@ -60,10 +63,6 @@ generation_settings:
     HOME_OFFICE: 0.25
     EDUCATION: 0.20
     GIFT: 0.40
-
-  # Share of cardholders who live in their company's municipality; the others
-  # anywhere, by population
-  cardholder_same_city_ratio: 0.8
 
   card_type_distribution:
     physical: 0.85
