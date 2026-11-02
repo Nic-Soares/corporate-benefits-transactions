@@ -16,7 +16,7 @@ Every attempt to pay, withdraw or reverse with a benefit card, and the issuer's 
 | `company_id` | VARCHAR | Cardholder's employer (dim_companies) |
 | `program_id` | VARCHAR | Card program (dim_card_programs) |
 | `modality_id` | VARCHAR | Network the card runs on: OWN (issuer's proprietary network, 3-party) or VISA, MASTERCARD, ELO (4-party) |
-| `card_wallet_id` | VARCHAR | Wallet of the card the issuer charged (dim_card_wallets); empty when none could be routed |
+| `card_wallet_id` | VARCHAR | Wallet of the card the issuer charged (dim_card_wallets); on a decline for balance, the wallet it would have charged; empty when the decline came before a wallet was chosen |
 | `wallet_id` | VARCHAR | Type of that wallet: FOOD, MEAL, MOBILITY, HEALTH, HOME_OFFICE, EDUCATION, GIFT, PREMIUM |
 | `transaction_type` | VARCHAR | purchase, withdrawal (cash, brand cards, GIFT wallet) or reversal |
 | `wallet_option` | VARCHAR | Proprietary network: the option picked on the terminal (FOOD, MEAL, OTHERS); empty on brand cards |
@@ -55,7 +55,7 @@ Every change of a wallet's balance: the monthly credit, debits of approved purch
 
 ## `dim_card_wallets`
 
-Each wallet a card holds, with its monthly credit and limits.
+Each wallet a card holds, with its monthly credit and limits. The employer picks, per program, which of the program's wallets (ref_program_wallets) its employees get.
 
 | Column | Type | Description |
 |---|---|---|
@@ -67,7 +67,7 @@ Each wallet a card holds, with its monthly credit and limits.
 | `monthly_limit` | DECIMAL(15,2) | Most that can be spent per month, BRL; 0 = no limit |
 | `daily_count_limit` | INTEGER | Most approved purchases per day; 0 = no limit |
 | `final_balance` | DECIMAL(15,2) | Balance at the end of the simulated period |
-| `activation_date` | DATE | Date the wallet was activated |
+| `activation_date` | DATE | Date the wallet was activated, a few days after the card's issue |
 | `status` | VARCHAR | active, suspended or cancelled |
 
 ## `dim_cards`
@@ -198,6 +198,15 @@ ISO 8583 response codes used in the dataset.
 |---|---|---|
 | `id` | VARCHAR | Code |
 | `description` | VARCHAR | Meaning, in Portuguese |
+
+## `ref_program_wallets`
+
+Wallets each card program allows. A multi-benefit card holds the ones its employer picked out of these.
+
+| Column | Type | Description |
+|---|---|---|
+| `program_id` | VARCHAR | Program (dim_card_programs) |
+| `wallet_id` | VARCHAR | Wallet the program allows (dim_wallets) |
 
 ## `ref_cnae_wallets`
 

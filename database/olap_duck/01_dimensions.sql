@@ -110,6 +110,12 @@ CREATE TABLE IF NOT EXISTS ref_response_codes (
   description VARCHAR NOT NULL
 );
 
+CREATE TABLE IF NOT EXISTS ref_program_wallets (
+  program_id VARCHAR NOT NULL,
+  wallet_id VARCHAR NOT NULL,
+  PRIMARY KEY (program_id, wallet_id)
+);
+
 CREATE TABLE IF NOT EXISTS ref_cnae_wallets (
   cnae_code VARCHAR NOT NULL,
   wallet_id VARCHAR NOT NULL,

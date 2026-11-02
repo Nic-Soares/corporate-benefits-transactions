@@ -295,8 +295,9 @@ def test_route_proprietary_option(tx, route):
     # The rule for supermarkets (4711) is inactive
     closed = tx | {"establishment_id": "est_closed", "wallet_option": "FOOD"}
     assert route(closed) == declined("57", "wallet_not_accepted_at_cnae")
-    # Accepted, but not enough balance
-    assert route(tx | {"amount": 600.0}) == declined("51", "insufficient_balance")
+    # Accepted, but not enough balance: the wallet it would have charged comes back
+    short = declined("51", "insufficient_balance") | {"card_wallet_id": "cw_1"}
+    assert route(tx | {"amount": 600.0}) == short
 
 
 def test_route_brand_by_mcc(brand_tx, route):
@@ -307,8 +308,9 @@ def test_route_brand_by_mcc(brand_tx, route):
     # pharmacy MCC goes to HEALTH (FOOD isn't accepted there)
     pharmacy = brand_tx | {"establishment_id": "est_pharmacy"}
     assert route(pharmacy) == PASS | {"card_wallet_id": "cw_6"}
-    # candidates exist, none with enough balance
-    assert route(brand_tx | {"amount": 5000.0}) == declined("51", "insufficient_balance")
+    # candidates exist, none with enough balance: the first in priority comes back
+    short = declined("51", "insufficient_balance") | {"card_wallet_id": "cw_4"}
+    assert route(brand_tx | {"amount": 5000.0}) == short
     # the card holds no wallet in the priority list
     empty = brand_tx | {"card_id": "card_blocked"}
     assert route(empty) == declined("57", "wallet_not_on_card")

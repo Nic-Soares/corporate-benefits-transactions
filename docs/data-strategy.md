@@ -53,7 +53,7 @@ Generated in batches, parents first, by `src/data_generators/entities/`:
 companies (holdings, then branches)   segment by weight; a branch keeps its holding's
   └── cardholders            as many as the segment says; admission ≥ company registration
         └── cards            one per program of the company's bundle; network from the program
-              └── card_wallets   every wallet of the program; monthly credit, balance, limits
+              └── card_wallets   the program wallets the company gives; monthly credit, balance, limits
 establishments               category by weight → a CNAE of it → the MCC of that CNAE
   └── terminals              POS/TEF by acquirer weight, e-commerce gateway or ATM by category
 ```
@@ -106,4 +106,4 @@ Views in `04_views.sql`: approval per program and network, declines per code and
 
 ## Dataset
 
-`python -m src.main export` (`src/pipeline/export.py`, [ADR-014](adr/014-public-dataset.md)) checks the OLAP database and writes `data/final_datasets/`: one Parquet file per table — the 12 above plus `ref_response_codes`, `ref_cnae_wallets`, `ref_mcc_wallets` and `ref_mcc_modalities`, the rules that explain the declines — with `data_dictionary.md` ([copy](data-dictionary.md)) and `quality_report.md`. Any failed check stops it.
+`python -m src.main export` (`src/pipeline/export.py`, [ADR-014](adr/014-public-dataset.md)) checks the OLAP database and writes `data/final_datasets/`: one Parquet file per table — the 12 above plus `ref_response_codes`, `ref_program_wallets`, `ref_cnae_wallets`, `ref_mcc_wallets` and `ref_mcc_modalities`, the rules that explain the declines — with `data_dictionary.md` ([copy](data-dictionary.md)) and `quality_report.md`. Any failed check stops it.
