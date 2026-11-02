@@ -1,12 +1,15 @@
 """`simulate`: purchase attempts answered by the issuer, written to the OLTP database."""
 
 import logging
+from collections import defaultdict
 from datetime import date, datetime, time, timedelta
 
+import polars as pl
 import psycopg
 
 from src.data_generators.providers import fake
 from src.infrastructure.database.postgres_manager import (
+    bulk_load,
     copy_dataframe,
     count_rows,
     read_table,
@@ -58,50 +61,92 @@ def run_simulation(conn: psycopg.Connection, seed: int, today: date, days: int) 
         days_back=days,
     )
     n_attempts = round(generator.expected_attempts())
-    attempts = [generator.generate() for _ in range(n_attempts)]
-    fraud = FraudGenerator(generator).generate(round(n_attempts * FRAUD["share_of_attempts"]))
-    attempts += fraud
-    log.info("%s attempts generated (%s in fraud incidents)", f"{len(attempts):,}", len(fraud))
-
-    end = datetime.combine(today, time())
-    result = TransactionSimulator(tables).run(
-        attempts, end - timedelta(days=days), end, generator.opening_balances()
+    plan = generator.plan(n_attempts)
+    fraud: dict[tuple[int, int], list[dict]] = defaultdict(list)
+    for tx in FraudGenerator(generator).generate(round(n_attempts * FRAUD["share_of_attempts"])):
+        fraud[tx["date"].year, tx["date"].month].append(tx)
+    log.info(
+        "%s attempts planned (%s in fraud incidents)",
+        f"{n_attempts + sum(map(len, fraud.values())):,}",
+        sum(map(len, fraud.values())),
     )
+
+    # Month by month: the attempts of a month are built, answered and written,
+    # so memory follows a month, not the window
+    end = datetime.combine(today, time())
+    start = end - timedelta(days=days)
+    simulator = TransactionSimulator(tables)
+    simulator.start(start, end, generator.opening_balances())
+    totals = {"transactions": 0, "balance_history": 0, "approved": 0, "fraud": 0, "disputed": 0}
+    answers: list[pl.DataFrame] = []
+    with bulk_load(conn, ["transactions", "balance_history"]):
+        for month in _months(start, end):
+            attempts = generator.build_month(plan.pop(month, ((), (), ()))) + fraud.pop(month, [])
+            following = date(month[0] + month[1] // 12, month[1] % 12 + 1, 1)
+            result = simulator.advance(attempts, min(datetime.combine(following, time()), end))
+            copy_dataframe(conn, "balance_history", result.balance_history)
+            totals["balance_history"] += result.balance_history.height
+            txs = result.transactions
+            if not txs.height:
+                continue
+            copy_dataframe(conn, "transactions", txs)
+            totals["transactions"] += txs.height
+            totals["approved"] += (txs["response_code"] == "00").sum()
+            totals["fraud"] += txs["is_fraud"].sum()
+            totals["disputed"] += txs["disputed"].sum()
+            answers.append(txs.group_by("response_code", "decline_reason").len())
+            log.info(
+                "  %d-%02d %9s attempts, %.1f%% approved",
+                *month,
+                f"{txs.height:,}",
+                100 * (txs["response_code"] == "00").mean(),
+            )
     log.info("Attempts answered")
     provenance.record(
         conn,
-        window_start=(end - timedelta(days=days)).date(),
+        window_start=start.date(),
         window_end=(end - timedelta(days=1)).date(),
         window_days=days,
         simulate_code_version=provenance.code_version(),
         simulate_config_hash=provenance.config_hash(),
     )
 
-    copy_dataframe(conn, "transactions", result.transactions)
-    copy_dataframe(conn, "balance_history", result.balance_history)
     conn.execute(
         "CREATE TEMP TABLE new_balances (id VARCHAR PRIMARY KEY, current_balance NUMERIC) "
         "ON COMMIT DROP"
     )
-    copy_dataframe(conn, "new_balances", result.card_wallets.select("id", "current_balance"))
+    balances = simulator.card_wallets.to_frame().select("id", "current_balance")
+    copy_dataframe(conn, "new_balances", balances)
     conn.execute(
         "UPDATE card_wallets c SET current_balance = n.current_balance, updated_at = now() "
         "FROM new_balances n WHERE c.id = n.id"
     )
 
-    answers = (
-        result.transactions.group_by("response_code", "decline_reason")
-        .len()
-        .sort("len", descending=True)
-    )
+    answered = totals["transactions"]
     return {
-        "transactions": result.transactions.height,
-        "balance_history": result.balance_history.height,
-        "approval_rate": (result.transactions["response_code"] == "00").mean(),
-        "fraud": result.transactions["is_fraud"].sum(),
-        "disputed": result.transactions["disputed"].sum(),
-        "answers": answers,
+        "transactions": answered,
+        "balance_history": totals["balance_history"],
+        "approval_rate": totals["approved"] / answered if answered else 0.0,
+        "fraud": totals["fraud"],
+        "disputed": totals["disputed"],
+        "answers": (
+            pl.concat(answers, how="vertical_relaxed")
+            .group_by("response_code", "decline_reason")
+            .agg(pl.col("len").sum())
+            .sort("len", descending=True)
+            if answers
+            else pl.DataFrame()
+        ),
     }
+
+
+def _months(start: datetime, end: datetime) -> list[tuple[int, int]]:
+    """The (year, month) pairs of [start, end)."""
+    months, year, month = [], start.year, start.month
+    while date(year, month, 1) < end.date():
+        months.append((year, month))
+        year, month = (year + 1, 1) if month == 12 else (year, month + 1)
+    return months
 
 
 def simulation_defaults() -> int:

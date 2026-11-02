@@ -204,6 +204,25 @@ simulation:
     spend_days: 30
 
 # =====================================
+# Statistical profile the export checks (src/pipeline/profile.py): the shape a
+# dataset must keep, whatever the seed and the scale
+# =====================================
+quality_profile:
+  monthly_approval: {min: 0.82, max: 0.93}
+  # Median ticket of each kind of place, within this share of the config's
+  ticket_median_tolerance: 0.30
+  restaurant_peak_hours: [11, 13]
+  # A weekend day's restaurant attempts ÷ a weekday's
+  restaurant_weekend_to_weekday: {min: 0.40, max: 0.90}
+  insufficient_balance_share_of_declines: {min: 0.35, max: 0.75}
+  # Reversals ÷ approved purchases, within this share of simulation.reversal_ratio
+  reversal_ratio_tolerance: 0.50
+  home_state_share: {min: 0.65, max: 0.95}
+  top_fifth_establishments_share: {min: 0.45, max: 0.90}
+  # Supermarket attempts on 24 December ÷ an average day (when the window holds it)
+  christmas_eve_lift: 1.30
+
+# =====================================
 # Fraud (read by src/data_generators/entities/fraud_generator.py). Typologies
 # of the benefits market; every number synthetic.
 # =====================================
