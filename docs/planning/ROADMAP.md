@@ -21,7 +21,7 @@
 | `EP-10` Dataset export and quality | ✅ Done — merged into `develop` 2026-11-01 (ADR-014) | code + `data/final_datasets/` |
 | `EP-11` Kaggle release | Not started — after `EP-13` | Kaggle |
 | `EP-12` Architecture review: a coherent dataset at volume | ✅ Done — merged into `develop` 2026-11-03 |
-| `EP-13` Layout and developer infrastructure | In progress | code, `config/`, `database/`, `.github/` |
+| `EP-13` Layout and developer infrastructure | ✅ Done — merged into `develop` 2026-11-03 (ADR-019) | code, `config/`, `database/`, `.github/` |
 
 ### Git workflow
 
@@ -596,22 +596,24 @@ Second pass against how benefits cards are used in the market. The model held; t
 
 **Dependencies:** `EP-12`. **Size:** S (~half a day). Review of 2026-11-03: folders three and four levels deep holding one or two files, the reference tables built in two places, generated files next to the SQL, personal editor settings in git, long commands to remember.
 
+Found on the way: `src/adapters/`, an empty folder left by an old commit.
+
 ### ST-13.1 — A flat source layout
-- [ ] Packages only where there are several modules: `entities/` (generators, `fake`, `brazil`), `sources/` (IBGE and MCC downloads), `simulation/`, `validators/`, `domain/`, `pipeline/` (the commands); single modules at the top: `config.py`, `postgres.py`, `reference.py`, `table.py`, `main.py`
-- [ ] The reference tables built in one module (`reference.py`), not five loaders plus a builder
-- [ ] Every package with an `__init__.py`
+- [x] Packages only where there are several modules: `entities/` (generators, `fake`, `brazil`), `sources/` (IBGE and MCC downloads), `simulation/`, `validators/`, `domain/`, `pipeline/` (the commands); single modules at the top: `config.py`, `postgres.py`, `reference.py`, `table.py`, `main.py`
+- [x] The reference tables built in one module (`reference.py`), not five loaders plus a builder
+- [x] Every package with an `__init__.py`
 
 ### ST-13.2 — Config files by purpose
-- [ ] `reference.yaml` (wallets, programs, networks, acquirers, acceptance rules, response codes, capture technologies), `authorization.yaml` (the issuer's checks and their order), `simulation.yaml` (volumes, behaviour, calendar, fraud, profile), `database.yaml`
+- [x] `reference.yaml` (wallets, programs, networks, acquirers, acceptance rules, response codes, capture technologies), `authorization.yaml` (the issuer's checks and their order), `simulation.yaml` (volumes, behaviour, calendar, fraud, profile), `database.yaml`
 
 ### ST-13.3 — Data folders
-- [ ] `database/` keeps only schemas and SQL; `data/raw/` (inputs), `data/olap/` (the DuckDB file), `data/dataset/` (the export)
+- [x] `database/` keeps only schemas and SQL; `data/raw/` (inputs), `data/olap/` (the DuckDB file), `data/dataset/` (the export)
 
 ### ST-13.4 — Developer infrastructure
-- [ ] `make` targets: `db`, `test`, `dataset` (with `SCALE`, `DAYS`, `SEED`, `TODAY`), `clean`; a `benefits` console command
-- [ ] Docker: defaults for the credentials (no `.env` needed to start), restart only when asked (not at every boot)
-- [ ] Personal editor settings out of git
+- [x] `make` targets: `db`, `test`, `dataset` (with `SCALE`, `DAYS`, `SEED`, `TODAY`), `clean`; a `benefits` console command
+- [x] Docker: defaults for the credentials (no `.env` needed to start), restart only when asked (not at every boot)
+- [x] Personal editor settings out of git
 
 ### ST-13.5 — Architecture docs
-- [ ] `docs/technical-architecture.md` describes the layout and the data flow as they are; ADR-019 records the layout
+- [x] `docs/technical-architecture.md` describes the layout and the data flow as they are; ADR-019 records the layout
 
