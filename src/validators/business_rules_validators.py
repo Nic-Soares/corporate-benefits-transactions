@@ -11,6 +11,7 @@ from typing import Any
 
 import polars as pl
 
+from src.domain.acceptance import Acceptance
 from src.validators._common import (
     PASS,
     PROPRIETARY_MODALITIES,
@@ -26,7 +27,6 @@ from src.validators._common import (
 )
 
 BUSINESS_RULES = RULES["business_rules_validations"]
-OPEN_WALLET = "GIFT"  # takes any MCC the brand accepts
 
 
 def _card_and_establishment(
@@ -66,16 +66,13 @@ def validate_mcc_brand(
     return PASS
 
 
-def _accepted_by_cnae(cnae: str, cnae_wallets_df: pl.DataFrame | Table) -> set[str]:
-    """Wallets the CNAE takes: the active rules of its longest matching prefix."""
-    table = as_table(cnae_wallets_df)
-    if cnae not in table.memo:
-        matching = [r for r in table.rows if cnae.startswith(r["cnae_code"])]
-        longest = max((len(r["cnae_code"]) for r in matching), default=0)
-        table.memo[cnae] = {
-            r["wallet_id"] for r in matching if len(r["cnae_code"]) == longest and r["active"]
-        }
-    return table.memo[cnae]
+def _acceptance(cnae_wallets_df: pl.DataFrame | Table, mcc_wallets_df: pl.DataFrame | Table):
+    """The acceptance rule of these tables (`src/domain/acceptance.py`), built once."""
+    cnae, mcc = as_table(cnae_wallets_df), as_table(mcc_wallets_df)
+    key = ("acceptance", id(mcc))
+    if key not in cnae.memo:
+        cnae.memo[key] = Acceptance(cnae.rows, mcc.rows)
+    return cnae.memo[key]
 
 
 def route_wallet(
@@ -129,14 +126,12 @@ def route_wallet(
     if not candidates:
         return fail(rule["error_code"], "card_wallet_inactive")
 
+    acceptance = _acceptance(cnae_wallets_df, mcc_wallets_df)
     if proprietary:
-        accepted = _accepted_by_cnae(establishment["main_cnae"], cnae_wallets_df)
+        accepted = acceptance.by_cnae(establishment["main_cnae"])
         reason = "wallet_not_accepted_at_cnae"
     else:
-        accepted = {
-            row["wallet_id"] for row in find_all(mcc_wallets_df, mcc_code=establishment["mcc_code"])
-        }
-        accepted.add(OPEN_WALLET)
+        accepted = acceptance.by_mcc(establishment["mcc_code"])
         reason = "no_wallet_for_mcc"
     candidates = [c for c in candidates if c["wallet_id"] in accepted]
     if not candidates:
