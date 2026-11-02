@@ -1,9 +1,9 @@
-oltp_postgres:
+oltp:
   host: "localhost"
   port: 5432
   dbname: "transactions_benefits_db"
   # user and password come from .env (DB_USER, DB_PASSWORD)
-  schema: ./database/oltp_postgres/oltp_schema.sql
+  schema: ./database/oltp/oltp_schema.sql
 
-olap_duck:
-  file_path: ./database/olap_duck/olap_corporate_benefits.duckdb
+olap:
+  file_path: ./data/olap/olap_corporate_benefits.duckdb

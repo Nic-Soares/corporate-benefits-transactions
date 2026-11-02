@@ -15,10 +15,10 @@ from src.entities import fake
 from src.reference import build_reference_tables
 
 DATABASE = Path(__file__).parent.parent / "database"
-OLTP_SCHEMA = DATABASE / "oltp_postgres" / "oltp_schema.sql"
+OLTP_SCHEMA = DATABASE / "oltp" / "oltp_schema.sql"
 OLAP_SCHEMA = [
-    DATABASE / "olap_duck" / "01_dimensions.sql",
-    DATABASE / "olap_duck" / "02_facts.sql",
+    DATABASE / "olap" / "01_dimensions.sql",
+    DATABASE / "olap" / "02_facts.sql",
 ]
 
 # Parents before children, so the foreign keys resolve

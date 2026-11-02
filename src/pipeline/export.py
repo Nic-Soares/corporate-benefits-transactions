@@ -1,7 +1,7 @@
 """`export`: quality checks on the OLAP database, then one Parquet file per table.
 
-Writes `data/final_datasets/`: `<table>.parquet`, `data_dictionary.md` (from
-`database/olap_duck/dictionary.yaml`), `quality_report.md` and
+Writes `data/dataset/`: `<table>.parquet`, `data_dictionary.md` (from
+`database/olap/dictionary.yaml`), `quality_report.md` and
 `dataset_metadata.json` (how the data was made: `src/pipeline/provenance.py`).
 A failed check stops the export.
 """
@@ -21,7 +21,7 @@ from src.pipeline.etl import OLAP_DIR, OLAP_FILE, OLAP_TABLES, ROOT
 
 log = logging.getLogger(__name__)
 
-EXPORT_DIR = ROOT / "data" / "final_datasets"
+EXPORT_DIR = ROOT / "data" / "dataset"
 DICTIONARY_FILE = OLAP_DIR / "dictionary.yaml"
 APPROVAL_TOLERANCE = 0.10
 FRAUD_SHARE = (0.001, 0.02)
@@ -197,7 +197,7 @@ def render_dictionary() -> str:
     lines = [
         "# Data dictionary",
         "",
-        "Generated from `database/olap_duck/dictionary.yaml` by `python -m src.main export`.",
+        "Generated from `database/olap/dictionary.yaml` by `python -m src.main export`.",
         "Every record is synthetic.",
     ]
     for table, entry in load_dictionary().items():

@@ -69,8 +69,8 @@ corporate-benefits-transactions/
 ├── config/                 # Business rules, reference data, simulation parameters
 ├── database/
 │   ├── model/              # DBML models (OLTP and OLAP)
-│   ├── oltp_postgres/      # PostgreSQL schema
-│   └── olap_duck/          # DuckDB star schema
+│   ├── oltp/      # PostgreSQL schema
+│   └── olap/          # DuckDB star schema
 ├── docs/
 │   ├── adr/                # Architecture decision records
 │   ├── planning/           # Roadmap
@@ -118,9 +118,9 @@ Step by step, with troubleshooting: [`docs/runbooks/local-setup.md`](docs/runboo
 
 `simulate` generates the purchase attempts of the 90 days before `--today` (`simulation.days`), lets the issuer answer each one in time order, and writes `transactions`, `balance_history` and the final balances: monthly credits, debits, reversals, and cardholders who stop trying once their balance runs out. Use the same `--today` as `setup`.
 
-`etl` rebuilds `database/olap_duck/olap_corporate_benefits.duckdb` from the OLTP database: 10 dimensions, `fact_transactions` (with the network, acquirer and company of each transaction) and `fact_balance_movements`, plus analytical views (`v_approval_by_program`, `v_declines`, `v_ticket_by_category`, `v_fraud_by_scenario`, `v_daily`, `v_wallet_flows_by_month`).
+`etl` rebuilds `data/olap/olap_corporate_benefits.duckdb` from the OLTP database: 10 dimensions, `fact_transactions` (with the network, acquirer and company of each transaction) and `fact_balance_movements`, plus analytical views (`v_approval_by_program`, `v_declines`, `v_ticket_by_category`, `v_fraud_by_scenario`, `v_daily`, `v_wallet_flows_by_month`).
 
-`export` runs 53 quality checks on the OLAP database (unique ids, every key resolves, the balance ledger holds, approval and fraud rates in range, no personal documents) and, only if all pass, writes `data/final_datasets/`: one Parquet file per table (10 dimensions, 2 facts, 5 reference tables with the program wallets and the acceptance rules), `data_dictionary.md` and `quality_report.md`. The dictionary is also in [`docs/data-dictionary.md`](docs/data-dictionary.md). The public tables carry no CNPJ, CPF, card number or cardholder name.
+`export` runs 53 quality checks on the OLAP database (unique ids, every key resolves, the balance ledger holds, approval and fraud rates in range, no personal documents) and, only if all pass, writes `data/dataset/`: one Parquet file per table (10 dimensions, 2 facts, 5 reference tables with the program wallets and the acceptance rules), `data_dictionary.md` and `quality_report.md`. The dictionary is also in [`docs/data-dictionary.md`](docs/data-dictionary.md). The public tables carry no CNPJ, CPF, card number or cardholder name.
 
 ## Development workflow
 

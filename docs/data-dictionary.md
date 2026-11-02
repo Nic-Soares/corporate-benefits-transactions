@@ -1,6 +1,6 @@
 # Data dictionary
 
-Generated from `database/olap_duck/dictionary.yaml` by `python -m src.main export`.
+Generated from `database/olap/dictionary.yaml` by `python -m src.main export`.
 Every record is synthetic.
 
 ## `fact_transactions`
