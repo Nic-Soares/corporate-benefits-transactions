@@ -6,7 +6,7 @@
 |---|---|---|
 | Language | Python 3.14, managed by uv | [ADR-005](adr/005-python-toolchain.md) |
 | DataFrames | Polars | [ADR-002](adr/002-polars.md) |
-| Fake data | mimesis (pt-BR) + a ported CPF/CNPJ provider | `src/data_generators/providers/` |
+| Fake data | mimesis (pt-BR) + a ported CPF/CNPJ provider | `src/entities/` |
 | OLTP | PostgreSQL 18 in Docker | [ADR-001](adr/001-postgres-duckdb-parquet.md) |
 | OLAP | DuckDB, star schema | [ADR-001](adr/001-postgres-duckdb-parquet.md) |
 | Distribution | Parquet | [ADR-001](adr/001-postgres-duckdb-parquet.md) |

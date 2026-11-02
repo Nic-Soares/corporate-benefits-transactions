@@ -5,8 +5,8 @@ from datetime import date, datetime, timedelta
 import polars as pl
 import pytest
 
-from src.data_generators.providers import fake
-from src.pipeline.reference import build_reference_tables
+from src.entities import fake
+from src.reference import build_reference_tables
 from src.simulation import seasons
 from src.simulation import simulator as transaction_simulator
 from src.simulation.simulator import (

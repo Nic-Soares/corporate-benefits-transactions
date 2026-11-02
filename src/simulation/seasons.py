@@ -15,7 +15,7 @@ from datetime import date, datetime, timedelta
 from functools import cache
 from itertools import accumulate
 
-from src.utils.read_yamls import load_simulation_config
+from src.config import load_simulation_config
 
 _CONFIG = load_simulation_config()
 USAGE: dict = _CONFIG["usage_patterns"]

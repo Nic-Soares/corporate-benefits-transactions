@@ -9,8 +9,8 @@ from dataclasses import dataclass
 
 import duckdb
 
-from src.data_generators.entities.establishment_generator import CATEGORIES
-from src.utils.read_yamls import load_simulation_config
+from src.config import load_simulation_config
+from src.entities.establishments import CATEGORIES
 
 _CONFIG = load_simulation_config()
 PROFILE = _CONFIG["quality_profile"]

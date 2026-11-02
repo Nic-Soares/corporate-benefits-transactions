@@ -68,4 +68,4 @@ in the commit body.
 
 | Date | Change | Notes |
 |---|---|---|
-| 2026-10-30 | Moved to `uv`; all packages to the latest release | `mimesis` 18 → 22: `mimesis.builtins` was removed in 19, so `BrazilSpecProvider` was ported to `src/data_generators/providers/brazil_provider.py` (same output for the same seed). 20 rewrote `SchemaBuilder` and 21 removed `Person.political_views/worldview/views_on`, `Datetime.century`, `Payment.paypal`, `Science.measure_unit/metric_prefix`, `Internet.stock_image_url` — none used here |
+| 2026-10-30 | Moved to `uv`; all packages to the latest release | `mimesis` 18 → 22: `mimesis.builtins` was removed in 19, so `BrazilSpecProvider` was ported to `src/entities/brazil_provider.py` (same output for the same seed). 20 rewrote `SchemaBuilder` and 21 removed `Person.political_views/worldview/views_on`, `Datetime.century`, `Payment.paypal`, `Science.measure_unit/metric_prefix`, `Internet.stock_image_url` — none used here |

@@ -16,12 +16,12 @@ from itertools import accumulate
 
 import polars as pl
 
-from src.data_generators.entities.establishment_generator import CATEGORIES
-from src.data_generators.providers import fake
+from src.config import load_pre_populated_data, load_simulation_config
 from src.domain.acceptance import OPEN_WALLET, Acceptance
 from src.domain.status import earliest, out_from
+from src.entities import fake
+from src.entities.establishments import CATEGORIES
 from src.simulation import seasons
-from src.utils.read_yamls import load_pre_populated_data, load_simulation_config
 
 USAGE = load_simulation_config()["usage_patterns"]
 ACCEPTANCE = Acceptance.from_config()

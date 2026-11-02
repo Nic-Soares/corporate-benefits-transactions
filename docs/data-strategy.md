@@ -43,11 +43,11 @@ erDiagram
 | `mcc_wallets` | `pre_populated_data.yaml → mcc_wallets` | one row per MCC × wallet (GIFT takes any MCC, no rows) |
 | `mcc_modalities` | `validation_rules.yaml → mcc_acceptance_rules` × the public MCC list | one row per MCC × accepting brand |
 
-Loaders: `src/data_generators/reference_data/`. External sources (`src/extractors/`, listed in the README): the IBGE CNAE, localities and population APIs, and the public MCC list. `mcc_acceptance_rules` is synthetic: the brands don't publish their acceptance tables.
+Loaders: `src/data_generators/reference_data/`. External sources (`src/sources/`, listed in the README): the IBGE CNAE, localities and population APIs, and the public MCC list. `mcc_acceptance_rules` is synthetic: the brands don't publish their acceptance tables.
 
 ## Entity tables — generated
 
-Generated in batches, parents first, by `src/data_generators/entities/`:
+Generated in batches, parents first, by `src/entities/`:
 
 ```
 companies (holdings, then branches)   segment by weight; a branch keeps its holding's
@@ -65,7 +65,7 @@ establishments               category by weight → a CNAE of it → the MCC of 
 - Statuses: weights in `generation_settings.*_status_distribution`.
 - Dates: ranges in `generation_settings.date_ranges`, relative to a reference day.
 - CPF and card numbers are generated valid and stored hashed (`cpf_hash`, `card_number_hash`).
-- Reproducible: `src/data_generators/providers/fake.py → seed(n, today=…)` fixes every random source.
+- Reproducible: `src/entities/fake.py → seed(n, today=…)` fixes every random source.
 - Loading order matters: `companies.parent_id` references `companies`, so holdings go in before branches.
 
 ## Transactional tables — simulated
