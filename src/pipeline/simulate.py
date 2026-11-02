@@ -13,6 +13,7 @@ from src.infrastructure.database.postgres_manager import (
     count_rows,
     read_table,
 )
+from src.pipeline import provenance
 from src.processors.transaction_simulator import TABLES, TransactionSimulator
 from src.utils.read_yamls import load_simulation_config
 
@@ -67,6 +68,14 @@ def run_simulation(conn: psycopg.Connection, seed: int, today: date, days: int) 
         attempts, end - timedelta(days=days), end, generator.opening_balances()
     )
     log.info("Attempts answered")
+    provenance.record(
+        conn,
+        window_start=(end - timedelta(days=days)).date(),
+        window_end=(end - timedelta(days=1)).date(),
+        window_days=days,
+        simulate_code_version=provenance.code_version(),
+        simulate_config_hash=provenance.config_hash(),
+    )
 
     copy_dataframe(conn, "transactions", result.transactions)
     copy_dataframe(conn, "balance_history", result.balance_history)

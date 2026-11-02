@@ -82,8 +82,12 @@ def run_etl(pg: psycopg.Connection, path: Path = OLAP_FILE) -> dict[str, int]:
     oltp = {table: read_table(pg, table) for table in STAGED}
     if not oltp["transactions"].height:
         log.warning("No transactions yet: run simulate first for the facts")
+    metadata = read_table(pg, "run_metadata")
     path.unlink(missing_ok=True)
     with duckdb.connect(str(path)) as duck:
         counts = build_olap(duck, oltp)
+        # How the data was made, for the export's dataset_metadata.json
+        duck.register("stg_run_metadata", metadata)
+        duck.execute("CREATE TABLE run_metadata AS SELECT * FROM stg_run_metadata")
     log.info("OLAP written to %s", path.relative_to(ROOT) if path.is_relative_to(ROOT) else path)
     return counts

@@ -56,10 +56,11 @@ uv run python -m src.main setup --seed 42 --today 2026-09-01 --reset
 uv run python -m src.main simulate --seed 42 --today 2026-09-01 --days 365
 ```
 
-`setup` creates the 17 OLTP tables, upserts the reference tables from
+`setup` creates the 17 OLTP tables (and `run_metadata`), upserts the reference tables from
 `config/` and writes the generated entities, then prints the rows per table.
-The first run downloads the public sources into `data/raw/` (CNAE from
-the IBGE API, the MCC list from GitHub, municipalities, population and municipal GDP from the IBGE API).
+The public sources (CNAE, municipalities, population and municipal GDP from the IBGE
+API, the MCC list from GitHub) are versioned in `data/raw/`, so the same seed gives the
+same dataset anywhere; a missing file is downloaded.
 
 | Option | Effect |
 |---|---|
@@ -86,8 +87,9 @@ views: `SELECT * FROM v_declines`.
 uv run python -m src.main export   # quality checks, then data/final_datasets/
 ```
 
-`export` writes one Parquet file per table, `data_dictionary.md` and
-`quality_report.md` into `data/final_datasets/` (git-ignored). If a check
+`export` writes one Parquet file per table, `data_dictionary.md`,
+`quality_report.md` and `dataset_metadata.json` (seed, reference day, window, code
+commit, config and source hashes, row counts) into `data/final_datasets/` (git-ignored). If a check
 fails it writes nothing and names the check. After changing
 `database/olap_duck/dictionary.yaml`, regenerate the copy in `docs/`:
 
