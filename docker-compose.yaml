@@ -2,10 +2,10 @@ services:
   db:
     image: postgres:18
     container_name: corporate_benefits_db
-    restart: always
+    # Local development defaults; .env overrides them
     environment:
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_USER: ${DB_USER:-benefits}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-change-me}
       POSTGRES_DB: transactions_benefits_db
     ports:
       - "5432:5432"
