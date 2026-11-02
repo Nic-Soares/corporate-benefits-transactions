@@ -2,18 +2,8 @@ oltp_postgres:
   host: "localhost"
   port: 5432
   dbname: "transactions_benefits_db"
-  user: ${DB_USER}
-  password: ${DB_PASSWORD}
+  # user and password come from .env (DB_USER, DB_PASSWORD)
   schema: ./database/oltp_postgres/oltp_schema.sql
 
 olap_duck:
-  engine: duckdb
   file_path: ./database/olap_duck/olap_corporate_benefits.duckdb
-  read_only: false
-  schema:
-    dimensions: ./database/olap_duck/01_dimensions.sql
-    facts: ./database/olap_duck/02_facts.sql
-
-performance:
-  memory_limit: 8GB
-  threads: 8
