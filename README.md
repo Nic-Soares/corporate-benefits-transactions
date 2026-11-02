@@ -56,9 +56,9 @@ generators (seeded) ──► entities ──┤
 transactions ──► validators ───────┘   approved / declined with a response code
 ```
 
-- **Generators** (`src/data_generators/`) create companies (by segment and size), cardholders, cards (the programs the company contracts, with their wallets), establishments (CNAE and the matching MCC) and terminals (POS, TEF, e-commerce gateway, ATM) with real IBGE municipalities, statuses weighted as configured, and dates that follow their parent records; then purchase attempts with the usage patterns in `config/simulation.yaml`. One seed reproduces a whole run.
+- **Entities** (`src/entities/`) create companies (by segment and size), cardholders, cards (the programs the company contracts, with their wallets), establishments (CNAE and the matching MCC) and terminals (POS, TEF, e-commerce gateway, ATM) with real IBGE municipalities, statuses weighted as configured, and dates that follow their parent records. **Simulation** (`src/simulation/`) draws the purchase attempts with the demand, calendar and places in `config/simulation.yaml`, and the issuer answers them in time order. One seed reproduces a whole run.
 - **Validators** (`src/validators/`) check status, dates, PIN, network rules and wallet routing (CNAE for the proprietary network, MCC for brands), balance and limits (amount and purchases per day), and capture technology. Each returns the ISO 8583 code configured in `config/authorization.yaml` and a `decline_reason`.
-- **Config** (`config/`) is the source of truth for business rules; the **OLTP schema** is the source of truth for table and column names.
+- **Config** (`config/`: `reference.yaml`, `authorization.yaml`, `simulation.yaml`, `database.yaml`) is the source of truth for business rules; the **OLTP schema** is the source of truth for table and column names.
 
 Architecture: [`docs/technical-architecture.md`](docs/technical-architecture.md). Decisions: [`docs/adr/`](docs/adr/).
 
@@ -66,11 +66,15 @@ Architecture: [`docs/technical-architecture.md`](docs/technical-architecture.md)
 
 ```
 corporate-benefits-transactions/
-├── config/                 # Business rules, reference data, simulation parameters
+├── config/                 # reference, authorization, simulation, database (YAML)
+├── data/
+│   ├── raw/                # Public sources (IBGE, MCC), versioned
+│   ├── olap/               # The DuckDB file (generated)
+│   └── dataset/            # The export (generated)
 ├── database/
 │   ├── model/              # DBML models (OLTP and OLAP)
-│   ├── oltp/      # PostgreSQL schema
-│   └── olap/          # DuckDB star schema
+│   ├── oltp/               # PostgreSQL schema
+│   └── olap/               # DuckDB star schema, load SQL, data dictionary
 ├── docs/
 │   ├── adr/                # Architecture decision records
 │   ├── planning/           # Roadmap
@@ -88,47 +92,38 @@ corporate-benefits-transactions/
 │   ├── validators/         # The issuer's authorization checks
 │   └── pipeline/           # The commands, provenance, statistical profile
 ├── tests/
+├── Makefile                # make help
 └── docker-compose.yaml     # PostgreSQL 18
 ```
 
 ## Getting started
 
-Prerequisites: [uv](https://docs.astral.sh/uv/) (it installs Python 3.14 if needed) and Docker.
+Prerequisites: [uv](https://docs.astral.sh/uv/) (it installs Python 3.14 if needed), Docker and `make`.
 
 ```bash
-uv sync                        # dependencies from uv.lock
-uv run pytest                  # offline test suite
+make install                   # dependencies from uv.lock
+make check                     # lint, format, offline tests
+make dataset                   # Postgres up, then setup → simulate → etl → export (a year)
+make dataset SCALE=4           # a world 4× bigger: about 5.7 million transactions
+make help                      # every target
 ```
 
-To run against PostgreSQL:
+`make dataset` runs the four commands of `uv run benefits` (the same as `python -m src.main`), with `SEED=42 TODAY=2026-09-01 DAYS=365 SCALE=1` unless given:
 
-```bash
-cp .env.example .env           # then set DB_PASSWORD
-docker compose up -d --wait
-uv run pytest -m db            # database tests
-uv run python -m src.main setup --seed 42 --today 2026-10-30
-uv run python -m src.main simulate --seed 42 --today 2026-10-30
-uv run python -m src.main etl
-uv run python -m src.main export
-```
+- `setup` creates the OLTP schema, loads the reference tables from `config/` and writes the generated companies, cardholders, cards, wallets, establishments and terminals. The same `--seed`, `--today` and `--scale` give the same data.
+- `simulate` plans the purchase attempts of the `--days` before `--today`, then month by month lets the issuer answer them in time order and writes `transactions`, `balance_history` and the final balances: monthly credits, debits, reversals, cardholders who stop trying once their balance runs out.
+- `etl` rebuilds `data/olap/olap_corporate_benefits.duckdb`: 10 dimensions, `fact_transactions` and `fact_balance_movements`, plus analytical views.
+- `export` runs the quality checks (keys, ledger, rates, no personal documents, and the statistical profile: monthly approval, tickets, hours, geography…) and, only if all pass, writes `data/dataset/`: one Parquet file per table, `data_dictionary.md`, `quality_report.md` and `dataset_metadata.json` (seed, window, code commit, config and source hashes).
 
-`setup` creates the OLTP schema, loads the reference tables from `config/` and writes the generated companies, cardholders, cards, wallets, establishments and terminals (`--reset` replaces them; the same `--seed` and `--today` give the same data).
-
-Step by step, with troubleshooting: [`docs/runbooks/local-setup.md`](docs/runbooks/local-setup.md).
-
-`simulate` generates the purchase attempts of the 90 days before `--today` (`simulation.days`), lets the issuer answer each one in time order, and writes `transactions`, `balance_history` and the final balances: monthly credits, debits, reversals, and cardholders who stop trying once their balance runs out. Use the same `--today` as `setup`.
-
-`etl` rebuilds `data/olap/olap_corporate_benefits.duckdb` from the OLTP database: 10 dimensions, `fact_transactions` (with the network, acquirer and company of each transaction) and `fact_balance_movements`, plus analytical views (`v_approval_by_program`, `v_declines`, `v_ticket_by_category`, `v_fraud_by_scenario`, `v_daily`, `v_wallet_flows_by_month`).
-
-`export` runs 53 quality checks on the OLAP database (unique ids, every key resolves, the balance ledger holds, approval and fraud rates in range, no personal documents) and, only if all pass, writes `data/dataset/`: one Parquet file per table (10 dimensions, 2 facts, 5 reference tables with the program wallets and the acceptance rules), `data_dictionary.md` and `quality_report.md`. The dictionary is also in [`docs/data-dictionary.md`](docs/data-dictionary.md). The public tables carry no CNPJ, CPF, card number or cardholder name.
+Postgres needs no `.env`: local defaults work; copy `.env.example` to change them. Step by step, with troubleshooting: [`docs/runbooks/local-setup.md`](docs/runbooks/local-setup.md). How it fits together: [`docs/technical-architecture.md`](docs/technical-architecture.md).
 
 ## Development workflow
 
 - `main` = released code. `develop` = integration; every epic or story is merged into it with a `merge(<scope>): …` commit.
 - One branch per epic/story, cut from `develop`: `<type>/ep-XX-<slug>` or `<type>/st-XX.Y-<slug>`, where `<type>` is the conventional-commit type (`feat`, `fix`, `chore`, `docs`, `test`, `ci`, `refactor`).
 - Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
-- Before committing: `uv run ruff check`, `uv run ruff format`, `uv run pytest`. CI runs the same three.
-- Tests that need the network or the database are behind markers: `uv run pytest -m network`, `uv run pytest -m db`.
+- Before committing: `make check` (ruff check, ruff format, pytest). CI runs it, then the database tests and the pipeline on 30 days.
+- Tests that need the network or the database are behind markers: `uv run pytest -m network`, `make test-db`.
 - Dependencies: [`docs/runbooks/dependency-upgrades.md`](docs/runbooks/dependency-upgrades.md).
 
 ## License
