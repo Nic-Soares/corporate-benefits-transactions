@@ -20,14 +20,14 @@ load_dotenv()
 
 def connect_pg_db() -> psycopg.Connection:
     """Connect to the OLTP database (host and name from `config/database.yaml`,
-    credentials from `.env`)."""
+    credentials from the environment or `.env`, local defaults otherwise)."""
     config = load_database()["oltp"]
     return psycopg.connect(
         host=config["host"],
         port=config["port"],
         dbname=config["dbname"],
-        user=os.environ.get("DB_USER"),
-        password=os.environ.get("DB_PASSWORD"),
+        user=os.environ.get("DB_USER", "benefits"),
+        password=os.environ.get("DB_PASSWORD", "change-me"),
     )
 
 
