@@ -71,6 +71,17 @@ def status(entity: str) -> str:
     return weighted_choice(f"{entity}_status_distribution")
 
 
+def status_since(status: str, start: date) -> date:
+    """The day `status` began: the record's start when active; otherwise a day
+    from the start to today, no more than `status_since_max_days` back for a
+    status that doesn't last (a terminal in maintenance)."""
+    if status == "active":
+        return start
+    limit = SETTINGS["status_since_max_days"].get(status)
+    earliest = max(start, reference_date - timedelta(days=limit)) if limit else start
+    return date_between(min(earliest, reference_date), reference_date)
+
+
 class Municipalities:
     """Municipalities to draw from, weighted by the `weight` column when
     `municipios_df` has it (IBGE `population` or `gdp`), uniformly otherwise."""

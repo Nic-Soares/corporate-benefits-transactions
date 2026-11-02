@@ -23,21 +23,22 @@ SELECT id, parent_id, name, trade_name, segment, city, state, status, registrati
 FROM stg_companies;
 
 INSERT INTO dim_cardholders BY NAME
-SELECT id, company_id, city, state, position, department, admission_date, status
+SELECT id, company_id, city, state, position, department, admission_date, status, status_since
 FROM stg_cardholders;
 
 INSERT INTO dim_cards BY NAME
-SELECT id, cardholder_id, program_id, modality_id, card_type, expiration_date, issue_date, status
+SELECT id, cardholder_id, program_id, modality_id, card_type, expiration_date, issue_date, status,
+       status_since
 FROM stg_cards;
 
 INSERT INTO dim_card_wallets BY NAME
 SELECT id, card_id, wallet_id, monthly_credit, daily_limit, monthly_limit, daily_count_limit,
-       current_balance AS final_balance, activation_date, status
+       current_balance AS final_balance, activation_date, status, status_since
 FROM stg_card_wallets;
 
 INSERT INTO dim_establishments BY NAME
 SELECT id, name, trade_name, main_cnae, mcc_code, category, city, state, status,
-       accreditation_date
+       status_since, accreditation_date
 FROM stg_establishments;
 
 INSERT INTO ref_response_codes BY NAME
@@ -56,7 +57,7 @@ INSERT INTO ref_mcc_modalities BY NAME
 SELECT mcc_code, modality_id, mcc_description, active FROM stg_mcc_modalities;
 
 INSERT INTO dim_terminals BY NAME
-SELECT id, establishment_id, acquirer_id, model, type, status, installation_date
+SELECT id, establishment_id, acquirer_id, model, type, status, status_since, installation_date
 FROM stg_terminals;
 
 -- Each transaction with the keys a user would otherwise join for

@@ -46,6 +46,7 @@ Table dim_cards {
   expiration_date date [not null]
   issue_date date [not null]
   status varchar [not null]
+  status_since date [not null]
 }
 
 Table dim_cardholders {
@@ -57,6 +58,7 @@ Table dim_cardholders {
   department varchar
   admission_date date [not null]
   status varchar [not null]
+  status_since date [not null]
 }
 
 Table dim_companies {
@@ -81,6 +83,7 @@ Table dim_establishments {
   city varchar [not null]
   state varchar [not null]
   status varchar [not null]
+  status_since date [not null]
   accreditation_date date [not null]
 }
 
@@ -91,6 +94,7 @@ Table dim_terminals {
   model varchar
   type varchar [not null]
   status varchar [not null]
+  status_since date [not null]
   installation_date date [not null]
 }
 
@@ -105,6 +109,7 @@ Table dim_card_wallets {
   final_balance decimal(15,2) [not null, note: 'Balance at the end of the simulation']
   activation_date date [not null]
   status varchar [not null]
+  status_since date [not null]
 }
 
 // ============================================================================

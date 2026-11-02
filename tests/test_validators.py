@@ -1,4 +1,4 @@
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 import polars as pl
 import pytest
@@ -156,6 +156,16 @@ def test_card_status(tx, data):
     assert validate_card_status(blocked, data["cards"]) == declined("62", "card_blocked")
     missing = tx | {"card_id": "nope"}
     assert validate_card_status(missing, data["cards"]) == declined("14", "card_not_found")
+
+
+def test_status_begins_on_its_day(tx, data):
+    """Before its status began the card was active; without the day, the status holds."""
+    blocked = tx | {"card_id": "card_blocked"}
+    since = tx["date"].date()
+    cards = data["cards"].with_columns(status_since=pl.lit(since + timedelta(days=1)))
+    assert validate_card_status(blocked, cards) == PASS
+    cards = data["cards"].with_columns(status_since=pl.lit(since))
+    assert validate_card_status(blocked, cards) == declined("62", "card_blocked")
 
 
 def test_cardholder_status(tx, data):

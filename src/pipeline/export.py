@@ -85,6 +85,19 @@ RULES = {
             PARTITION BY card_wallet_id ORDER BY sequence_number) AS before
           FROM fact_balance_movements)
         WHERE before IS NOT NULL AND before <> previous_balance""",
+    "approved attempts only on records active that day": """
+        SELECT count(*) FROM fact_transactions f
+        JOIN dim_cards c ON c.id = f.card_id
+        JOIN dim_cardholders h ON h.id = f.cardholder_id
+        JOIN dim_establishments e ON e.id = f.establishment_id
+        JOIN dim_terminals t ON t.id = f.terminal_id
+        JOIN dim_card_wallets w ON w.id = f.card_wallet_id
+        WHERE f.response_code = '00' AND f.transaction_type <> 'reversal' AND (
+          (c.status <> 'active' AND f.date::DATE >= c.status_since)
+          OR (h.status <> 'active' AND f.date::DATE >= h.status_since)
+          OR (e.status <> 'active' AND f.date::DATE >= e.status_since)
+          OR (t.status <> 'active' AND f.date::DATE >= t.status_since)
+          OR (w.status <> 'active' AND f.date::DATE >= w.status_since))""",
     "no balance goes negative": """
         SELECT count(*) FROM fact_balance_movements WHERE posterior_balance < 0""",
     "the final balance is the last movement": """
