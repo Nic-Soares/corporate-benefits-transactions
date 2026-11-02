@@ -133,21 +133,24 @@ generation_settings:
 
   # Dates
   date_ranges:
-    card_issuance:
-      start: "-2y"
-      end: "today"
     cardholder_admission:
-      start: "-5y"
+      start: "-10y"
       end: "today"
     company_registration:
-      start: "-10y"
+      start: "-20y"
       end: "today"
     establishment_opening:
       start: "-8y"
       end: "today"
   # Each date also starts no earlier than its parent's: admission ≥ company
-  # registration, card issue ≥ admission, wallet activation ≥ card issue,
-  # terminal installation ≥ establishment accreditation.
+  # registration, wallet activation ≥ card issue, terminal installation ≥
+  # establishment accreditation.
+  # A card is issued a few days after the admission; the plastic is valid for
+  # 3-5 years and renewed on expiry under the same card, so the expiration date
+  # is the current plastic's.
+  card_issue_days_after_admission: {min: 0, max: 30}
+  # A terminal is installed a few days after its establishment's accreditation
+  terminal_install_days_after_accreditation: {min: 0, max: 30}
   card_validity_years:
     min: 3
     max: 5

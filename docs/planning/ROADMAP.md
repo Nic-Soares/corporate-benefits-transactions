@@ -409,6 +409,13 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] Share of cardholders in the company's city per segment (`company_segments.*.same_city`): SME 90% to Corporate 35%
 - [x] Result (seeds 42 and 7): São Paulo 21–24% of the transactions, then Rio de Janeiro and Minas Gerais
 
+### ST-07.6 — Card and terminal dates (2026-11-02)
+
+- [x] A card is issued 0–30 days after the admission and renewed on expiry under the same id (`card_issue_days_after_admission`); `card_issuance` range removed; admissions up to 10 years back, companies up to 20
+- [x] A terminal is installed 0–30 days after the accreditation (`terminal_install_days_after_accreditation`)
+- [x] Why: dates drawn between the parent's date and today piled up near today, so a one-year simulation saw the cards and terminals multiply and the volume grow 4.7×
+- [x] Result (seed 42, 2025-09-01 to 2026-08-31): 2.47 million transactions, 177–250 thousand a month, approval 87%, 53 checks, 281 MB of Parquet
+
 ---
 
 ## EP-08 — Transaction simulator

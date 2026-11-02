@@ -1,4 +1,5 @@
 import random
+from datetime import timedelta
 
 import polars as pl
 
@@ -42,6 +43,7 @@ def generate_terminals(
 
     acquirer_weights = fake.SETTINGS["acquirer_distribution"]
     establishments = establishments_df.select("id", "category", "accreditation_date").to_dicts()
+    delay = fake.SETTINGS["terminal_install_days_after_accreditation"]
     extra = [random.choice(establishments) for _ in range(n_terminals - len(establishments))]
 
     terminals = []
@@ -61,8 +63,11 @@ def generate_terminals(
                 "model": terminal_model["model"],
                 "type": terminal_model["type"],
                 "status": fake.status("terminal"),
-                "installation_date": fake.date_between(
-                    establishment["accreditation_date"], fake.reference_date
+                # A few days after the accreditation, no later than today
+                "installation_date": min(
+                    establishment["accreditation_date"]
+                    + timedelta(days=random.randint(delay["min"], delay["max"])),
+                    fake.reference_date,
                 ),
             }
         )

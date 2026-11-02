@@ -82,8 +82,8 @@ Benefit cards. The program fixes the wallets and the network.
 | `program_id` | VARCHAR | Program (dim_card_programs) |
 | `modality_id` | VARCHAR | Network: OWN or a brand (dim_transaction_modalities) |
 | `card_type` | VARCHAR | physical or virtual |
-| `expiration_date` | DATE | Last day the card is valid |
-| `issue_date` | DATE | Date issued |
+| `expiration_date` | DATE | Last day of the current plastic; a card is renewed on expiry and keeps its id |
+| `issue_date` | DATE | Date first issued, a few days after the cardholder's admission |
 | `status` | VARCHAR | active, inactive (not unlocked yet), blocked or cancelled |
 
 ## `dim_cardholders`
