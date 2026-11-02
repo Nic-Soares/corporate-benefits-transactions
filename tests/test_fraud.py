@@ -6,9 +6,9 @@ import polars as pl
 import pytest
 
 from src.data_generators.entities.establishment_generator import CATEGORIES
-from src.data_generators.entities.fraud_generator import WALLET_CAPTURES, FraudGenerator
 from src.data_generators.providers import fake
-from src.processors import disputes
+from src.simulation import disputes
+from src.simulation.fraud import WALLET_CAPTURES, FraudGenerator
 
 TODAY = date(2026, 10, 30)
 
@@ -136,7 +136,7 @@ def test_names_are_brazilian(build_tables):
 
 def test_simulated_fraud_is_labeled(build_tables, sources, transaction_generator):
     from src.pipeline.reference import build_reference_tables
-    from src.processors.transaction_simulator import TransactionSimulator
+    from src.simulation.simulator import TransactionSimulator
 
     fake.seed(4, today=TODAY)
     world = build_tables() | build_reference_tables(sources.cnae, sources.mcc)

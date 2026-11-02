@@ -3,7 +3,7 @@ from datetime import date, datetime, timedelta
 import polars as pl
 import pytest
 
-from src.processors.balance import credit, debit
+from src.simulation.balance import credit, debit
 from src.validators._common import Table, find_all, find_one
 from src.validators.balance_and_limits_validations import (
     validate_current_balance,
