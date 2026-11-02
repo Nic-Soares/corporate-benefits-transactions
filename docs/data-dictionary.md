@@ -24,7 +24,7 @@ Every attempt to pay, withdraw or reverse with a benefit card, and the issuer's 
 | `terminal_id` | VARCHAR | Terminal that captured it (dim_terminals) |
 | `acquirer_id` | VARCHAR | Terminal's acquirer (dim_acquirers) |
 | `amount` | DECIMAL(15,2) | Amount in BRL |
-| `date` | TIMESTAMP | Date and time of the attempt |
+| `date` | TIMESTAMP | Date and time of the attempt; volume follows the week, the month, national holidays and their eves, Christmas, New Year's Eve and Black Friday |
 | `capture_type` | VARCHAR | How the card was read: CHIP, MAG_STRIPE, CONTACTLESS, MOBILE_NFC, APPLE_PAY, GOOGLE_PAY, ECOMMERCE |
 | `pin_status` | VARCHAR | ok, wrong or not_required (contactless, wallets, online) |
 | `response_code` | VARCHAR | ISO 8583 response code; 00 is approved (ref_response_codes) |
@@ -47,7 +47,7 @@ Every change of a wallet's balance: the monthly credit, debits of approved purch
 | `card_id` | VARCHAR | Card (dim_cards) |
 | `wallet_id` | VARCHAR | Wallet type (dim_wallets) |
 | `transaction_id` | VARCHAR | Transaction that moved it (fact_transactions); empty for the monthly credit |
-| `operation_type` | VARCHAR | credit, purchase, withdrawal or reversal |
+| `operation_type` | VARCHAR | credit (the monthly benefit; the first, pro rata, on activation; a year-end extra some employers give on 10 December), purchase, withdrawal or reversal |
 | `operation_amount` | DECIMAL(15,2) | Amount moved in BRL, always positive |
 | `previous_balance` | DECIMAL(15,2) | Balance before the movement |
 | `posterior_balance` | DECIMAL(15,2) | Balance after the movement |

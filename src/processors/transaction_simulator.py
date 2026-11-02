@@ -2,7 +2,8 @@
 
 Attempts, monthly credits and reversals run in time order. A wallet activated
 in the window starts empty and gets its first credit, pro rata to the days
-left in the month, on the activation day. Each attempt goes
+left in the month, on the activation day. Some employers add a one-off
+year-end credit (`seasons.year_end_credit`). Each attempt goes
 through the validators in `validation_rules.yaml → validation_order`; the
 first failure declines it with its ISO code and reason, an approval debits the
 routed card wallet. The daily amount, daily count and monthly amount of each
@@ -16,12 +17,12 @@ import string
 from collections import defaultdict
 from collections.abc import Callable
 from dataclasses import dataclass
-from datetime import date, datetime, timedelta
+from datetime import date, datetime, time, timedelta
 from typing import Any
 
 import polars as pl
 
-from src.data_generators.providers import fake
+from src.data_generators.providers import fake, seasons
 from src.processors.balance import HISTORY_SCHEMA, credit, debit, reverse
 from src.processors.disputes import mark_disputes
 from src.utils.read_yamls import load_simulation_config
@@ -191,18 +192,33 @@ class TransactionSimulator:
         self.history += [credit(self.card_wallets, id_, moment) for id_ in eligible["id"]]
         self.out_of_balance.clear()
 
+    def year_end_credit(self, moment: datetime) -> None:
+        """The year-end credit, from the companies that give it that year, to
+        their wallets of its kind in use that day."""
+        eligible = self._in_use(pl.lit(moment.date())).filter(
+            wallet_id=seasons.YEAR_END_CREDIT["wallet"]
+        )
+        for id_, company_id in eligible.select("id", "company_id").iter_rows():
+            amount = seasons.year_end_credit(company_id, moment.year)
+            if amount:
+                self.history.append(credit(self.card_wallets, id_, moment, amount))
+
     def _in_use(self, day: pl.Expr) -> pl.DataFrame:
         """The card wallets the employer credits on `day` (a date, or a column of
         card_wallets): activated, not cancelled, on a card not cancelled, of an
         active cardholder."""
         holders = self.t["cardholders"].select(
-            pl.col("id").alias("cardholder_id"), holder="status", holder_since="status_since"
+            pl.col("id").alias("cardholder_id"),
+            "company_id",
+            holder="status",
+            holder_since="status_since",
         )
         cards = (
             self.t["cards"]
             .join(holders, on="cardholder_id")
             .select(
                 pl.col("id").alias("card_id"),
+                "company_id",
                 "holder",
                 "holder_since",
                 card="status",
@@ -269,6 +285,10 @@ class TransactionSimulator:
         events: list[tuple[datetime, int, str, Any]] = []
         for moment in credit_moments(start, end):
             events.append((moment, 0, "credit", None))
+        for year in range(start.year, end.year + 1):
+            moment = datetime.combine(seasons.year_end_credit_day(year), time(CREDIT_HOUR))
+            if start <= moment < end:
+                events.append((moment, 0, "year_end_credit", None))
         for moment, card_wallet_id in self._first_credits(start, end):
             events.append((moment, 0, "first_credit", card_wallet_id))
         for seq, tx in enumerate(sorted(attempts, key=lambda tx: tx["date"]), start=1):
@@ -282,6 +302,9 @@ class TransactionSimulator:
             moment, _, kind, payload = heapq.heappop(events)
             if kind == "credit":
                 self.credit(moment)
+                continue
+            if kind == "year_end_credit":
+                self.year_end_credit(moment)
                 continue
             if kind == "first_credit":
                 wallet = find_one(self.card_wallets, id=payload)
