@@ -224,7 +224,8 @@ __marimo__/
 !/data/raw/**/
 # The public sources the setup used are versioned: the same seed gives the same dataset
 !/data/raw/*.parquet
-/data/final_datasets/*
+/data/dataset/*
+/data/olap/*
 !/data/**/.gitkeep
 
 # macOS

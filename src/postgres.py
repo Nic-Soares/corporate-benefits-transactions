@@ -21,7 +21,7 @@ load_dotenv()
 def connect_pg_db() -> psycopg.Connection:
     """Connect to the OLTP database (host and name from `config/database.yaml`,
     credentials from `.env`)."""
-    config = load_database()["oltp_postgres"]
+    config = load_database()["oltp"]
     return psycopg.connect(
         host=config["host"],
         port=config["port"],

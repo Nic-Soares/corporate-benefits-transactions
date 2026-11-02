@@ -27,13 +27,13 @@ simulator ─► validators ────────────┘
         DuckDB (10 dimensions + 2 facts + views) ─► Parquet ─► Kaggle
 ```
 
-Exists today: config, extractors, loaders, generators, validators, both schemas, the setup pipeline, the simulator and the ETL (`python -m src.main setup | simulate | etl`, `src/pipeline/`, `src/simulation/simulator.py`, `database/olap_duck/03_load.sql`) and the export (`python -m src.main export`, `src/pipeline/export.py`). Planned: the Kaggle release (`EP-11`).
+Exists today: config, extractors, loaders, generators, validators, both schemas, the setup pipeline, the simulator and the ETL (`python -m src.main setup | simulate | etl`, `src/pipeline/`, `src/simulation/simulator.py`, `database/olap/03_load.sql`) and the export (`python -m src.main export`, `src/pipeline/export.py`). Planned: the Kaggle release (`EP-11`).
 
 ## Data models
 
 - `database/model/*.dbml` document both models; they match the SQL column for column (checked in `ST-04.3`).
-- OLTP (`database/oltp_postgres/oltp_schema.sql`): normalized, `id` primary keys, `*_id` foreign keys, audit columns filled by the database.
-- OLAP (`database/olap_duck/`): `dim_wallets`, `dim_card_programs`, `dim_transaction_modalities`, `dim_acquirers`, `dim_cards`, `dim_cardholders`, `dim_companies`, `dim_establishments`, `dim_terminals` and `fact_transactions`.
+- OLTP (`database/oltp/oltp_schema.sql`): normalized, `id` primary keys, `*_id` foreign keys, audit columns filled by the database.
+- OLAP (`database/olap/`): `dim_wallets`, `dim_card_programs`, `dim_transaction_modalities`, `dim_acquirers`, `dim_cards`, `dim_cardholders`, `dim_companies`, `dim_establishments`, `dim_terminals` and `fact_transactions`.
 
 ## Key dependencies between tables
 
