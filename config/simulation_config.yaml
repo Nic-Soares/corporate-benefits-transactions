@@ -183,7 +183,7 @@ establishment_categories:
   atm:              {weight: 0.02, names: ["Banco"], cnae: ["6422"], atm: true, amount: {median: 150.00, p90: 400.00, max: 1500.00, step: 20.00}}
 
 # =====================================
-# Simulation (read by src/processors/transaction_simulator.py)
+# Simulation (read by src/simulation/simulator.py)
 # =====================================
 simulation:
   days: 90                        # window before the reference day
@@ -222,7 +222,7 @@ fraud:
   friendly_disputes_per_fraud_dispute: 0.4
 
 # =====================================
-# Transactions (read by src/data_generators/entities/transaction_generator.py)
+# Transactions (read by src/simulation/: generator, demand, pools, seasons)
 # =====================================
 usage_patterns:
   # Share of attempts per hour, 0h to 23h: a lunch peak and an evening peak
@@ -242,7 +242,7 @@ usage_patterns:
     restaurant:  [1.10, 1.10, 1.10, 1.10, 1.15, 0.70, 0.55]
     supermarket: [0.90, 0.85, 0.90, 0.95, 1.10, 1.40, 0.90]
     fuel:        [1.00, 0.95, 0.95, 1.00, 1.20, 1.10, 0.80]
-  # The calendar (src/data_generators/providers/seasons.py). A holiday takes
+  # The calendar (src/simulation/seasons.py). A holiday takes
   # the category's Saturday, times its weight; the eve of a holiday and the
   # special days have their own. Per category, `all` for the rest
   seasonality:

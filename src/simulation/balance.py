@@ -10,7 +10,7 @@ from typing import Any
 import polars as pl
 
 from src.data_generators.providers import fake
-from src.validators._common import Table, find_one
+from src.utils.table import Table, find_one
 
 # Columns of `balance_history`
 HISTORY_SCHEMA = {
