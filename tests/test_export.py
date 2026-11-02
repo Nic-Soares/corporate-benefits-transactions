@@ -94,6 +94,9 @@ def test_export_writes_every_table(olap_file, lenient, tmp_path):
     # the checks; the profile follows, informative on a small world
     report = (tmp_path / "quality_report.md").read_text().split("## Statistical profile")[0]
     assert "❌" not in report and len(checks) == report.count("✅")
+    sample = pl.read_csv(tmp_path / export.SAMPLE_FILE)
+    assert 0 < sample.height <= export.SAMPLE_ROWS
+    assert sample.columns == pl.read_parquet(tmp_path / "fact_transactions.parquet").columns
     metadata = json.loads((tmp_path / "dataset_metadata.json").read_text())
     assert metadata["rows"] == counts and metadata["synthetic"]
     assert metadata["quality_checks_passed"] == len(checks)

@@ -156,6 +156,144 @@
       }
     },
     {
+      "path": "fact_transactions_sample.csv",
+      "description": "10,000 rows of fact_transactions drawn at random (the same ones each export), as CSV: a look at the data without loading the whole fact. Read response_code, nsu and authorization_code as text: '00' (approved) has a leading zero",
+      "schema": {
+        "fields": [
+          {
+            "name": "id",
+            "description": "Transaction id",
+            "type": "string"
+          },
+          {
+            "name": "related_transaction_id",
+            "description": "For a reversal, the purchase it undoes",
+            "type": "string"
+          },
+          {
+            "name": "card_id",
+            "description": "Card used (dim_cards)",
+            "type": "string"
+          },
+          {
+            "name": "cardholder_id",
+            "description": "Card's holder (dim_cardholders)",
+            "type": "string"
+          },
+          {
+            "name": "company_id",
+            "description": "Cardholder's employer (dim_companies)",
+            "type": "string"
+          },
+          {
+            "name": "program_id",
+            "description": "Card program (dim_card_programs)",
+            "type": "string"
+          },
+          {
+            "name": "modality_id",
+            "description": "Network the card runs on: OWN (issuer's proprietary network, 3-party) or VISA, MASTERCARD, ELO (4-party)",
+            "type": "string"
+          },
+          {
+            "name": "card_wallet_id",
+            "description": "Wallet of the card the issuer charged (dim_card_wallets); on a decline for balance, the wallet it would have charged; empty when the decline came before a wallet was chosen",
+            "type": "string"
+          },
+          {
+            "name": "wallet_id",
+            "description": "Type of that wallet: FOOD, MEAL, MOBILITY, HEALTH, HOME_OFFICE, EDUCATION, GIFT, PREMIUM",
+            "type": "string"
+          },
+          {
+            "name": "transaction_type",
+            "description": "purchase, withdrawal (cash, brand cards, GIFT wallet) or reversal",
+            "type": "string"
+          },
+          {
+            "name": "wallet_option",
+            "description": "Proprietary network: the option picked on the terminal (FOOD, MEAL, OTHERS); empty on brand cards",
+            "type": "string"
+          },
+          {
+            "name": "establishment_id",
+            "description": "Where (dim_establishments)",
+            "type": "string"
+          },
+          {
+            "name": "terminal_id",
+            "description": "Terminal that captured it (dim_terminals)",
+            "type": "string"
+          },
+          {
+            "name": "acquirer_id",
+            "description": "Terminal's acquirer (dim_acquirers)",
+            "type": "string"
+          },
+          {
+            "name": "amount",
+            "description": "Amount in BRL",
+            "type": "numeric"
+          },
+          {
+            "name": "date",
+            "description": "Date and time of the attempt; volume follows the week, the month, national holidays and their eves, Christmas, New Year's Eve and Black Friday",
+            "type": "datetime"
+          },
+          {
+            "name": "capture_type",
+            "description": "How the card was read: CHIP, MAG_STRIPE, CONTACTLESS, MOBILE_NFC, APPLE_PAY, GOOGLE_PAY, ECOMMERCE",
+            "type": "string"
+          },
+          {
+            "name": "pin_status",
+            "description": "ok, wrong or not_required (contactless, wallets, online)",
+            "type": "string"
+          },
+          {
+            "name": "response_code",
+            "description": "ISO 8583 response code; 00 is approved (ref_response_codes)",
+            "type": "string"
+          },
+          {
+            "name": "response_message",
+            "description": "Description of the response code",
+            "type": "string"
+          },
+          {
+            "name": "decline_reason",
+            "description": "Specific cause of a decline (one ISO code covers several); empty when approved",
+            "type": "string"
+          },
+          {
+            "name": "nsu",
+            "description": "Sequence number the terminal gave the attempt",
+            "type": "string"
+          },
+          {
+            "name": "authorization_code",
+            "description": "Issuer's authorization code; empty when declined",
+            "type": "string"
+          },
+          {
+            "name": "is_fraud",
+            "description": "Ground truth: made by someone other than the cardholder",
+            "type": "boolean"
+          },
+          {
+            "name": "fraud_scenario",
+            "description": "How the fraud happened: account_takeover_wallet, card_not_present, intercepted_card, point_of_compromise; empty when not fraud",
+            "type": "string"
+          },
+          {
+            "name": "disputed",
+            "description": "The cardholder contested it; true for most approved fraud and for a few legit purchases contested by mistake",
+            "type": "boolean"
+          }
+        ]
+      }
+    },
+    {
       "path": "fact_balance_movements.parquet",
       "description": "Every change of a wallet's balance: the monthly credit, debits of approved purchases and withdrawals, reversals. One row per movement.",
       "schema": {
