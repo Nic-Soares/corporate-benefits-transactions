@@ -193,6 +193,14 @@ simulation:
   # place (brand) until the next credit: they know that balance is gone. Most
   # try again: a smaller purchase, another day
   give_up_after_insufficient_balance: 0.3
+  # One-off year-end credit (a Christmas basket): a share of the employers adds
+  # it to the wallet on this day of December; spent over the next days
+  year_end_credit:
+    company_share: 0.35
+    wallet: FOOD
+    amount: {min: 150.00, max: 500.00}
+    day: 10
+    spend_days: 30
 
 # =====================================
 # Fraud (read by src/data_generators/entities/fraud_generator.py). Typologies
@@ -233,6 +241,18 @@ usage_patterns:
     restaurant:  [1.10, 1.10, 1.10, 1.10, 1.15, 0.70, 0.55]
     supermarket: [0.90, 0.85, 0.90, 0.95, 1.10, 1.40, 0.90]
     fuel:        [1.00, 0.95, 0.95, 1.00, 1.20, 1.10, 0.80]
+  # The calendar (src/data_generators/providers/seasons.py). A holiday takes
+  # the category's Saturday, times its weight; the eve of a holiday and the
+  # special days have their own. Per category, `all` for the rest
+  seasonality:
+    # January to December: vacations early in the year, Black Friday, Christmas
+    month_weights: [0.94, 0.95, 1.00, 1.00, 1.02, 1.00, 1.00, 1.00, 1.00, 1.00, 1.03, 1.10]
+    holiday: {all: 1.25, supermarket: 1.30, food_retail: 1.25, fuel: 1.40, restaurant: 1.65}
+    eve: {all: 1.10, supermarket: 1.45, food_retail: 1.30, fuel: 1.35}
+    special_days:
+      christmas_eve: {all: 1.30, supermarket: 2.00, food_retail: 1.80, retail: 2.00}
+      new_years_eve: {all: 1.20, supermarket: 1.80, food_retail: 1.60}
+      black_friday: {retail: 2.50, digital_services: 2.50, home_office: 2.00}
   # Weight of the first and last day of the month: spending follows the credit
   month_day_weights: {first: 1.4, last: 0.8}
 

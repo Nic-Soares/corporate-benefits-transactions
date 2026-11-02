@@ -496,7 +496,13 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] A wallet activated in the window starts empty and gets its first credit, pro rata to the days left in the month, on the activation day. New cards approved 65% of their first month; now about 83%
 - [x] Dictionary: the segment is the employer's size; the dataset holds a sample of its cardholders
 - [x] `copy_dataframe` sends Polars CSV to `COPY`. The write still takes about 2 minutes on a year: the foreign-key checks of 4.7 million rows
-- [ ] Open: the first month approves more (90%, the starting balance plus the credit); afterwards the approval eases from 87% to 85% over the year, as records that stopped being active pile up toward the end (no record comes back to active)
+- [x] Accepted as is: the first month approves more (90%, the starting balance plus the credit); afterwards the approval eases from 87% to 85% over the year, as records that stopped being active pile up toward the end (no record comes back to active)
+
+### ST-08.11 — Seasonality (2026-11-03)
+
+- [x] `src/data_generators/providers/seasons.py`: national holidays (fixed, and Carnival, Good Friday and Corpus Christi from Easter), their eves, Christmas Eve, New Year's Eve, Black Friday; `usage_patterns.seasonality` weighs each per category, plus a weight per month. A holiday takes the category's Saturday times its weight
+- [x] `simulation.year_end_credit`: a third of the employers (`company_share`) add a one-off credit to the FOOD wallet on 10 December, spent over the next 30 days; the generator adds the attempts it pays for
+- [x] Result (seed 42, a year): December about 12% more attempts and 8% more approved BRL than November, January the quietest; on a holiday 1.0–1.6× the attempts of the same weekday, BRL up to 2×; Christmas Day spends less (Christmas Eve takes it: supermarkets +50%); Black Friday doubles retail
 
 ---
 
