@@ -4,16 +4,9 @@ from typing import Any
 
 import polars as pl
 
-from src.validators._common import (
-    PASS,
-    RULES,
-    UNKNOWN_STATUS,
-    fail,
-    find_one,
-    not_found,
-    status_on,
-    transaction_date,
-)
+from src.domain.status import status_on
+from src.utils.table import find_one
+from src.validators._common import PASS, RULES, UNKNOWN_STATUS, fail, not_found, transaction_date
 
 STATUS_RULES = RULES["status_validations"]
 

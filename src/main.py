@@ -1,28 +1,30 @@
 """Command line.
 
-python -m src.main setup [--seed N] [--today YYYY-MM-DD] [--reset]
-python -m src.main simulate [--seed N] [--today YYYY-MM-DD] [--days N]
+python -m src.main [--config DIR] setup [--seed N] [--today YYYY-MM-DD] [--reset]
+python -m src.main [--config DIR] simulate [--seed N] [--today YYYY-MM-DD] [--days N]
 python -m src.main etl
 python -m src.main export
+
+The pipeline is imported by each command, after `--config` picks the folder
+the modules read (`src/utils/read_yamls.py`).
 """
 
 import argparse
 import logging
+import os
 import sys
 from datetime import date
-
-from src.infrastructure.database.postgres_manager import connect_pg_db
-from src.pipeline.etl import run_etl
-from src.pipeline.export import ExportError, run_export
-from src.pipeline.setup import SetupError, run_setup
-from src.pipeline.simulate import SimulationError, run_simulation, simulation_defaults
-from src.pipeline.sources import fetch_sources
-from src.utils.read_yamls import load_simulation_config
+from pathlib import Path
 
 log = logging.getLogger("src.main")
 
 
 def setup(args: argparse.Namespace) -> int:
+    from src.infrastructure.database.postgres_manager import connect_pg_db
+    from src.pipeline.setup import SetupError, run_setup
+    from src.pipeline.sources import fetch_sources
+    from src.utils.read_yamls import load_simulation_config
+
     sources = fetch_sources()
     volumes = load_simulation_config()["data_volumes"]
     with connect_pg_db() as conn:
@@ -39,6 +41,9 @@ def setup(args: argparse.Namespace) -> int:
 
 
 def simulate(args: argparse.Namespace) -> int:
+    from src.infrastructure.database.postgres_manager import connect_pg_db
+    from src.pipeline.simulate import SimulationError, run_simulation, simulation_defaults
+
     days = simulation_defaults()
     with connect_pg_db() as conn:
         try:
@@ -58,6 +63,9 @@ def simulate(args: argparse.Namespace) -> int:
 
 
 def etl(args: argparse.Namespace) -> int:
+    from src.infrastructure.database.postgres_manager import connect_pg_db
+    from src.pipeline.etl import run_etl
+
     with connect_pg_db() as conn:
         counts = run_etl(conn)
     width = max(map(len, counts))
@@ -67,6 +75,8 @@ def etl(args: argparse.Namespace) -> int:
 
 
 def export(args: argparse.Namespace) -> int:
+    from src.pipeline.export import ExportError, run_export
+
     try:
         checks, counts = run_export()
     except ExportError as error:
@@ -91,6 +101,9 @@ def _common_options(parser: argparse.ArgumentParser) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(prog="python -m src.main")
+    parser.add_argument(
+        "--config", type=Path, help="config folder (default: config/); a variant of the rules"
+    )
     commands = parser.add_subparsers(dest="command", required=True)
 
     setup_parser = commands.add_parser(
@@ -122,6 +135,8 @@ def main(argv: list[str] | None = None) -> int:
     export_parser.set_defaults(run=export)
 
     args = parser.parse_args(argv)
+    if args.config:
+        os.environ["BENEFITS_CONFIG_DIR"] = str(args.config.resolve())
     logging.basicConfig(level=logging.INFO, format="%(asctime)s %(message)s", datefmt="%H:%M:%S")
     return args.run(args)
 

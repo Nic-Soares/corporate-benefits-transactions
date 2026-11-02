@@ -3,16 +3,16 @@ from datetime import date, datetime, timedelta
 import polars as pl
 import pytest
 
-from src.processors.balance import credit, debit
-from src.validators._common import Table, find_all, find_one
-from src.validators.balance_and_limits_validations import (
+from src.simulation.balance import credit, debit
+from src.utils.table import Table, find_all, find_one
+from src.validators.balance_validators import (
     validate_current_balance,
     validate_daily_count,
     validate_daily_limit,
     validate_monthly_limit,
 )
 from src.validators.business_rules_validators import route_wallet, validate_mcc_brand
-from src.validators.infrastructure_validations import validate_capture_type_support
+from src.validators.infrastructure_validators import validate_capture_type_support
 from src.validators.security_validators import validate_pin
 from src.validators.status_validators import (
     validate_acquirer_active,

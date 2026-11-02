@@ -4,7 +4,8 @@ from typing import Any
 
 import polars as pl
 
-from src.validators._common import PASS, RULES, fail, find_one, not_found
+from src.utils.table import find_one
+from src.validators._common import PASS, RULES, fail, not_found
 
 INFRASTRUCTURE_RULES = RULES["infrastructure_validations"]
 

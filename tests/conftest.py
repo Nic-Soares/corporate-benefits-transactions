@@ -7,8 +7,8 @@ from src.data_generators.entities.cardholder_generator import CardholderGenerato
 from src.data_generators.entities.company_generator import CompanyGenerator
 from src.data_generators.entities.establishment_generator import generate_establishments
 from src.data_generators.entities.terminal_generator import generate_terminals
-from src.data_generators.entities.transaction_generator import TransactionGenerator
 from src.pipeline.sources import Sources
+from src.simulation.generator import TransactionGenerator
 from src.utils.read_yamls import load_pre_populated_data
 
 REFERENCE = load_pre_populated_data()

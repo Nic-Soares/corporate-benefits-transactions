@@ -574,9 +574,9 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] CI starts Postgres 18 as a service, runs the `db` tests, then setup → simulate (30 days) → etl → export with the quality checks (about 25 s locally); first run on GitHub after the first push
 
 ### ST-12.6 — Structure
-- [ ] `TransactionGenerator` split by job: terminal pools and geography, demand (slots and rates), calendar, opening balances; the simulation's demand model leaves `data_generators/entities`
-- [ ] `Table` moves out of `validators/`; validator modules named alike
-- [ ] Config read once and passed in, not at import time, so a run or a test can use another config
+- [x] `src/simulation/`: `generator.py` (attempts) composes `seasons.Calendar` (days), `pools.TerminalPools` (where) and `demand.Demand` (who, how often, opening balances); fraud, simulator, balance and disputes move there from `data_generators/entities` and `processors/`
+- [x] `src/domain/` holds the rules both sides share: `acceptance.py`, `status.py`; `Table` moves to `src/utils/table.py`; validator modules all `*_validators.py`
+- [x] Config read once per file, from `config/` or the folder `python -m src.main --config DIR` names (a variant of the rules); `run_metadata.config_dir` records it. Modules still read it when imported, so one process runs one config: enough for runs, and a test of another config runs in a subprocess
 
 ### ST-12.7 — Volume
 - [ ] Simulate month by month (balances carried over), so memory follows a month, not the window: years and tens of millions of attempts on a laptop
