@@ -51,7 +51,6 @@ Table dim_cards {
 Table dim_cardholders {
   id varchar [primary key]
   company_id varchar [not null]
-  name varchar [not null]
   city varchar [not null]
   state varchar [not null]
   position varchar
@@ -63,7 +62,6 @@ Table dim_cardholders {
 Table dim_companies {
   id varchar [primary key]
   parent_id varchar [note: 'NULL = holding; filled = filial/branch']
-  cnpj varchar [unique, not null]
   name varchar [not null]
   trade_name varchar
   segment varchar [not null]
@@ -75,7 +73,6 @@ Table dim_companies {
 
 Table dim_establishments {
   id varchar [primary key]
-  cnpj varchar [unique, not null]
   name varchar [not null]
   trade_name varchar
   main_cnae varchar [not null]
@@ -108,6 +105,46 @@ Table dim_card_wallets {
   final_balance decimal(15,2) [not null, note: 'Balance at the end of the simulation']
   activation_date date [not null]
   status varchar [not null]
+}
+
+// ============================================================================
+// REFERENCE TABLES (the rules behind the answers)
+// ============================================================================
+
+Table ref_response_codes {
+  id varchar [primary key, note: 'ISO 8583']
+  description varchar [not null]
+}
+
+Table ref_cnae_wallets {
+  cnae_code varchar [not null]
+  wallet_id varchar [not null]
+  cnae_description varchar
+  active boolean [not null]
+
+  Indexes {
+    (cnae_code, wallet_id) [pk]
+  }
+}
+
+Table ref_mcc_wallets {
+  mcc_code varchar [not null]
+  wallet_id varchar [not null]
+
+  Indexes {
+    (mcc_code, wallet_id) [pk]
+  }
+}
+
+Table ref_mcc_modalities {
+  mcc_code varchar [not null]
+  modality_id varchar [not null]
+  mcc_description varchar [not null]
+  active boolean [not null]
+
+  Indexes {
+    (mcc_code, modality_id) [pk]
+  }
 }
 
 // ============================================================================
@@ -190,6 +227,10 @@ Ref: fact_transactions.company_id > dim_companies.id
 Ref: fact_transactions.modality_id > dim_transaction_modalities.id
 Ref: fact_transactions.acquirer_id > dim_acquirers.id
 Ref: fact_transactions.card_wallet_id > dim_card_wallets.id
+Ref: fact_transactions.response_code > ref_response_codes.id
+Ref: ref_cnae_wallets.wallet_id > dim_wallets.id
+Ref: ref_mcc_wallets.wallet_id > dim_wallets.id
+Ref: ref_mcc_modalities.modality_id > dim_transaction_modalities.id
 
 Ref: dim_card_wallets.card_id > dim_cards.id
 Ref: dim_card_wallets.wallet_id > dim_wallets.id

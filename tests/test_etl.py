@@ -114,7 +114,15 @@ def test_no_personal_hashes(olap):
     columns = {
         row[0] for row in duck.sql("SELECT column_name FROM information_schema.columns").fetchall()
     }
-    assert not {"cpf_hash", "card_number_hash"} & columns
+    assert not {"cpf_hash", "card_number_hash", "cnpj"} & columns
+    holder_columns = {
+        row[0]
+        for row in duck.sql(
+            "SELECT column_name FROM information_schema.columns "
+            "WHERE table_name = 'dim_cardholders'"
+        ).fetchall()
+    }
+    assert "name" not in holder_columns
 
 
 def test_views_answer(olap):
