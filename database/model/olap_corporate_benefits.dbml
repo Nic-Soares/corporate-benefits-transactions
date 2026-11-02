@@ -127,6 +127,15 @@ Table ref_cnae_wallets {
   }
 }
 
+Table ref_program_wallets {
+  program_id varchar [not null]
+  wallet_id varchar [not null]
+
+  Indexes {
+    (program_id, wallet_id) [pk]
+  }
+}
+
 Table ref_mcc_wallets {
   mcc_code varchar [not null]
   wallet_id varchar [not null]
@@ -228,6 +237,8 @@ Ref: fact_transactions.modality_id > dim_transaction_modalities.id
 Ref: fact_transactions.acquirer_id > dim_acquirers.id
 Ref: fact_transactions.card_wallet_id > dim_card_wallets.id
 Ref: fact_transactions.response_code > ref_response_codes.id
+Ref: ref_program_wallets.program_id > dim_card_programs.id
+Ref: ref_program_wallets.wallet_id > dim_wallets.id
 Ref: ref_cnae_wallets.wallet_id > dim_wallets.id
 Ref: ref_mcc_wallets.wallet_id > dim_wallets.id
 Ref: ref_mcc_modalities.modality_id > dim_transaction_modalities.id

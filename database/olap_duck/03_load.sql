@@ -43,6 +43,9 @@ FROM stg_establishments;
 INSERT INTO ref_response_codes BY NAME
 SELECT id, description FROM stg_response_codes;
 
+INSERT INTO ref_program_wallets BY NAME
+SELECT program_id, wallet_id FROM stg_card_program_wallets;
+
 INSERT INTO ref_cnae_wallets BY NAME
 SELECT cnae_code, wallet_id, cnae_description, active FROM stg_cnae_wallets;
 

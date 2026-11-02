@@ -47,6 +47,19 @@ generation_settings:
     - {programs: ["MULTI_4P", "PREMIUM"],   weight: 0.03}
     - {programs: ["GIFT"],                  weight: 0.03}
 
+  # Multi-benefit programs: the wallets a company gives its employees, out of
+  # those the program allows. Each wallet is in a company's set with its share;
+  # a wallet not listed is always in it. Every cardholder of the company gets
+  # the same set; a set never comes out empty.
+  program_wallet_shares:
+    FOOD: 0.90
+    MEAL: 0.90
+    MOBILITY: 0.55
+    HEALTH: 0.30
+    HOME_OFFICE: 0.25
+    EDUCATION: 0.20
+    GIFT: 0.40
+
   # Share of cardholders who live in their company's municipality; the others
   # anywhere, by population
   cardholder_same_city_ratio: 0.8
@@ -66,6 +79,9 @@ generation_settings:
     EDUCATION:   {monthly_credit: {min: 50.00,  max: 400.00},  daily_limit: 0,       monthly_limit: 0, daily_count_limit: 0}
     GIFT:        {monthly_credit: {min: 100.00, max: 600.00},  daily_limit: 0,       monthly_limit: 0, daily_count_limit: 0}
     PREMIUM:     {monthly_credit: {min: 100.00, max: 1000.00}, daily_limit: 0,       monthly_limit: 0, daily_count_limit: 0}
+
+  # Days from a card's issue to the activation of its wallets (no later than today)
+  wallet_activation_days: {min: 0, max: 15}
 
   # Balance at the start of the simulation, as a share of the monthly credit
   starting_balance_ratio: {min: 0.0, max: 1.0}
