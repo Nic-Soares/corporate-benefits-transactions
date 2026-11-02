@@ -100,3 +100,10 @@ def find_one(data: pl.DataFrame | Table, **match: Any) -> dict[str, Any] | None:
 def transaction_date(transaction: dict[str, Any]) -> date:
     value = transaction["date"]
     return value.date() if isinstance(value, datetime) else value
+
+
+def status_on(record: dict[str, Any], day: date) -> str:
+    """The record's status on `day`: active before its current status began
+    (`status_since`); the current status when that day is unknown."""
+    since = record.get("status_since")
+    return "active" if since is not None and day < since else record["status"]

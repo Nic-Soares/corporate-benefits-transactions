@@ -39,7 +39,8 @@ CREATE TABLE IF NOT EXISTS dim_cards (
   card_type VARCHAR NOT NULL,
   expiration_date DATE NOT NULL,
   issue_date DATE NOT NULL,
-  status VARCHAR NOT NULL
+  status VARCHAR NOT NULL,
+  status_since DATE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS dim_cardholders (
@@ -50,7 +51,8 @@ CREATE TABLE IF NOT EXISTS dim_cardholders (
   position VARCHAR,
   department VARCHAR,
   admission_date DATE NOT NULL,
-  status VARCHAR NOT NULL
+  status VARCHAR NOT NULL,
+  status_since DATE NOT NULL
 );
 
 CREATE TABLE IF NOT EXISTS dim_companies (
@@ -75,6 +77,7 @@ CREATE TABLE IF NOT EXISTS dim_establishments (
   city VARCHAR NOT NULL,
   state VARCHAR NOT NULL,
   status VARCHAR NOT NULL,
+  status_since DATE NOT NULL,
   accreditation_date DATE NOT NULL
 );
 
@@ -85,6 +88,7 @@ CREATE TABLE IF NOT EXISTS dim_terminals (
   model VARCHAR,
   type VARCHAR NOT NULL,
   status VARCHAR NOT NULL,
+  status_since DATE NOT NULL,
   installation_date DATE NOT NULL
 );
 
@@ -98,7 +102,8 @@ CREATE TABLE IF NOT EXISTS dim_card_wallets (
   daily_count_limit INTEGER,
   final_balance DECIMAL(15, 2) NOT NULL,
   activation_date DATE NOT NULL,
-  status VARCHAR NOT NULL
+  status VARCHAR NOT NULL,
+  status_since DATE NOT NULL
 );
 
 -- ============================================================================

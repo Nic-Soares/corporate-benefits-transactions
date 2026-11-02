@@ -49,6 +49,7 @@ class Cardholder:
         self.department: str = random.choice(DEPARTMENTS)
         self.admission_date: date = fake.date_in_range("cardholder_admission", hired_from)
         self.status: str = fake.status("cardholder")
+        self.status_since: date = fake.status_since(self.status, self.admission_date)
 
     def to_dict(self) -> dict[str, str | date]:
         """Columns of the `cardholders` table; the CPF is stored hashed."""
@@ -63,6 +64,7 @@ class Cardholder:
             "position": self.position,
             "department": self.department,
             "status": self.status,
+            "status_since": self.status_since,
         }
 
 

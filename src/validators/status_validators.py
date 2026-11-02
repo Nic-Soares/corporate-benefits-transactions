@@ -1,10 +1,19 @@
-"""Status validations: every record the transaction touches must be active."""
+"""Status validations: every record the transaction touches must be active on its day."""
 
 from typing import Any
 
 import polars as pl
 
-from src.validators._common import PASS, RULES, UNKNOWN_STATUS, fail, find_one, not_found
+from src.validators._common import (
+    PASS,
+    RULES,
+    UNKNOWN_STATUS,
+    fail,
+    find_one,
+    not_found,
+    status_on,
+    transaction_date,
+)
 
 STATUS_RULES = RULES["status_validations"]
 
@@ -28,7 +37,7 @@ def validate_card_status(transaction: dict[str, Any], cards_df: pl.DataFrame) ->
     card = find_one(cards_df, id=transaction["card_id"])
     if card is None:
         return not_found("card")
-    return _check_status(card["status"], "card_status", "card")
+    return _check_status(status_on(card, transaction_date(transaction)), "card_status", "card")
 
 
 def validate_cardholder_status(
@@ -40,7 +49,9 @@ def validate_cardholder_status(
     cardholder = find_one(cardholders_df, id=card["cardholder_id"])
     if cardholder is None:
         return not_found("cardholder")
-    return _check_status(cardholder["status"], "cardholder_status", "cardholder")
+    return _check_status(
+        status_on(cardholder, transaction_date(transaction)), "cardholder_status", "cardholder"
+    )
 
 
 def validate_establishment_status(
@@ -49,7 +60,11 @@ def validate_establishment_status(
     establishment = find_one(establishments_df, id=transaction["establishment_id"])
     if establishment is None:
         return not_found("establishment")
-    return _check_status(establishment["status"], "establishment_status", "establishment")
+    return _check_status(
+        status_on(establishment, transaction_date(transaction)),
+        "establishment_status",
+        "establishment",
+    )
 
 
 def validate_terminal_status(
@@ -58,7 +73,9 @@ def validate_terminal_status(
     terminal = find_one(terminals_df, id=transaction["terminal_id"])
     if terminal is None:
         return not_found("terminal")
-    return _check_status(terminal["status"], "terminal_status", "terminal")
+    return _check_status(
+        status_on(terminal, transaction_date(transaction)), "terminal_status", "terminal"
+    )
 
 
 def validate_modality_active(

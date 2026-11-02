@@ -49,6 +49,7 @@ def generate_card_wallets(cards_df: pl.DataFrame, cardholders_df: pl.DataFrame) 
             given[key] = draw_program_wallets(card["program_id"])
         activated = activation_date(card["issue_date"])
         for wallet_id in given[key]:
+            status = fake.status("card_wallet")
             settings = WALLET_SETTINGS[wallet_id]
             credit = settings["monthly_credit"]
             monthly_credit = round(random.uniform(credit["min"], credit["max"]) / 10) * 10.0
@@ -65,7 +66,8 @@ def generate_card_wallets(cards_df: pl.DataFrame, cardholders_df: pl.DataFrame) 
                     "monthly_limit": float(settings["monthly_limit"]),
                     "daily_count_limit": settings["daily_count_limit"],
                     "activation_date": activated,
-                    "status": fake.status("card_wallet"),
+                    "status": status,
+                    "status_since": fake.status_since(status, activated),
                 }
             )
     return pl.DataFrame(card_wallets)

@@ -52,6 +52,12 @@ class Card:
         self.expiration_date: date = self.issue_date + plastic
         while self.expiration_date <= fake.reference_date:
             self.expiration_date += plastic
+        # A card never unlocked (inactive) is so since its issue
+        self.status_since: date = (
+            self.issue_date
+            if self.status == "inactive"
+            else fake.status_since(self.status, self.issue_date)
+        )
 
     def to_dict(self) -> dict[str, str | date]:
         """Columns of the `cards` table; the card number is stored hashed."""
@@ -64,6 +70,7 @@ class Card:
             "expiration_date": self.expiration_date,
             "card_type": self.card_type,
             "status": self.status,
+            "status_since": self.status_since,
             "issue_date": self.issue_date,
         }
 

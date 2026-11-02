@@ -21,6 +21,7 @@ from src.validators._common import (
     find_all,
     find_one,
     not_found,
+    status_on,
     transaction_date,
 )
 
@@ -121,7 +122,7 @@ def route_wallet(
     candidates = [
         c
         for c in candidates
-        if c["status"] == "active"
+        if status_on(c, today) == "active"
         and c["wallet_id"] in enabled
         and c.get("activation_date", today) <= today
     ]
