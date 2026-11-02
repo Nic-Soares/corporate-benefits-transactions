@@ -82,14 +82,14 @@ RULES = {
     "each balance movement starts where the last ended": """
         SELECT count(*) FROM (
           SELECT previous_balance, lag(posterior_balance) OVER (
-            PARTITION BY card_wallet_id ORDER BY operation_date, id) AS before
+            PARTITION BY card_wallet_id ORDER BY sequence_number) AS before
           FROM fact_balance_movements)
         WHERE before IS NOT NULL AND before <> previous_balance""",
     "no balance goes negative": """
         SELECT count(*) FROM fact_balance_movements WHERE posterior_balance < 0""",
     "the final balance is the last movement": """
         SELECT count(*) FROM dim_card_wallets w
-        JOIN (SELECT card_wallet_id, arg_max(posterior_balance, (operation_date, id)) AS last
+        JOIN (SELECT card_wallet_id, arg_max(posterior_balance, sequence_number) AS last
               FROM fact_balance_movements GROUP BY 1) m ON m.card_wallet_id = w.id
         WHERE w.final_balance <> m.last""",
 }

@@ -53,7 +53,7 @@ def test_answers(world, transaction_generator, sources):
 
 def test_ledger(world, transaction_generator):
     result = simulate(world, transaction_generator)
-    history = result.balance_history.sort("card_wallet_id", "operation_date", "id")
+    history = result.balance_history.sort("card_wallet_id", "sequence_number")
 
     # each movement does its math, and starts where the previous one ended
     sign = pl.when(pl.col("operation_type").is_in(["credit", "reversal"])).then(1).otherwise(-1)
@@ -135,3 +135,11 @@ def test_same_seed_same_simulation(build_tables, sources, transaction_generator)
     first, second = run(), run()
     assert first.transactions.equals(second.transactions)
     assert first.balance_history.equals(second.balance_history)
+
+
+def test_ledger_sequence(world, transaction_generator):
+    """The sequence orders the movements in time; ties of the same second keep the
+    order they happened in."""
+    history = simulate(world, transaction_generator).balance_history
+    assert history["sequence_number"].to_list() == list(range(1, history.height + 1))
+    assert history["operation_date"].is_sorted()

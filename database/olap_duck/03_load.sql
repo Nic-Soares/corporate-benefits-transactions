@@ -80,6 +80,7 @@ LEFT JOIN stg_response_codes rc ON rc.id = t.response_code;
 
 INSERT INTO fact_balance_movements BY NAME
 SELECT b.id, b.card_wallet_id, cw.card_id, cw.wallet_id, b.transaction_id, b.operation_type,
-       b.operation_amount, b.previous_balance, b.posterior_balance, b.operation_date
+       b.operation_amount, b.previous_balance, b.posterior_balance, b.operation_date,
+       b.sequence_number
 FROM stg_balance_history b
 JOIN stg_card_wallets cw ON cw.id = b.card_wallet_id;

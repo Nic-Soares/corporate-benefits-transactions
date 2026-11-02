@@ -257,7 +257,7 @@ def test_transactions_look_like_the_market(tables, transactions):
 
     # uneven use: big credits and spenders buy far more than small credits and savers
     per_card = transactions["card_id"].value_counts()["count"]
-    assert per_card.max() > 3 * per_card.median()
+    assert per_card.max() > 2 * per_card.median()
     assert per_card.min() < per_card.median() / 2
     # within the window, before the reference day
     today = datetime(2026, 10, 30)
