@@ -10,7 +10,7 @@ table) plus the Polars DataFrames it needs, with the column names of
 from datetime import date, datetime
 from typing import Any
 
-from src.utils.read_yamls import load_pre_populated_data, load_validation_rules
+from src.config import load_pre_populated_data, load_validation_rules
 
 RULES = load_validation_rules()
 

@@ -29,11 +29,11 @@ def test_another_config_folder(tmp_path):
     import subprocess
     import sys
 
-    from src.utils.read_yamls import CONFIG_DIR
+    from src.config import CONFIG_DIR
 
     shutil.copytree(CONFIG_DIR, tmp_path / "cfg")
     code = (
-        "from src.utils.read_yamls import CONFIG_DIR, load_simulation_config;"
+        "from src.config import CONFIG_DIR, load_simulation_config;"
         "print(CONFIG_DIR, load_simulation_config()['data_volumes']['companies'])"
     )
     out = subprocess.run(

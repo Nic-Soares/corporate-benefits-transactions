@@ -13,7 +13,7 @@ from typing import Any
 
 import yaml
 
-ROOT = Path(__file__).resolve().parents[2]
+ROOT = Path(__file__).resolve().parents[1]
 CONFIG_DIR = Path(os.environ.get("BENEFITS_CONFIG_DIR") or ROOT / "config").resolve()
 
 

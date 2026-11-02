@@ -13,8 +13,8 @@ import duckdb
 import polars as pl
 import psycopg
 
-from src.infrastructure.database.postgres_manager import read_chunks, read_table, table_schema
-from src.utils.read_yamls import ROOT, load_database
+from src.config import ROOT, load_database
+from src.postgres import read_chunks, read_table, table_schema
 
 log = logging.getLogger(__name__)
 

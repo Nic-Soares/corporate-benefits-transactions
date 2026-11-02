@@ -6,7 +6,7 @@ python -m src.main etl
 python -m src.main export
 
 The pipeline is imported by each command, after `--config` picks the folder
-the modules read (`src/utils/read_yamls.py`).
+the modules read (`src/config.py`).
 """
 
 import argparse
@@ -28,10 +28,10 @@ def scaled(volumes: dict, scale: float) -> dict:
 
 
 def setup(args: argparse.Namespace) -> int:
-    from src.infrastructure.database.postgres_manager import connect_pg_db
+    from src.config import load_simulation_config
     from src.pipeline.setup import SetupError, run_setup
-    from src.pipeline.sources import fetch_sources
-    from src.utils.read_yamls import load_simulation_config
+    from src.postgres import connect_pg_db
+    from src.sources import fetch_sources
 
     sources = fetch_sources()
     volumes = scaled(load_simulation_config()["data_volumes"], args.scale)
@@ -49,8 +49,8 @@ def setup(args: argparse.Namespace) -> int:
 
 
 def simulate(args: argparse.Namespace) -> int:
-    from src.infrastructure.database.postgres_manager import connect_pg_db
     from src.pipeline.simulate import SimulationError, run_simulation, simulation_defaults
+    from src.postgres import connect_pg_db
 
     days = simulation_defaults()
     with connect_pg_db() as conn:
@@ -71,8 +71,8 @@ def simulate(args: argparse.Namespace) -> int:
 
 
 def etl(args: argparse.Namespace) -> int:
-    from src.infrastructure.database.postgres_manager import connect_pg_db
     from src.pipeline.etl import run_etl
+    from src.postgres import connect_pg_db
 
     with connect_pg_db() as conn:
         counts = run_etl(conn)

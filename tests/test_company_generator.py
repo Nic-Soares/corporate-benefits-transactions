@@ -1,6 +1,6 @@
 import polars as pl
 
-from src.data_generators.entities.company_generator import COMPANY_SEGMENTS, CompanyGenerator
+from src.entities.companies import COMPANY_SEGMENTS, CompanyGenerator
 
 
 def test_holding_and_branch(municipios_df):

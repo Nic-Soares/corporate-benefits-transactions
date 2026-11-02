@@ -4,7 +4,7 @@ from typing import Any
 
 import polars as pl
 
-from src.utils.table import Table, find_one
+from src.table import Table, find_one
 from src.validators._common import PASS, RULES, fail, not_found
 
 BALANCE_RULES = RULES["balance_and_limits_validations"]

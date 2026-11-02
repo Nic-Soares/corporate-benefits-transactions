@@ -7,18 +7,18 @@ from datetime import date, datetime, time, timedelta
 import polars as pl
 import psycopg
 
-from src.data_generators.providers import fake
-from src.infrastructure.database.postgres_manager import (
+from src.config import load_simulation_config
+from src.entities import fake
+from src.pipeline import provenance
+from src.postgres import (
     bulk_load,
     copy_dataframe,
     count_rows,
     read_table,
 )
-from src.pipeline import provenance
 from src.simulation.fraud import FRAUD, FraudGenerator
 from src.simulation.generator import TransactionGenerator
 from src.simulation.simulator import TABLES, TransactionSimulator
-from src.utils.read_yamls import load_simulation_config
 
 log = logging.getLogger(__name__)
 

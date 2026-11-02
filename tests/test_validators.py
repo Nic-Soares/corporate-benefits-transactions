@@ -4,7 +4,7 @@ import polars as pl
 import pytest
 
 from src.simulation.balance import credit, debit
-from src.utils.table import Table, find_all, find_one
+from src.table import Table, find_all, find_one
 from src.validators.balance_validators import (
     validate_current_balance,
     validate_daily_count,
@@ -431,7 +431,7 @@ def test_capture_type_support(tx, data):
 
 def test_codes_are_documented():
     """Every code a validator can return is an ISO 8583 code described in response_codes."""
-    from src.utils.read_yamls import load_pre_populated_data, load_validation_rules
+    from src.config import load_pre_populated_data, load_validation_rules
 
     def codes(node):
         if isinstance(node, dict):

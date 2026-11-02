@@ -10,10 +10,10 @@ label them.
 import random
 from datetime import datetime, timedelta
 
-from src.data_generators.entities.establishment_generator import CATEGORIES
-from src.data_generators.providers import fake
+from src.config import load_simulation_config
+from src.entities import fake
+from src.entities.establishments import CATEGORIES
 from src.simulation.generator import TransactionGenerator
-from src.utils.read_yamls import load_simulation_config
 
 FRAUD = load_simulation_config()["fraud"]
 

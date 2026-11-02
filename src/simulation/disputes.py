@@ -11,7 +11,7 @@ import random
 
 import polars as pl
 
-from src.utils.read_yamls import load_simulation_config
+from src.config import load_simulation_config
 
 FRAUD = load_simulation_config()["fraud"]
 

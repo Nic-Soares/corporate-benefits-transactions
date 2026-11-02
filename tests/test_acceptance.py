@@ -1,7 +1,7 @@
 """One acceptance rule for the generator and the issuer."""
 
 from src.domain.acceptance import OPEN_WALLET, Acceptance
-from src.pipeline.reference import build_reference_tables
+from src.reference import build_reference_tables
 
 
 def test_generator_and_issuer_read_the_same_rule(sources):

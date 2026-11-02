@@ -5,15 +5,15 @@ from datetime import date, datetime, timedelta
 import polars as pl
 import pytest
 
-from src.data_generators.entities.card_wallet_generator import draw_program_wallets
-from src.data_generators.entities.establishment_generator import CATEGORIES, mcc_for
-from src.data_generators.providers import fake
-from src.domain.acceptance import Acceptance
-from src.utils.read_yamls import (
+from src.config import (
     load_business_rules,
     load_pre_populated_data,
     load_validation_rules,
 )
+from src.domain.acceptance import Acceptance
+from src.entities import fake
+from src.entities.card_wallets import draw_program_wallets
+from src.entities.establishments import CATEGORIES, mcc_for
 
 STATUS_OPTIONS = load_business_rules()["status_options"]
 REFERENCE = load_pre_populated_data()

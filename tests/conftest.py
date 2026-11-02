@@ -1,15 +1,15 @@
 import polars as pl
 import pytest
 
-from src.data_generators.entities.card_generator import CardGenerator
-from src.data_generators.entities.card_wallet_generator import generate_card_wallets
-from src.data_generators.entities.cardholder_generator import CardholderGenerator
-from src.data_generators.entities.company_generator import CompanyGenerator
-from src.data_generators.entities.establishment_generator import generate_establishments
-from src.data_generators.entities.terminal_generator import generate_terminals
-from src.pipeline.sources import Sources
+from src.config import load_pre_populated_data
+from src.entities.card_wallets import generate_card_wallets
+from src.entities.cardholders import CardholderGenerator
+from src.entities.cards import CardGenerator
+from src.entities.companies import CompanyGenerator
+from src.entities.establishments import generate_establishments
+from src.entities.terminals import generate_terminals
 from src.simulation.generator import TransactionGenerator
-from src.utils.read_yamls import load_pre_populated_data
+from src.sources import Sources
 
 REFERENCE = load_pre_populated_data()
 

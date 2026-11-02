@@ -3,8 +3,8 @@ from datetime import date, timedelta
 
 import polars as pl
 
-from src.data_generators.providers import fake
-from src.utils.read_yamls import load_pre_populated_data
+from src.config import load_pre_populated_data
+from src.entities import fake
 
 _REFERENCE = load_pre_populated_data()
 PROGRAMS = {program["id"]: program for program in _REFERENCE["card_programs"]}

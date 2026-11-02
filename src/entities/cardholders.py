@@ -3,8 +3,8 @@ from datetime import date
 
 import polars as pl
 
-from src.data_generators.entities.company_generator import COMPANY_SEGMENTS
-from src.data_generators.providers import fake
+from src.entities import fake
+from src.entities.companies import COMPANY_SEGMENTS
 
 JOB_POSITIONS = [
     "Director",

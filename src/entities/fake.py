@@ -15,8 +15,8 @@ import polars as pl
 from mimesis import Person
 from mimesis.locales import Locale
 
-from src.data_generators.providers.brazil_provider import BrazilProvider
-from src.utils.read_yamls import load_simulation_config
+from src.config import load_simulation_config
+from src.entities.brazil import BrazilProvider
 
 person = Person(Locale.PT_BR)
 brazil = BrazilProvider()
