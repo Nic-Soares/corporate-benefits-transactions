@@ -2,7 +2,7 @@
 
 Every validator takes the transaction as a dict (columns of the `transactions`
 table) plus the Polars DataFrames it needs, with the column names of
-`database/oltp_postgres/oltp_schema.sql`, and returns
+`database/oltp/oltp_schema.sql`, and returns
 `{"passed", "error_code", "reason"}`: the ISO 8583 response code from
 `config/authorization.yaml` and the specific cause (`decline_reason`).
 """

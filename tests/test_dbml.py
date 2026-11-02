@@ -29,10 +29,10 @@ def _tables(path: Path) -> dict[str, list[str]]:
 @pytest.mark.parametrize(
     ("dbml", "sql"),
     [
-        ("database/model/oltp_corporate_benefits.dbml", ["database/oltp_postgres/oltp_schema.sql"]),
+        ("database/model/oltp_corporate_benefits.dbml", ["database/oltp/oltp_schema.sql"]),
         (
             "database/model/olap_corporate_benefits.dbml",
-            ["database/olap_duck/01_dimensions.sql", "database/olap_duck/02_facts.sql"],
+            ["database/olap/01_dimensions.sql", "database/olap/02_facts.sql"],
         ),
     ],
 )

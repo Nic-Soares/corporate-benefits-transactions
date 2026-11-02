@@ -1,6 +1,6 @@
 # Data Strategy
 
-Where each table's data comes from. Table and column names are those of `database/oltp_postgres/oltp_schema.sql` ([ADR-006](adr/006-oltp-schema-as-column-contract.md)); the model is explained in [ADR-007](adr/007-transaction-core-model.md) and [ADR-008](adr/008-transaction-record.md).
+Where each table's data comes from. Table and column names are those of `database/oltp/oltp_schema.sql` ([ADR-006](adr/006-oltp-schema-as-column-contract.md)); the model is explained in [ADR-007](adr/007-transaction-core-model.md) and [ADR-008](adr/008-transaction-record.md).
 
 ## Model
 
@@ -93,7 +93,7 @@ The public sources (CNAE, municipalities and population from IBGE, the MCC list)
 
 ## Analytical model
 
-`python -m src.main etl` (`src/pipeline/etl.py`, [ADR-012](adr/012-olap-plain-sql.md)) stages the OLTP tables in DuckDB and loads the star schema with `database/olap_duck/03_load.sql` — a full refresh into a new file:
+`python -m src.main etl` (`src/pipeline/etl.py`, [ADR-012](adr/012-olap-plain-sql.md)) stages the OLTP tables in DuckDB and loads the star schema with `database/olap/03_load.sql` — a full refresh into a new file:
 
 | Table | Grain | From |
 |---|---|---|
@@ -106,4 +106,4 @@ Views in `04_views.sql`: approval per program and network, declines per code and
 
 ## Dataset
 
-`python -m src.main export` (`src/pipeline/export.py`, [ADR-014](adr/014-public-dataset.md)) checks the OLAP database and writes `data/final_datasets/`: one Parquet file per table — the 12 above plus `ref_response_codes`, `ref_program_wallets`, `ref_cnae_wallets`, `ref_mcc_wallets` and `ref_mcc_modalities`, the rules that explain the declines — with `data_dictionary.md` ([copy](data-dictionary.md)) and `quality_report.md`. Any failed check stops it.
+`python -m src.main export` (`src/pipeline/export.py`, [ADR-014](adr/014-public-dataset.md)) checks the OLAP database and writes `data/dataset/`: one Parquet file per table — the 12 above plus `ref_response_codes`, `ref_program_wallets`, `ref_cnae_wallets`, `ref_mcc_wallets` and `ref_mcc_modalities`, the rules that explain the declines — with `data_dictionary.md` ([copy](data-dictionary.md)) and `quality_report.md`. Any failed check stops it.

@@ -83,20 +83,20 @@ another run starts with `setup --reset`.
 uv run python -m src.main etl   # DuckDB star schema from the OLTP database
 ```
 
-`etl` writes a new `database/olap_duck/olap_corporate_benefits.duckdb`
+`etl` writes a new `data/olap/olap_corporate_benefits.duckdb`
 (git-ignored) every run. Open it with `duckdb` or Python and start from the
 views: `SELECT * FROM v_declines`.
 
 ```bash
-uv run python -m src.main export   # quality checks, then data/final_datasets/
+uv run python -m src.main export   # quality checks, then data/dataset/
 ```
 
 `export` writes one Parquet file per table, `data_dictionary.md`,
 `quality_report.md` (the checks and the statistical profile, each against
 `quality_profile` in the config) and `dataset_metadata.json` (seed, reference day, window, code
-commit, config and source hashes, row counts) into `data/final_datasets/` (git-ignored). If a check
+commit, config and source hashes, row counts) into `data/dataset/` (git-ignored). If a check
 fails it writes nothing and names the check. After changing
-`database/olap_duck/dictionary.yaml`, regenerate the copy in `docs/`:
+`database/olap/dictionary.yaml`, regenerate the copy in `docs/`:
 
 ```bash
 uv run python -c "from src.pipeline.export import render_dictionary; open('docs/data-dictionary.md', 'w').write(render_dictionary())"
@@ -115,7 +115,7 @@ needed. To download a source again, delete its file in `data/raw/`.
 
 ```bash
 docker compose down -v                                    # drops the volume
-rm -f database/olap_duck/olap_corporate_benefits.duckdb
+rm -f data/olap/olap_corporate_benefits.duckdb
 ```
 
 ---
