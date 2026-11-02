@@ -7,6 +7,7 @@ import psycopg
 
 from src.data_generators.providers import fake
 from src.infrastructure.database.postgres_manager import count_rows, run_sql_file
+from src.pipeline import provenance
 from src.pipeline.entities import ENTITY_TABLES, build_entities, load_entities
 from src.pipeline.reference import REFERENCE_KEYS, build_reference_tables, load_reference_tables
 from src.pipeline.sources import Sources
@@ -54,6 +55,15 @@ def run_setup(
     fake.seed(seed, today=today)
     load_entities(conn, build_entities(volumes, sources.municipios, sources.cnae))
     log.info("Entities generated (seed %s, reference day %s)", seed, today)
+    conn.execute("TRUNCATE run_metadata")
+    provenance.record(
+        conn,
+        seed=seed,
+        reference_date=today,
+        setup_code_version=provenance.code_version(),
+        setup_config_hash=provenance.config_hash(),
+        sources=provenance.source_hashes(),
+    )
 
     tables = [*REFERENCE_KEYS, *ENTITY_TABLES, *SIMULATED_TABLES]
     return {table: count_rows(conn, table) for table in tables}

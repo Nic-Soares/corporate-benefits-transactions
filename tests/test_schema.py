@@ -122,7 +122,7 @@ def test_oltp_schema_on_postgres():
         count = conn.execute(
             "SELECT count(*) FROM information_schema.tables WHERE table_schema = 'schema_check'"
         ).fetchone()[0]
-        assert count == 17
+        assert count == 18  # 17 data tables and run_metadata
     finally:
         conn.rollback()
         conn.close()
