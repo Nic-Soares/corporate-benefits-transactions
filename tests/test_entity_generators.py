@@ -5,6 +5,7 @@ from datetime import date, datetime, timedelta
 import polars as pl
 import pytest
 
+from src.data_generators.entities.card_wallet_generator import draw_program_wallets
 from src.data_generators.entities.establishment_generator import CATEGORIES, mcc_for
 from src.data_generators.providers import fake
 from src.utils.read_yamls import (
@@ -89,14 +90,41 @@ def test_dates_follow_their_parents(tables):
         assert df[column].max() <= today
 
 
-def test_card_wallets_follow_the_program(tables):
-    """Each card holds exactly the wallets of its program, once each."""
+def test_card_wallets_follow_the_company(tables):
+    """Each card holds wallets its program allows, once each, and every card of a
+    company on a program holds the same ones."""
     wallets_by_program = {p["id"]: set(p["wallets"]) for p in REFERENCE["card_programs"]}
     held = tables["card_wallets"].group_by("card_id").agg(pl.col("wallet_id"))
-    cards = tables["cards"].join(held, left_on="id", right_on="card_id")
-    for program_id, wallet_ids in cards.select("program_id", "wallet_id").iter_rows():
+    cards = (
+        tables["cards"]
+        .join(held, left_on="id", right_on="card_id")
+        .join(
+            tables["cardholders"].select("id", "company_id"), left_on="cardholder_id", right_on="id"
+        )
+    )
+    given: dict[tuple[str, str], set[str]] = {}
+    for company_id, program_id, wallet_ids in cards.select(
+        "company_id", "program_id", "wallet_id"
+    ).iter_rows():
         assert len(wallet_ids) == len(set(wallet_ids))
-        assert set(wallet_ids) == wallets_by_program[program_id]
+        assert set(wallet_ids) <= wallets_by_program[program_id]
+        assert given.setdefault((company_id, program_id), set(wallet_ids)) == set(wallet_ids)
+
+
+def test_program_wallets_vary_by_company():
+    """Companies on a multi-benefit program give different wallet sets, never none."""
+    fake.seed(3)
+    sets = {tuple(draw_program_wallets("MULTI_3P")) for _ in range(200)}
+    assert len(sets) > 10
+    assert all(sets)
+    assert draw_program_wallets("MEAL") == ["MEAL"]
+
+
+def test_wallets_activate_soon_after_issue(tables):
+    days = fake.SETTINGS["wallet_activation_days"]
+    activated = tables["card_wallets"].join(tables["cards"], left_on="card_id", right_on="id")
+    delay = (activated["activation_date"] - activated["issue_date"]).dt.total_days()
+    assert delay.min() >= 0 and delay.max() <= days["max"]
 
 
 def test_card_network_follows_the_program(tables):

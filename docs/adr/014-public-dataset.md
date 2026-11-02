@@ -23,5 +23,6 @@ that doesn't add up) misleads everyone who uses it.
   test fails when a column has no line, and the copy in `docs/` must match.
 
 ## Consequences
-- Dataset users get 16 tables, a dictionary and the report of the checks.
+- Dataset users get 16 tables, a dictionary and the report of the checks
+  (17 tables since [ADR-015](015-program-products-per-company.md)).
 - Adding an OLAP column means a dictionary line, or the tests fail.

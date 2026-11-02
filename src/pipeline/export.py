@@ -51,10 +51,19 @@ FOREIGN_KEYS = [
     ("dim_companies", "parent_id", "dim_companies"),
     ("dim_terminals", "establishment_id", "dim_establishments"),
     ("dim_terminals", "acquirer_id", "dim_acquirers"),
+    ("ref_program_wallets", "program_id", "dim_card_programs"),
+    ("ref_program_wallets", "wallet_id", "dim_wallets"),
 ]
 
 # Rules the data must follow: a query counting the rows that break each one
 RULES = {
+    "cards hold only wallets their program allows": """
+        SELECT count(*) FROM dim_card_wallets w JOIN dim_cards c ON c.id = w.card_id
+        ANTI JOIN ref_program_wallets p
+        ON p.program_id = c.program_id AND p.wallet_id = w.wallet_id""",
+    "declines for balance name the wallet": """
+        SELECT count(*) FROM fact_transactions
+        WHERE decline_reason = 'insufficient_balance' AND card_wallet_id IS NULL""",
     "approved attempts have an authorization code and a wallet": """
         SELECT count(*) FROM fact_transactions WHERE response_code = '00'
         AND (authorization_code IS NULL OR card_wallet_id IS NULL)""",

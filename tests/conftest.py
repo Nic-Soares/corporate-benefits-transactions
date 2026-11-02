@@ -46,7 +46,7 @@ def build_tables(municipios_df):
             companies, scale=0.02
         )
         cards = CardGenerator(cardholders).generate_cards_as_dataframe()
-        card_wallets = generate_card_wallets(cards)
+        card_wallets = generate_card_wallets(cards, cardholders)
         establishments = generate_establishments(
             120,
             df_cnae=pl.DataFrame({"subclasse_id": CNAE_SUBCLASSES}),
