@@ -69,8 +69,8 @@ dim_cards:
     program_id: "Program (dim_card_programs)"
     modality_id: "Network: OWN or a brand (dim_transaction_modalities)"
     card_type: "physical or virtual"
-    expiration_date: "Last day the card is valid"
-    issue_date: "Date issued"
+    expiration_date: "Last day of the current plastic; a card is renewed on expiry and keeps its id"
+    issue_date: "Date first issued, a few days after the cardholder's admission"
     status: "active, inactive (not unlocked yet), blocked or cancelled"
 
 dim_cardholders:
