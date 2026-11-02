@@ -19,7 +19,7 @@
 | `EP-08` Transaction simulator | ✅ Done — merged into `develop` 2026-11-01 (ADR-010, 011, 013, 015, 016, 017); ST-08.9–08.12 2026-11-03 | code (`src/processors/transaction_simulator.py`) |
 | `EP-09` OLAP: Postgres → DuckDB | ✅ Done — merged into `develop` 2026-11-01 (ADR-012) | code + `database/olap_duck/` |
 | `EP-10` Dataset export and quality | ✅ Done — merged into `develop` 2026-11-01 (ADR-014) | code + `data/final_datasets/` |
-| `EP-11` Kaggle release | Not started — after `EP-13` | Kaggle |
+| `EP-11` Kaggle release | ✅ Done — public 2026-11-03 | Kaggle |
 | `EP-12` Architecture review: a coherent dataset at volume | ✅ Done — merged into `develop` 2026-11-03 |
 | `EP-13` Layout and developer infrastructure | ✅ Done — merged into `develop` 2026-11-03 (ADR-019) | code, `config/`, `database/`, `.github/` |
 
@@ -545,9 +545,9 @@ Second pass against how benefits cards are used in the market. The model held; t
 
 **Dependencies:** `EP-10`, `EP-12`, `EP-13`. **Size:** S (~1 day).
 
-- [ ] Dataset page (description, benefits-market context, license)
-- [ ] Example notebook
-- [ ] Publish and link from the README
+- [x] Dataset page (`kaggle/`: description with context, content, limitations and citation; cover; CC BY 4.0; provenance; every file and column described): https://www.kaggle.com/datasets/nicolasssoares/brazilian-benefit-card-transactions-synthetic
+- [x] Example notebook (`kaggle/getting-started.ipynb`): https://www.kaggle.com/code/nicolasssoares/getting-started-brazilian-benefit-card-transactio
+- [x] Published and linked from the README and the portfolio page; a 10,000-row CSV sample for Kaggle's preview (the export writes it). Usability 8.8 → 10 once Kaggle counts the public notebook
 
 ---
 
@@ -621,7 +621,8 @@ Found on the way: `src/adapters/`, an empty folder left by an old commit.
 - [x] Releases by hand, one per published dataset version: `CHANGELOG.md`, the version in `pyproject.toml`, a signed tag and a GitHub Release (`docs/runbooks/releases.md`); `v1.0.0` is the first
 - [x] CI also on pull requests and by hand, with a timeout
 - [x] Left out on purpose, for a data project with one author and no deploy: Dependabot (removed), automated releases, required pull requests; GitHub's own secret scanning replaces a gitleaks job
-- [ ] GitHub settings applied by hand: a `main` ruleset (no deletion, no force push), secret scanning with push protection, topics
+- [x] GitHub settings applied by hand: a `main` ruleset (no deletion, no force push), secret scanning with push protection, topics; repository public; release `v1.0.0` published (2026-11-03)
+- [x] History rewritten to drop the `Co-Authored-By` trailers (137 commits; same trees, dates and authors, re-signed; `v1.0.0` re-tagged): GitHub listed Claude as a contributor
 
 ### ST-13.6 — README and portfolio page (2026-11-03)
 - [x] README in the Best-README-Template layout: badges, table of contents, usage, architecture, data sources, roadmap, contributing, contact

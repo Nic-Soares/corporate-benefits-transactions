@@ -299,7 +299,8 @@
           "type": "list",
           "items": [
             "Código-fonte — [GitHub](https://github.com/Nic-Soares/corporate-benefits-transactions)",
-            "Dataset — Kaggle (em breve)"
+            "Dataset — [Kaggle](https://www.kaggle.com/datasets/nicolasssoares/brazilian-benefit-card-transactions-synthetic)",
+            "Notebook de exemplo — [Kaggle](https://www.kaggle.com/code/nicolasssoares/getting-started-brazilian-benefit-card-transactio)"
           ]
         },
         {
@@ -336,7 +337,6 @@
         {
           "type": "list",
           "items": [
-            "Publicar no Kaggle com um notebook de exemplo",
             "Um segundo cenário com outra pasta de config (mais fraude, outros volumes)"
           ]
         }

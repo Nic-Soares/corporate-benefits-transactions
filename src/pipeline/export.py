@@ -1,7 +1,8 @@
 """`export`: quality checks on the OLAP database, then one Parquet file per table.
 
 Writes `data/dataset/`: `<table>.parquet`, `data_dictionary.md` (from
-`database/olap/dictionary.yaml`), `quality_report.md` and
+`database/olap/dictionary.yaml`), `fact_transactions_sample.csv` (a few rows
+to look at), `quality_report.md` and
 `dataset_metadata.json` (how the data was made: `src/pipeline/provenance.py`).
 A failed check stops the export.
 """
@@ -22,6 +23,9 @@ from src.pipeline.etl import OLAP_DIR, OLAP_FILE, OLAP_TABLES, ROOT
 log = logging.getLogger(__name__)
 
 EXPORT_DIR = ROOT / "data" / "dataset"
+# A few rows of the transactions as CSV, for a look without loading the whole fact
+SAMPLE_ROWS = 10_000
+SAMPLE_FILE = "fact_transactions_sample.csv"
 DICTIONARY_FILE = OLAP_DIR / "dictionary.yaml"
 APPROVAL_TOLERANCE = 0.10
 FRAUD_SHARE = (0.001, 0.02)
@@ -230,6 +234,14 @@ def render_report(
     return "\n".join(lines) + "\n"
 
 
+def write_sample(duck: duckdb.DuckDBPyConnection, target: Path) -> None:
+    """`SAMPLE_ROWS` transactions drawn at random, the same ones every time, by date."""
+    duck.execute(
+        f"COPY (SELECT * FROM fact_transactions USING SAMPLE reservoir({SAMPLE_ROWS} ROWS) "
+        f"REPEATABLE (42) ORDER BY date, id) TO '{target}' (HEADER, DELIMITER ',')"
+    )
+
+
 def run_export(path: Path = OLAP_FILE, out_dir: Path = EXPORT_DIR) -> tuple[list[Check], dict]:
     """Check the OLAP database at `path` and write the dataset to `out_dir`."""
     if not path.exists():
@@ -246,6 +258,7 @@ def run_export(path: Path = OLAP_FILE, out_dir: Path = EXPORT_DIR) -> tuple[list
             target = out_dir / f"{table}.parquet"
             duck.execute(f"COPY {table} TO '{target}' (FORMAT parquet, COMPRESSION zstd)")
             counts[table] = _count(duck, f"SELECT count(*) FROM {table}")
+        write_sample(duck, out_dir / SAMPLE_FILE)
         has_run = duck.sql(
             "SELECT count(*) FROM information_schema.tables WHERE table_name = 'run_metadata'"
         ).fetchall()[0][0]

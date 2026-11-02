@@ -5,6 +5,7 @@
 [![MIT License][license-shield]][license-url]
 [![Python][python-shield]][python-url]
 [![Last commit][commit-shield]][commit-url]
+[![Kaggle][kaggle-shield]][kaggle-url]
 
 <!-- PROJECT LOGO -->
 <br />
@@ -21,6 +22,10 @@
     <a href="docs/technical-architecture.md"><strong>Explore the docs »</strong></a>
     <br />
     <br />
+    <a href="https://www.kaggle.com/datasets/nicolasssoares/brazilian-benefit-card-transactions-synthetic">Dataset on Kaggle</a>
+    &middot;
+    <a href="https://www.kaggle.com/code/nicolasssoares/getting-started-brazilian-benefit-card-transactio">Example notebook</a>
+    &middot;
     <a href="docs/data-dictionary.md">Data dictionary</a>
     &middot;
     <a href="https://github.com/Nic-Soares/corporate-benefits-transactions/issues/new?labels=bug">Report Bug</a>
@@ -99,7 +104,7 @@ Every decline carries an ISO 8583 code and a reason (wrong PIN, wallet not accep
 
 ### What's in the dataset
 
-The official build (seed 42, Sep 2025 – Aug 2026, scale 4):
+The official build (seed 42, Sep 2025 – Aug 2026, scale 4) is on **[Kaggle](https://www.kaggle.com/datasets/nicolasssoares/brazilian-benefit-card-transactions-synthetic)** under CC BY 4.0, with a [getting-started notebook](https://www.kaggle.com/code/nicolasssoares/getting-started-brazilian-benefit-card-transactio):
 
 | | |
 |---|---|
@@ -252,7 +257,7 @@ Every record is synthetic. The generators draw on public reference data, version
 - [x] DuckDB star schema and the checked Parquet export (EP-09, EP-10)
 - [x] Architecture review: reproducible, one acceptance rule, volume, statistical profile (EP-12)
 - [x] Flat layout, config by purpose, `make` (EP-13)
-- [ ] Kaggle release: dataset page and an example notebook (EP-11)
+- [x] Kaggle release: dataset page and an example notebook (EP-11)
 
 See the [roadmap](docs/planning/ROADMAP.md) for every story.
 
@@ -332,3 +337,5 @@ Project link: [github.com/Nic-Soares/corporate-benefits-transactions](https://gi
 [docker-url]: https://www.docker.com/
 [uv-badge]: https://img.shields.io/badge/uv-DE5FE9?style=for-the-badge&logo=uv&logoColor=white
 [uv-url]: https://docs.astral.sh/uv/
+[kaggle-shield]: https://img.shields.io/badge/Kaggle-dataset-20BEFF?style=for-the-badge&logo=kaggle&logoColor=white
+[kaggle-url]: https://www.kaggle.com/datasets/nicolasssoares/brazilian-benefit-card-transactions-synthetic
