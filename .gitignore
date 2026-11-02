@@ -218,3 +218,18 @@ __marimo__/
 *.patch
 .vscode
 .idea
+
+# Data files (downloaded or generated); keep the folder skeleton
+/data/raw/**/*
+!/data/raw/**/
+# The public sources the setup used are versioned: the same seed gives the same dataset
+!/data/raw/*.parquet
+/data/dataset/*
+/data/olap/*
+!/data/**/.gitkeep
+
+# macOS
+.DS_Store
+
+# Editor settings are personal
+.vscode/

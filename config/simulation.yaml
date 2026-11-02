@@ -1,0 +1,322 @@
+# =====================================
+# simulation.yaml
+# Parameters of the data generation and the transaction simulation.
+# Every number here is synthetic: shaped like a benefits-card market (lunch
+# and evening peaks, small tickets, spending that follows the credit), not
+# taken from one.
+# =====================================
+
+# Volumes of the setup. Cardholders follow each company's segment and cards
+# follow its program bundle: with seed 42, about 9 thousand cardholders, 12
+# thousand cards and about 600 thousand attempts in 90 days.
+data_volumes:
+  companies: 200
+  # Share of each company's headcount that is generated: a Corporate client
+  # has thousands of employees, more than a dataset needs
+  cardholder_scale: 0.1
+  establishments: 2000
+  terminals: 3000
+  # No attempt count: the volume follows the credits (usage_patterns.spend_profile)
+
+# Expected share of approved attempts — checked by the simulator (EP-08)
+approval_rates:
+  overall: 0.80
+
+# Data generation (read by src/entities/fake.py)
+generation_settings:
+  # Company segment: its weight and how many employees (cardholders) it has.
+  # SME, Middle and Corporate are cut by headcount; Public is the kind of
+  # client (government bodies), of any size. Sizes are log-uniform in the
+  # range, so small companies are the commonest. Companies sit where the GDP
+  # is (IBGE municipal GDP). `same_city`: share of the employees who live in
+  # the company's municipality; the others anywhere, by population (a big
+  # employer has branches and staff across the country).
+  company_segments:
+    SME:       {weight: 0.70, cardholders: {min: 1,    max: 250},   same_city: 0.90}
+    Middle:    {weight: 0.18, cardholders: {min: 251,  max: 1999},  same_city: 0.70}
+    Corporate: {weight: 0.05, cardholders: {min: 2000, max: 10000}, same_city: 0.35}
+    Public:    {weight: 0.07, cardholders: {min: 50,   max: 5000},  same_city: 0.60}
+
+  # Programs a company contracts; every cardholder gets one card per program.
+  # The 3-party multi-benefit card replaces the separate Food, Meal and Gift
+  # cards, so it never comes with them.
+  program_bundles:
+    - {programs: ["MULTI_3P"],              weight: 0.30}
+    - {programs: ["FOOD", "MEAL"],          weight: 0.22}
+    - {programs: ["MULTI_4P"],              weight: 0.15}
+    - {programs: ["MEAL"],                  weight: 0.12}
+    - {programs: ["FOOD"],                  weight: 0.08}
+    - {programs: ["MULTI_3P", "FUEL"],      weight: 0.04}
+    - {programs: ["FOOD", "MEAL", "GIFT"],  weight: 0.03}
+    - {programs: ["MULTI_4P", "PREMIUM"],   weight: 0.03}
+    - {programs: ["GIFT"],                  weight: 0.03}
+
+  # Multi-benefit programs: the wallets a company gives its employees, out of
+  # those the program allows. Each wallet is in a company's set with its share;
+  # a wallet not listed is always in it. Every cardholder of the company gets
+  # the same set; a set never comes out empty.
+  program_wallet_shares:
+    FOOD: 0.90
+    MEAL: 0.90
+    MOBILITY: 0.55
+    HEALTH: 0.30
+    HOME_OFFICE: 0.25
+    EDUCATION: 0.20
+    GIFT: 0.40
+
+  card_type_distribution:
+    physical: 0.85
+    virtual: 0.15
+
+  # Per wallet: the monthly credit range and the limits (0 = no limit).
+  # Meal has the lowest daily limit; Food and Meal cap the purchases per day.
+  wallets:
+    FOOD:        {monthly_credit: {min: 300.00, max: 1200.00}, daily_limit: 2500.00, monthly_limit: 0, daily_count_limit: 10}
+    MEAL:        {monthly_credit: {min: 400.00, max: 1000.00}, daily_limit: 600.00,  monthly_limit: 0, daily_count_limit: 10}
+    MOBILITY:    {monthly_credit: {min: 200.00, max: 900.00},  daily_limit: 0,       monthly_limit: 0, daily_count_limit: 0}
+    HEALTH:      {monthly_credit: {min: 50.00,  max: 300.00},  daily_limit: 0,       monthly_limit: 0, daily_count_limit: 0}
+    HOME_OFFICE: {monthly_credit: {min: 100.00, max: 500.00},  daily_limit: 0,       monthly_limit: 0, daily_count_limit: 0}
+    EDUCATION:   {monthly_credit: {min: 50.00,  max: 400.00},  daily_limit: 0,       monthly_limit: 0, daily_count_limit: 0}
+    GIFT:        {monthly_credit: {min: 100.00, max: 600.00},  daily_limit: 0,       monthly_limit: 0, daily_count_limit: 0}
+    PREMIUM:     {monthly_credit: {min: 100.00, max: 1000.00}, daily_limit: 0,       monthly_limit: 0, daily_count_limit: 0}
+
+  # Days from a card's issue to the activation of its wallets (no later than today)
+  wallet_activation_days: {min: 0, max: 15}
+
+  # Balance at the start of the simulation, as a share of the monthly credit
+  starting_balance_ratio: {min: 0.0, max: 1.0}
+
+  # Day of the month the monthly credit lands (balance_history 'credit')
+  benefit_credit_day: 1
+
+  # Status weights (valid statuses: reference.yaml → status_options)
+  company_status_distribution:
+    active: 0.90
+    inactive: 0.07
+    suspended: 0.03
+
+  cardholder_status_distribution:
+    active: 0.92
+    inactive: 0.05
+    terminated: 0.03
+
+  card_status_distribution:
+    active: 0.90
+    inactive: 0.04
+    blocked: 0.04
+    cancelled: 0.02
+
+  card_wallet_status_distribution:
+    active: 0.96
+    suspended: 0.02
+    cancelled: 0.02
+
+  establishment_status_distribution:
+    active: 0.90
+    inactive: 0.07
+    suspended: 0.02
+    terminated: 0.01
+
+  terminal_status_distribution:
+    active: 0.90
+    inactive: 0.05
+    maintenance: 0.05
+
+  # A record not active was active until its status began (`status_since`),
+  # a day between its start and today drawn as start + U^skew of the span:
+  # above 1 it leans to early in the record's life, so the share of records
+  # out of use barely grows within a simulated year (none comes back)
+  status_since_skew: 3.0
+
+  # Acquirer of a physical terminal: a few large ones and a tail
+  acquirer_distribution:
+    CIE: 0.28
+    RED: 0.26
+    GET: 0.16
+    STO: 0.14
+    PAG: 0.12
+    SAF: 0.04
+
+  # Dates
+  date_ranges:
+    cardholder_admission:
+      start: "-10y"
+      end: "today"
+    company_registration:
+      start: "-20y"
+      end: "today"
+    establishment_opening:
+      start: "-8y"
+      end: "today"
+  # Each date also starts no earlier than its parent's: admission ≥ company
+  # registration, wallet activation ≥ card issue, terminal installation ≥
+  # establishment accreditation.
+  # A card is issued a few days after the admission; the plastic is valid for
+  # 3-5 years and renewed on expiry under the same card, so the expiration date
+  # is the current plastic's.
+  card_issue_days_after_admission: {min: 0, max: 30}
+  # A terminal is installed a few days after its establishment's accreditation
+  terminal_install_days_after_accreditation: {min: 0, max: 30}
+  card_validity_years:
+    min: 3
+    max: 5
+
+# =====================================
+# Establishments: what kinds exist, how many, and what they sell.
+# cnae: CNAE prefixes of the category (the MCC comes from
+#   reference.yaml → cnae_mcc). online: sells through an e-commerce
+#   gateway, no physical terminal. atm: cash withdrawal.
+# names: words for the trade name (with a Brazilian surname).
+# amount: a log-normal ticket — median, 90th percentile and cap (R$).
+# =====================================
+establishment_categories:
+  supermarket:      {weight: 0.22, names: ["Supermercado", "Mercado", "Atacarejo"], cnae: ["4711", "4691"], amount: {median: 60.00, p90: 280.00, max: 2500.00}}
+  food_retail:      {weight: 0.16, names: ["Padaria", "Açougue", "Hortifruti", "Empório"], cnae: ["4721", "4722", "4723", "4724", "4729"], amount: {median: 22.00, p90: 80.00, max: 400.00}}
+  restaurant:       {weight: 0.24, names: ["Restaurante", "Lanchonete", "Cantina", "Bar e Restaurante"], cnae: ["5611", "5612", "5620"], amount: {median: 35.00, p90: 85.00, max: 400.00}}
+  fuel:             {weight: 0.10, names: ["Auto Posto", "Posto", "Auto Center"], cnae: ["4731", "4520", "4530", "5223"], amount: {median: 110.00, p90: 250.00, max: 1000.00}}
+  health:           {weight: 0.07, names: ["Farmácia", "Drogaria", "Ótica", "Academia"], cnae: ["4771", "4773", "4774", "8630", "9313"], amount: {median: 45.00, p90: 180.00, max: 1500.00}}
+  home_office:      {weight: 0.02, names: ["Informática", "Eletro", "Móveis"], cnae: ["4751", "4752", "4753", "4754"], amount: {median: 120.00, p90: 600.00, max: 5000.00}}
+  education:        {weight: 0.02, names: ["Livraria", "Papelaria", "Escola"], cnae: ["4761", "8599"], amount: {median: 80.00, p90: 400.00, max: 3000.00}}
+  retail:           {weight: 0.10, names: ["Loja", "Magazine", "Calçados", "Modas"], cnae: ["4755", "4763", "4772", "4781", "4782", "4789"], amount: {median: 70.00, p90: 300.00, max: 2500.00}}
+  ride_hailing:     {weight: 0.03, names: ["Mobilidade", "Transportes"], cnae: ["4923"], online: true, amount: {median: 18.00, p90: 45.00, max: 250.00}}
+  digital_services: {weight: 0.02, names: ["Digital", "Streaming"], cnae: ["6319"], online: true, amount: {median: 30.00, p90: 80.00, max: 300.00}}
+  atm:              {weight: 0.02, names: ["Banco"], cnae: ["6422"], atm: true, amount: {median: 150.00, p90: 400.00, max: 1500.00, step: 20.00}}
+
+# =====================================
+# Simulation (read by src/simulation/simulator.py)
+# =====================================
+simulation:
+  days: 90                        # window before the reference day
+  reversal_ratio: 0.004           # share of approved purchases reversed later
+  reversal_delay_minutes: {min: 2, max: 2880}
+  # After a decline for lack of balance, the cardholder skips this share of
+  # their attempts with that option (proprietary network) or at that kind of
+  # place (brand) until the next credit: they know that balance is gone. Most
+  # try again: a smaller purchase, another day
+  give_up_after_insufficient_balance: 0.3
+  # One-off year-end credit (a Christmas basket): a share of the employers adds
+  # it to the wallet on this day of December; spent over the next days
+  year_end_credit:
+    company_share: 0.35
+    wallet: FOOD
+    amount: {min: 150.00, max: 500.00}
+    day: 10
+    spend_days: 30
+
+# =====================================
+# Statistical profile the export checks (src/pipeline/profile.py): the shape a
+# dataset must keep, whatever the seed and the scale
+# =====================================
+quality_profile:
+  monthly_approval: {min: 0.82, max: 0.93}
+  # Median ticket of each kind of place, within this share of the config's
+  ticket_median_tolerance: 0.30
+  restaurant_peak_hours: [11, 13]
+  # A weekend day's restaurant attempts ÷ a weekday's
+  restaurant_weekend_to_weekday: {min: 0.40, max: 0.90}
+  insufficient_balance_share_of_declines: {min: 0.35, max: 0.75}
+  # Reversals ÷ approved purchases, within this share of simulation.reversal_ratio
+  reversal_ratio_tolerance: 0.50
+  home_state_share: {min: 0.65, max: 0.95}
+  top_fifth_establishments_share: {min: 0.45, max: 0.90}
+  # Supermarket attempts on 24 December ÷ an average day (when the window holds it)
+  christmas_eve_lift: 1.30
+
+# =====================================
+# Fraud (read by src/entities/fraud_generator.py). Typologies
+# of the benefits market; every number synthetic.
+# =====================================
+fraud:
+  # Fraud attempts as a share of the legit ones
+  share_of_attempts: 0.005
+  # Weight of each scenario among the incidents
+  scenarios:
+    account_takeover_wallet: 0.35   # app account taken over, card added to a mobile wallet, burst far from home
+    card_not_present: 0.30          # brand card's open wallet drained online
+    intercepted_card: 0.15          # new card used before the cardholder gets it, in another state
+    point_of_compromise: 0.20       # cards skimmed at one shop, cloned stripe used in another state
+  # Share of approved fraud the cardholder disputes
+  report_ratio: 0.85
+  # Legit approved purchases disputed by mistake or bad faith, per fraud dispute
+  friendly_disputes_per_fraud_dispute: 0.4
+
+# =====================================
+# Transactions (read by src/simulation/: generator, demand, pools, seasons)
+# =====================================
+usage_patterns:
+  # Share of attempts per hour, 0h to 23h: a lunch peak and an evening peak
+  hour_weights: [0.5, 0.3, 0.2, 0.2, 0.2, 0.7, 2.0, 4.0, 5.0, 5.0, 5.5, 7.0,
+                 9.5, 7.5, 5.0, 5.0, 6.0, 8.0, 9.0, 8.0, 5.5, 3.5, 1.5, 1.0]
+  # Categories with their own day
+  hour_weights_by_category:
+    restaurant: [0.2, 0.1, 0.1, 0.1, 0.1, 0.2, 1.0, 2.5, 3.0, 2.5, 3.5, 9.0,
+                 16.0, 12.0, 5.0, 3.0, 3.0, 4.0, 6.5, 8.0, 7.5, 4.0, 1.5, 0.5]
+    fuel:       [0.5, 0.3, 0.2, 0.2, 0.3, 1.5, 4.5, 8.0, 7.0, 5.5, 5.0, 5.0,
+                 5.0, 5.0, 5.0, 5.5, 6.5, 8.5, 8.0, 5.5, 3.5, 2.0, 1.0, 0.7]
+  # Monday to Sunday: Friday and Saturday a little busier, Sunday quietest
+  weekday_weights: [1.00, 1.00, 1.00, 1.00, 1.10, 1.05, 0.85]
+  # Categories with their own week: meals on workdays, groceries on Saturday,
+  # fuel before the weekend
+  weekday_weights_by_category:
+    restaurant:  [1.10, 1.10, 1.10, 1.10, 1.15, 0.70, 0.55]
+    supermarket: [0.90, 0.85, 0.90, 0.95, 1.10, 1.40, 0.90]
+    fuel:        [1.00, 0.95, 0.95, 1.00, 1.20, 1.10, 0.80]
+  # The calendar (src/simulation/seasons.py). A holiday takes
+  # the category's Saturday, times its weight; the eve of a holiday and the
+  # special days have their own. Per category, `all` for the rest
+  seasonality:
+    # January to December: vacations early in the year, Black Friday, Christmas
+    month_weights: [0.94, 0.95, 1.00, 1.00, 1.02, 1.00, 1.00, 1.00, 1.00, 1.00, 1.03, 1.10]
+    # Each month of the window also draws its own intensity (log-normal with
+    # this sigma): some months spend more than others, and approve less
+    month_noise_sigma: 0.08
+    holiday: {all: 1.25, supermarket: 1.30, food_retail: 1.25, fuel: 1.40, restaurant: 1.65}
+    eve: {all: 1.10, supermarket: 1.45, food_retail: 1.30, fuel: 1.35}
+    special_days:
+      christmas_eve: {all: 1.30, supermarket: 2.00, food_retail: 1.80, retail: 2.00}
+      new_years_eve: {all: 1.20, supermarket: 1.80, food_retail: 1.60}
+      black_friday: {retail: 2.50, digital_services: 2.50, home_office: 2.00}
+  # Weight of the first and last day of the month: spending follows the credit
+  month_day_weights: {first: 1.4, last: 0.8}
+
+  # Share of the monthly credit each cardholder tries to spend: most try to
+  # spend more than they have (above 1, the balance runs out before the next
+  # credit and the rest is declined); savers let the balance build up. Each
+  # wallet then makes about credit × ratio ÷ average ticket attempts a month.
+  spend_profile:
+    saver_share: 0.10
+    saver: {min: 0.10, max: 0.50}
+    spender: {min: 1.00, max: 1.35}
+  # Balance of a wallet in use when the window starts, as a share of its
+  # credit: a spender keeps a little of past months; a saver what built up,
+  # (1 - ratio) a month for up to `saver_months` months
+  opening_balance:
+    spender_leftover: {min: 0.10, max: 0.40}
+    saver_months: 12
+  # Share of in-person purchases in the cardholder's city (else state, when
+  # the kind of place exists there); online businesses are anywhere
+  local_purchase_ratio: 0.8
+  # Share of attempts where the cardholder goes to a shop that takes the wallet
+  # (they learn where the card works); the others try any shop of the kind
+  known_acceptance_ratio: 0.9
+  # Popularity of an establishment, the same way
+  establishment_popularity_sigma: 1.0
+  # Weight of a card, cardholder, establishment or terminal that isn't active
+  inactive_usage_factor: 0.05
+
+  # Proprietary network: share of attempts where the cardholder picks the
+  # wrong option on the terminal
+  wrong_option_ratio: 0.04
+  # Share of attempts at a place none of the card's wallets fits
+  off_pattern_ratio: 0.03
+  # Share of PIN-verified captures (CHIP, MAG_STRIPE) where the PIN is wrong
+  wrong_pin_ratio: 0.02
+
+  # Capture per terminal type (codes: reference.yaml →
+  # transaction_technologies). A virtual card only uses the captures that
+  # don't need the physical card (reference.yaml).
+  capture_by_terminal_type:
+    POS: {CONTACTLESS: 0.50, CHIP: 0.30, GOOGLE_PAY: 0.06, APPLE_PAY: 0.04, MOBILE_NFC: 0.05, MAG_STRIPE: 0.05}
+    TEF: {CHIP: 0.90, MAG_STRIPE: 0.10}
+    ECOMMERCE: {ECOMMERCE: 1.00}
+    ATM: {CHIP: 1.00}

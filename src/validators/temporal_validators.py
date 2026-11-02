@@ -1,95 +1,67 @@
-def validate_card_expiration(single_transaction, cards_df):
-    """
-    Valida se o cartão não está vencido
-    """
-    card_id = single_transaction['card_id']
-    print(card_id)
-    transaction_date = single_transaction['date']
-    print(transaction_date)
-    
-    # Buscar cartão pelo ID
-    card = cards_df[cards_df['card_id'] == card_id]
-    print(card)
-    
-    if card.empty:
-        return {'passed': False, 'error_code': '99'}  # Cartão não encontrado
-    
-    expiration_date = card['expiration_date'].iloc[0]
-    
-    # Verificar se cartão está vencido
-    if transaction_date.date() > expiration_date:
-        return {'passed': False, 'error_code': '54'}  # Cartão vencido
-    
-    return {'passed': True, 'error_code': None}
+"""Temporal validations: the transaction can't predate or outlive its records."""
 
-def cardholder_admission_validation(single_transaction, cards_df, cardholders_df):
-    """
-    Valida se a transação ocorreu após a admissão do portador
-    """
-    card_id = single_transaction['card_id']
-    transaction_date = single_transaction['date']
-    
-    # Buscar cartão
-    card = cards_df[cards_df['card_id'] == card_id]
-    
-    if card.empty:
-        return {'passed': False, 'error_code': '99'}  # Cartão não encontrado
-    
-    cardholder_id = card['cardholder_id'].iloc[0]
-    
-    # Buscar portador
-    cardholder = cardholders_df[cardholders_df['cardholder_id'] == cardholder_id]
-    
-    if cardholder.empty:
-        return {'passed': False, 'error_code': '98'}  # Portador não encontrado
-    
-    admission_date = cardholder['admission_date'].iloc[0]
-    
-    # Verificar se transação é posterior à admissão
-    if transaction_date.date() < admission_date:
-        return {'passed': False, 'error_code': '56'}  # Transação antes da admissão
-    
-    return {'passed': True, 'error_code': None}
+from datetime import date
+from typing import Any
 
-def establishment_accreditation_validation(single_transaction, establishments_df):
-    """
-    Valida se a transação ocorreu após o credenciamento do estabelecimento
-    """
-    establishment_id = single_transaction['establishment_id']
-    transaction_date = single_transaction['date']
-    
-    # Buscar estabelecimento
-    establishment = establishments_df[establishments_df['establishment_id'] == establishment_id]
-    
-    if establishment.empty:
-        return {'passed': False, 'error_code': '97'}  # Estabelecimento não encontrado
-    
-    # Usar opening_date como accreditation_date (conforme estrutura atual)
-    accreditation_date = establishment['opening_date'].iloc[0]
-    
-    # Verificar se transação é posterior ao credenciamento
-    if transaction_date.date() < accreditation_date:
-        return {'passed': False, 'error_code': '57'}  # Estabelecimento ainda não credenciado
-    
-    return {'passed': True, 'error_code': None}
+import polars as pl
 
-def terminal_installation_validation(single_transaction, terminals_df):
-    """
-    Valida se a transação ocorreu após a instalação do terminal
-    """
-    terminal_id = single_transaction['terminal_id']
-    transaction_date = single_transaction['date']
-    
-    # Buscar terminal
-    terminal = terminals_df[terminals_df['terminal_id'] == terminal_id]
-    
-    if terminal.empty:
-        return {'passed': False, 'error_code': '96'}  # Terminal não encontrado
-    
-    installation_date = terminal['installation_date'].iloc[0]
-    
-    # Verificar se transação é posterior à instalação
-    if transaction_date.date() < installation_date:
-        return {'passed': False, 'error_code': '58'}  # Terminal ainda não instalado
-    
-    return {'passed': True, 'error_code': None}
+from src.table import find_one
+from src.validators._common import PASS, RULES, fail, not_found, transaction_date
+
+TEMPORAL_RULES = RULES["temporal_validations"]
+
+
+def _on_or_after(
+    transaction: dict[str, Any], start: date, rule_name: str, reason: str
+) -> dict[str, Any]:
+    if transaction_date(transaction) < start:
+        return fail(TEMPORAL_RULES[rule_name]["error_code"], reason)
+    return PASS
+
+
+def validate_card_expiration(transaction: dict[str, Any], cards_df: pl.DataFrame) -> dict[str, Any]:
+    card = find_one(cards_df, id=transaction["card_id"])
+    if card is None:
+        return not_found("card")
+    if transaction_date(transaction) > card["expiration_date"]:
+        return fail(TEMPORAL_RULES["card_expiration"]["error_code"], "card_expired")
+    return PASS
+
+
+def validate_cardholder_admission(
+    transaction: dict[str, Any], cards_df: pl.DataFrame, cardholders_df: pl.DataFrame
+) -> dict[str, Any]:
+    card = find_one(cards_df, id=transaction["card_id"])
+    if card is None:
+        return not_found("card")
+    cardholder = find_one(cardholders_df, id=card["cardholder_id"])
+    if cardholder is None:
+        return not_found("cardholder")
+    return _on_or_after(
+        transaction, cardholder["admission_date"], "cardholder_admission", "before_admission"
+    )
+
+
+def validate_establishment_accreditation(
+    transaction: dict[str, Any], establishments_df: pl.DataFrame
+) -> dict[str, Any]:
+    establishment = find_one(establishments_df, id=transaction["establishment_id"])
+    if establishment is None:
+        return not_found("establishment")
+    return _on_or_after(
+        transaction,
+        establishment["accreditation_date"],
+        "establishment_accreditation",
+        "before_accreditation",
+    )
+
+
+def validate_terminal_installation(
+    transaction: dict[str, Any], terminals_df: pl.DataFrame
+) -> dict[str, Any]:
+    terminal = find_one(terminals_df, id=transaction["terminal_id"])
+    if terminal is None:
+        return not_found("terminal")
+    return _on_or_after(
+        transaction, terminal["installation_date"], "terminal_installation", "before_installation"
+    )

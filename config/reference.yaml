@@ -1,0 +1,725 @@
+# =====================================
+# reference.yaml
+# Reference data: wallets, programs, networks, acquirers, terminal models,
+# acceptance rules (CNAE, MCC), capture technologies, response codes, the
+# statuses records can have. Loaded into the database by setup (src/reference.py).
+# =====================================
+
+# Wallets: the balances a card can hold
+# =====================================
+wallets:
+  - id: "FOOD"
+    name: "Alimentação"
+    category: "Beneficio"
+
+  - id: "MEAL"
+    name: "Refeição"
+    category: "Beneficio"
+
+  - id: "MOBILITY"
+    name: "Mobilidade"
+    category: "Beneficio"
+
+  - id: "HEALTH"
+    name: "Saúde e Bem-estar"
+    category: "Beneficio"
+
+  - id: "HOME_OFFICE"
+    name: "Home Office"
+    category: "Beneficio"
+
+  - id: "EDUCATION"
+    name: "Educação"
+    category: "Beneficio"
+
+  - id: "GIFT"
+    name: "Presente"
+    category: "Incentivo"
+
+  - id: "PREMIUM"
+    name: "Premiação"
+    category: "Incentivo"
+
+# =====================================
+# Card programs: what a card is. The program fixes the wallets on the card
+# and the network it runs on:
+#   proprietary_network — 3-party: the issuer's own network authorizes by
+#     CNAE, and the cardholder picks the wallet on the terminal
+#   brand — 4-party: acquirer → brand → issuer; the issuer picks the wallet
+#     from the MCC (wallet_priority in authorization.yaml)
+# =====================================
+card_programs:
+  - id: "FOOD"
+    name: "Alimentação"
+    network_type: "proprietary_network"
+    wallets: ["FOOD"]
+
+  - id: "MEAL"
+    name: "Refeição"
+    network_type: "proprietary_network"
+    wallets: ["MEAL"]
+
+  - id: "MULTI_3P"
+    name: "Multibenefícios (rede própria)"
+    network_type: "proprietary_network"
+    wallets: ["FOOD", "MEAL", "MOBILITY", "HEALTH", "HOME_OFFICE", "EDUCATION", "GIFT"]
+
+  - id: "MULTI_4P"
+    name: "Multibenefícios (bandeirado)"
+    network_type: "brand"
+    brands: ["VISA", "MASTERCARD", "ELO"]
+    wallets: ["FOOD", "MEAL", "MOBILITY", "HEALTH", "HOME_OFFICE", "EDUCATION", "GIFT"]
+
+  - id: "GIFT"
+    name: "Presente"
+    network_type: "proprietary_network"
+    wallets: ["GIFT"]
+
+  - id: "PREMIUM"
+    name: "Premiação"
+    network_type: "proprietary_network"
+    wallets: ["PREMIUM"]
+
+  - id: "FUEL"
+    name: "Combustível"
+    network_type: "proprietary_network"
+    wallets: ["MOBILITY"]
+
+# =====================================
+# Transaction modalities: the proprietary network and the brands
+# =====================================
+transaction_modalities:
+  - id: "OWN"
+    name: "Rede Própria"
+    type: "proprietary_network"
+
+  - id: "VISA"
+    name: "Visa"
+    type: "brand"
+
+  - id: "MASTERCARD"
+    name: "Mastercard"
+    type: "brand"
+
+  - id: "ELO"
+    name: "Elo"
+    type: "brand"
+
+# =====================================
+# Acquirers
+# =====================================
+acquirers:
+  - id: "CIE"
+    name: "Cielo"
+
+  - id: "RED"
+    name: "Rede"
+
+  - id: "STO"
+    name: "Stone"
+
+  - id: "GET"
+    name: "GetNet"
+
+  - id: "PAG"
+    name: "PagSeguro"
+
+  - id: "SAF"
+    name: "SafraPay"
+
+  - id: "ATM"
+    name: "ATM network"   # cash machines shared by the banks
+
+# =====================================
+# Terminal models per acquirer (acquirer id → model and type)
+# =====================================
+terminal_models_by_acquirer:
+  # ECOMMERCE: the acquirer's online gateway; ATM: a cash machine
+  CIE:
+    - model: "LIO V1"
+      type: "POS"
+    - model: "LIO V2"
+      type: "POS"
+    - model: "Cielo Flash"
+      type: "TEF"
+    - model: "Cielo E-commerce"
+      type: "ECOMMERCE"
+
+  RED:
+    - model: "Pop"
+      type: "POS"
+    - model: "Flex"
+      type: "POS"
+    - model: "TEF Dedicado"
+      type: "TEF"
+    - model: "Rede E-commerce"
+      type: "ECOMMERCE"
+
+  STO:
+    - model: "Ton T1"
+      type: "POS"
+    - model: "Ton T2"
+      type: "POS"
+    - model: "Ton Pro"
+      type: "POS"
+    - model: "Stone E-commerce"
+      type: "ECOMMERCE"
+
+  GET:
+    - model: "Smart"
+      type: "POS"
+    - model: "Touch"
+      type: "POS"
+    - model: "TEF GetNet"
+      type: "TEF"
+    - model: "GetNet E-commerce"
+      type: "ECOMMERCE"
+
+  PAG:
+    - model: "Moderninha Plus"
+      type: "POS"
+    - model: "Moderninha Pro"
+      type: "POS"
+    - model: "Moderninha Smart"
+      type: "POS"
+    - model: "PagSeguro E-commerce"
+      type: "ECOMMERCE"
+
+  SAF:
+    - model: "Safra Mobile"
+      type: "POS"
+    - model: "Safra Touch"
+      type: "POS"
+    - model: "Safra TEF"
+      type: "TEF"
+
+  ATM:
+    - model: "Cash machine"
+      type: "ATM"
+
+# CNAE × wallets: what the proprietary network accepts at each establishment
+# =====================================
+cnae_wallets:
+  # Longest prefix wins: a 7-digit subclass entry overrides its 4-digit class,
+  # so each entry lists every wallet accepted at that level.
+
+  # Supermarkets and hypermarkets
+  "4711": ["FOOD", "GIFT", "PREMIUM"]
+  "4691": ["FOOD", "GIFT"]       # cash-and-carry food wholesale
+
+  # Food retail
+  "4721": ["FOOD", "GIFT"]       # bakeries, dairy, cold cuts
+  "4722": ["FOOD", "GIFT"]       # butchers, fishmongers
+  "4723": ["FOOD", "GIFT"]       # beverages
+  "4724": ["FOOD", "GIFT"]       # fruit and vegetables
+  "4729": ["FOOD", "GIFT"]       # other food
+
+  # Restaurants and food services
+  "5611": ["MEAL", "GIFT"]       # restaurants, snack bars, bars
+  "5612": ["MEAL"]               # street food
+  "5620": ["MEAL"]               # catering and canteens
+
+  # Mobility
+  "4731": ["MOBILITY"]           # fuel stations
+  "4520": ["MOBILITY"]           # vehicle repair and car wash
+  "4530": ["MOBILITY"]           # vehicle parts
+  "5223": ["MOBILITY"]           # parking
+
+  # Health and wellness
+  "4771": ["HEALTH", "GIFT", "PREMIUM"]  # pharmacies
+  "4773": ["HEALTH"]             # medical and orthopedic items
+  "4774": ["HEALTH", "PREMIUM"]  # optical goods
+  "8630": ["HEALTH"]             # outpatient care
+  "9313": ["HEALTH"]             # gyms
+
+  # Home office
+  "4751": ["HOME_OFFICE", "GIFT", "PREMIUM"]  # IT equipment
+  "4752": ["HOME_OFFICE", "GIFT", "PREMIUM"]  # telecom equipment
+  "4753": ["HOME_OFFICE", "GIFT", "PREMIUM"]  # home appliances
+  "4754": ["HOME_OFFICE", "GIFT", "PREMIUM"]  # furniture and lighting
+
+  # Education
+  "4761": ["EDUCATION", "GIFT", "PREMIUM"]    # books, stationery
+  "8599": ["EDUCATION"]          # courses and training
+
+  # General retail
+  "4755": ["GIFT", "PREMIUM"]    # textiles and household linen
+  "4756": ["GIFT", "PREMIUM"]    # musical instruments
+  "4762": ["GIFT", "PREMIUM"]    # music and video recordings
+  "4763": ["GIFT", "PREMIUM"]    # toys, sports, recreation
+  "4772": ["GIFT", "PREMIUM"]    # cosmetics and perfume
+  "4781": ["GIFT", "PREMIUM"]    # clothing and accessories
+  "4782": ["GIFT", "PREMIUM"]    # footwear and leather goods
+  "4789": ["GIFT", "PREMIUM"]    # other new goods
+
+# =====================================
+# CNAE × MCC: the MCC an acquirer gives an establishment of each activity
+# (longest prefix wins, as in cnae_wallets)
+# =====================================
+cnae_mcc:
+  "4711": "5411"     # supermarkets
+  "4711301": "5300"  # hypermarkets
+  "4691": "5300"     # cash-and-carry wholesale
+  "4721": "5462"     # bakeries
+  "4722": "5422"     # butchers
+  "4723": "5921"     # beverages
+  "4724": "5499"     # fruit and vegetables
+  "4729": "5499"     # other food
+  "5611": "5812"     # restaurants
+  "5611203": "5814"  # snack bars
+  "5611204": "5813"  # bars
+  "5611205": "5813"  # bars with entertainment
+  "5612": "5814"     # street food
+  "5620": "5812"     # catering
+  "4731": "5541"     # fuel stations
+  "4520": "7538"     # vehicle repair
+  "4530": "5533"     # vehicle parts
+  "5223": "7523"     # parking
+  "4771": "5912"     # pharmacies
+  "4773": "5976"     # orthopedic goods
+  "4774": "8043"     # opticians
+  "8630": "8011"     # doctors
+  "9313": "7997"     # gyms
+  "4751": "5732"     # IT equipment
+  "4752": "5732"     # telecom equipment
+  "4753": "5722"     # home appliances
+  "4754": "5712"     # furniture
+  "4761": "5942"     # books
+  "8599": "8299"     # courses
+  "4755": "5714"     # household textiles
+  "4763": "5941"     # sports and toys
+  "4772": "5977"     # cosmetics
+  "4781": "5651"     # clothing
+  "4782": "5661"     # footwear
+  "4789": "5999"     # other retail
+  "4923": "4121"     # taxi and ride-hailing
+  "6319": "4899"     # online content and subscriptions
+  "6422": "6011"     # banks: cash machines
+
+# =====================================
+# MCC × wallets: on a brand (4-party) card the issuer picks the wallet from
+# the establishment's MCC. GIFT is open: it takes any MCC the brand accepts.
+# =====================================
+mcc_wallets:
+  FOOD: ["5411", "5300", "5422", "5441", "5451", "5462", "5499"]
+  MEAL: ["5811", "5812", "5814"]
+  MOBILITY: ["5541", "5542", "5531", "5532", "5533", "7523", "7542", "7531", "7538", "4111", "4121", "4131"]
+  HEALTH: ["5912", "5976", "8011", "8021", "8031", "8041", "8042", "8043", "8049", "8050", "8062", "8071", "8099", "7997"]
+  HOME_OFFICE: ["5712", "5722", "5732", "5734", "5045", "4814", "4816"]
+  EDUCATION: ["5942", "5943", "8211", "8220", "8241", "8244", "8249", "8299"]
+  GIFT: "any"
+
+# =====================================
+# Capture technologies (transactions.capture_type)
+# =====================================
+transaction_technologies:
+  - code: CHIP
+    category: physical
+    name: Chip
+
+  - code: MAG_STRIPE
+    category: physical
+    name: Magnetic Stripe
+
+  - code: CONTACTLESS
+    category: physical
+    name: Contactless
+
+  - code: MOBILE_NFC
+    category: digital
+    name: Mobile NFC
+
+  - code: APPLE_PAY
+    category: digital
+    name: Apple Pay
+
+  - code: GOOGLE_PAY
+    category: digital
+    name: Google Pay
+
+  - code: ECOMMERCE
+    category: digital
+    name: E-commerce (card not present)
+
+# Response codes: ISO 8583, the card industry's standard. Descriptions are
+# shown to Brazilian users, so they stay in Portuguese. The specific reason
+# of a decline is in transactions.decline_reason.
+# =====================================
+response_codes:
+  "00": "Transação aprovada"
+  "03": "Estabelecimento inválido"
+  "14": "Cartão inválido"
+  "15": "Emissor inexistente"
+  "46": "Conta encerrada"
+  "51": "Saldo insuficiente"
+  "54": "Cartão vencido"
+  "55": "Senha incorreta"
+  "57": "Transação não permitida ao portador"
+  "58": "Transação não permitida no terminal"
+  "61": "Limite de valor excedido"
+  "62": "Cartão restrito"
+  "65": "Limite de quantidade excedido"
+  "78": "Cartão não desbloqueado"
+  "92": "Rota de autorização não encontrada"
+  "96": "Erro no sistema"
+
+# =====================================
+# Valid statuses per entity (generators draw from these)
+# =====================================
+status_options:
+  cardholder:
+    - "active"
+    - "inactive"
+    - "terminated"
+
+  card:
+    - "active"
+    - "inactive"
+    - "blocked"
+    - "cancelled"
+
+  card_wallet:
+    - "active"
+    - "suspended"
+    - "cancelled"
+
+  terminal:
+    - "active"
+    - "inactive"
+    - "maintenance"
+
+  establishment:
+    - "active"
+    - "inactive"
+    - "suspended"
+    - "terminated"
+
+# =====================================
+# Capture technologies: which need a physical card
+# =====================================
+# A virtual card only uses the captures that don't need the physical card
+# (read by src/simulation/pools.py).
+transaction_technology_rules:
+  CHIP:
+    requires_physical_card: true
+    description: "EMV chip - physical card"
+
+  MAG_STRIPE:
+    requires_physical_card: true
+    description: "Magnetic stripe - physical card"
+
+  CONTACTLESS:
+    requires_physical_card: true
+    description: "Contactless - physical card"
+
+  MOBILE_NFC:
+    requires_physical_card: false
+    description: "Mobile NFC - no physical card"
+
+  APPLE_PAY:
+    requires_physical_card: false
+    description: "Apple Pay - no physical card"
+
+  GOOGLE_PAY:
+    requires_physical_card: false
+    description: "Google Pay - no physical card"
+
+  ECOMMERCE:
+    requires_physical_card: false
+    description: "Online purchase - card number and CVV"
+
+# =====================================
+# MCC acceptance by brand
+# =====================================
+# MCC × brands that accept it (E = Elo | M = Mastercard | V = Visa).
+# SYNTHETIC: a plausible rule set for the simulation, not the brands' official
+# acceptance tables (which aren't published as open data). The MCC codes
+# themselves are real (public MCC list).
+
+mcc_acceptance_rules:
+  "0742": "E, M, V"
+  "0763": "M, V"
+  "0780": "E, M, V"
+  "1520": "M, V"
+  "1711": "E, M, V"
+  "1731": "E, M, V"
+  "1740": "M, V"
+  "1750": "E, M, V"
+  "1761": "E, M, V"
+  "1771": "E, M, V"
+  "1799": "M, V"
+  "2741": "M, V"
+  "2791": "M, V"
+  "2842": "E, M, V"
+  "3000": "E, M, V"
+  "3351": "E, M, V"
+  "3501": "E, M, V"
+  "3816": "M, V"
+  "4011": "M, V"
+  "4111": "E, M, V"
+  "4112": "E, M, V"
+  "4119": "E, M, V"
+  "4121": "E, M, V"
+  "4131": "E, M, V"
+  "4214": "M, V"
+  "4215": "M, V"
+  "4225": "M, V"
+  "4411": "M, V"
+  "4457": "M, V"
+  "4468": "M, V"
+  "4511": "E, M, V"
+  "4582": "M, V"
+  "4722": "E, M, V"
+  "4723": "V"
+  "4784": "E, M, V"
+  "4789": "E, M, V"
+  "4812": "E, M, V"
+  "4814": "E, M, V"
+  "4816": "E, M, V"
+  "4821": "M, V"
+  "4829": "M, V"
+  "4899": "E, M, V"
+  "4900": "E, M, V"
+  "5013": "E, M, V"
+  "5021": "M, V"
+  "5039": "M, V"
+  "5044": "M, V"
+  "5045": "E, M, V"
+  "5046": "M, V"
+  "5047": "E, M, V"
+  "5051": "M, V"
+  "5065": "E, M, V"
+  "5072": "E, M, V"
+  "5074": "E, M, V"
+  "5085": "M, V"
+  "5094": "M, V"
+  "5099": "M, V"
+  "5111": "E, M, V"
+  "5122": "E, M, V"
+  "5131": "M, V"
+  "5137": "M, V"
+  "5139": "M, V"
+  "5169": "M, V"
+  "5172": "M, V"
+  "5192": "E, M, V"
+  "5193": "E, M, V"
+  "5198": "E, M, V"
+  "5199": "M, V"
+  "5200": "E, M, V"
+  "5211": "E, M, V"
+  "5231": "E, M, V"
+  "5251": "E, M, V"
+  "5261": "E, M, V"
+  "5271": "M, V"
+  "5300": "E, M, V"
+  "5309": "M, V"
+  "5310": "E, M, V"
+  "5311": "E, M, V"
+  "5331": "E, M, V"
+  "5399": "E, M, V"
+  "5411": "E, M, V"
+  "5422": "E, M, V"
+  "5441": "E, M, V"
+  "5451": "E, M, V"
+  "5462": "E, M, V"
+  "5499": "E, M, V"
+  "5511": "M, V"
+  "5521": "M, V"
+  "5531": "E, M, V"
+  "5532": "E, M, V"
+  "5533": "E, M, V"
+  "5541": "E, M, V"
+  "5542": "E, M, V"
+  "5551": "M, V"
+  "5561": "E, M, V"
+  "5571": "E, M, V"
+  "5592": "M, V"
+  "5598": "M, V"
+  "5599": "M, V"
+  "5611": "E, M, V"
+  "5621": "E, M, V"
+  "5631": "E, M, V"
+  "5641": "E, M, V"
+  "5651": "E, M, V"
+  "5655": "E, M, V"
+  "5661": "E, M, V"
+  "5681": "M, V"
+  "5691": "E, M, V"
+  "5697": "E, M, V"
+  "5698": "M, V"
+  "5699": "E, M, V"
+  "5712": "E, M, V"
+  "5713": "E, M, V"
+  "5714": "E, M, V"
+  "5718": "M, V"
+  "5719": "E, M, V"
+  "5722": "E, M, V"
+  "5732": "E, M, V"
+  "5733": "E, M, V"
+  "5734": "E, M, V"
+  "5735": "E, M, V"
+  "5811": "E, M, V"
+  "5812": "E, M, V"
+  "5813": "M, V"
+  "5814": "E, M, V"
+  "5912": "E, M, V"
+  "5921": "M, V"
+  "5931": "M, V"
+  "5932": "M, V"
+  "5933": "M, V"
+  "5935": "M, V"
+  "5937": "M, V"
+  "5940": "E, M, V"
+  "5941": "E, M, V"
+  "5942": "E, M, V"
+  "5943": "E, M, V"
+  "5944": "E, M, V"
+  "5945": "E, M, V"
+  "5946": "E, M, V"
+  "5947": "E, M, V"
+  "5948": "M, V"
+  "5949": "E, M, V"
+  "5950": "M, V"
+  "5960": "M, V"
+  "5962": "M, V"
+  "5963": "M, V"
+  "5964": "M, V"
+  "5965": "M, V"
+  "5966": "M, V"
+  "5967": "M, V"
+  "5968": "M, V"
+  "5969": "M, V"
+  "5970": "E, M, V"
+  "5971": "M, V"
+  "5972": "M, V"
+  "5973": "E, M, V"
+  "5975": "E, M, V"
+  "5976": "E, M, V"
+  "5977": "E, M, V"
+  "5978": "M, V"
+  "5983": "M, V"
+  "5992": "E, M, V"
+  "5993": "M, V"
+  "5994": "E, M, V"
+  "5995": "E, M, V"
+  "5996": "M, V"
+  "5997": "M, V"
+  "5998": "M, V"
+  "5999": "E, M, V"
+  "6010": "M, V"
+  "6011": "E, M, V"
+  "6012": "M, V"
+  "6051": "M, V"
+  "6211": "M, V"
+  "6300": "M, V"
+  "6399": "M, V"
+  "6513": "M, V"
+  "7011": "E, M, V"
+  "7012": "M, V"
+  "7032": "M, V"
+  "7033": "E, M, V"
+  "7210": "E, M, V"
+  "7211": "E, M, V"
+  "7216": "E, M, V"
+  "7217": "E, M, V"
+  "7221": "E, M, V"
+  "7230": "E, M, V"
+  "7251": "E, M, V"
+  "7261": "E, M, V"
+  "7273": "M, V"
+  "7276": "E, M, V"
+  "7277": "M, V"
+  "7278": "M, V"
+  "7296": "M, V"
+  "7297": "V"
+  "7298": "E, M, V"
+  "7299": "E, M, V"
+  "7311": "M, V"
+  "7321": "M, V"
+  "7333": "M, V"
+  "7338": "M, V"
+  "7339": "M, V"
+  "7342": "E, M, V"
+  "7349": "E, M, V"
+  "7361": "M, V"
+  "7372": "M, V"
+  "7375": "M, V"
+  "7379": "E, M, V"
+  "7392": "M, V"
+  "7393": "M, V"
+  "7394": "M, V"
+  "7395": "E, M, V"
+  "7399": "M, V"
+  "7511": "E, M, V"
+  "7512": "E, M, V"
+  "7513": "M, V"
+  "7519": "M, V"
+  "7523": "E, M, V"
+  "7531": "E, M, V"
+  "7534": "E, M, V"
+  "7535": "E, M, V"
+  "7538": "E, M, V"
+  "7542": "E, M, V"
+  "7549": "E, M, V"
+  "7622": "E, M, V"
+  "7623": "E, M, V"
+  "7629": "E, M, V"
+  "7631": "E, M, V"
+  "7641": "E, M, V"
+  "7692": "M, V"
+  "7699": "E, M, V"
+  "7829": "M, V"
+  "7832": "E, M, V"
+  "7841": "E, M, V"
+  "7911": "E, M, V"
+  "7922": "E, M, V"
+  "7929": "M, V"
+  "7932": "E, M, V"
+  "7933": "E, M, V"
+  "7941": "E, M, V"
+  "7991": "E, M, V"
+  "7992": "E, M, V"
+  "7993": "M, V"
+  "7994": "E, M, V"
+  "7995": "V"
+  "7996": "E, M, V"
+  "7997": "M, V"
+  "7998": "E, M, V"
+  "7999": "E, M, V"
+  "8011": "E, M, V"
+  "8021": "E, M, V"
+  "8031": "M, V"
+  "8041": "E, M, V"
+  "8042": "E, M, V"
+  "8043": "E, M, V"
+  "8049": "E, M, V"
+  "8050": "E, M, V"
+  "8062": "E, M, V"
+  "8071": "E, M, V"
+  "8099": "E, M, V"
+  "8111": "M, V"
+  "8211": "E, M, V"
+  "8220": "E, M, V"
+  "8241": "M, V"
+  "8244": "M, V"
+  "8249": "E, M, V"
+  "8299": "E, M, V"
+  "8351": "E, M, V"
+  "8398": "M, V"
+  "8641": "M, V"
+  "8651": "M, V"
+  "8661": "E, M, V"
+  "8675": "M, V"
+  "8699": "M, V"
+  "8734": "M, V"
+  "8911": "M, V"
+  "8931": "M, V"
+  "8999": "M, V"
+  "9211": "M, V"
+  "9222": "M, V"
+  "9223": "M, V"
+  "9311": "M, V"
+  "9399": "M, V"
+  "9402": "M, V"
+  "9405": "M, V"
+  "9950": "M, V"

@@ -4,73 +4,60 @@ config:
   theme: mc
   look: neo
 ---
+%% A full run. Solid boxes exist today; dashed ones are planned (roadmap EP-11).
 flowchart TD
-    Start(["Início da Execução"]) --> PrefectOrch["Prefect Orchestrator"]
-    PrefectOrch --> Phase1{"Fase 1: Inicialização"}
-    Phase1 --> CheckRef["Verificar Arquivos de Referência"]
-    CheckRef --> RefExists{"Arquivos existem?"}
-    RefExists -- Não --> CreateRef["Criar Arquivos Parquet"]
-    CreateRef --> RefList["acquirers.parquet<br>products.parquet<br>modalities.parquet<br>mcc_modalities.parquet<br>cnae_products.parquet<br>response_codes.parquet<br>segments.parquet<br>capture_technologies.parquet"]
-    RefExists -- Sim --> CheckDB["Verificar PostgreSQL OLTP"]
-    RefList --> CheckDB
-    CheckDB --> DBExists{"Banco existe?"}
-    DBExists -- Não --> CreateDB["Criar Banco PostgreSQL"]
-    CreateDB --> CreateTables["Executar oltp_schema.sql"]
-    CreateTables --> TablesCreated["15 Tabelas Criadas:<br>products, modalities, acquirers,<br>companies, cardholders, cards,<br>card_products, establishments,<br>terminals, transactions,<br>authorizations, balance_history, etc"]
-    DBExists -- Sim --> Phase2{"Fase 2: Geração de Entidades"}
-    TablesCreated --> Phase2
-    Phase2 --> LoadRef["Carregar Referências Parquet"]
-    LoadRef --> GenCompanies["Gerar Empresas"]
-    GenCompanies --> GenCardholders["Gerar Portadores"]
-    GenCardholders --> GenCards["Gerar Cartões"]
-    GenCards --> GenCardProducts["Gerar Card_Products<br>VA, VR, VC, GF"]
-    GenCardProducts --> GenEstab["Gerar Estabelecimentos"]
-    GenEstab --> GenTerminals["Gerar Terminais"]
-    GenTerminals --> EntitiesReady["Entidades Prontas no OLTP"]
-    EntitiesReady --> Phase3{"Fase 3: Simulação Transacional"}
-    Phase3 --> SimConfig["Carregar Configuração YAML<br>volume, período, distribuição"]
-    SimConfig --> TransGen["Gerador de Transações"]
-    TransGen --> SelectCard["Selecionar Cartão Aleatório"]
-    SelectCard --> SelectEstab["Selecionar Estabelecimento"]
-    SelectEstab --> SelectProduct["Selecionar Produto VA/VR/VC/GF"]
-    SelectProduct --> GenAmount["Gerar Valor da Transação"]
-    GenAmount --> Validation["Motor de Validação<br>validation_rules.yaml"]
-    Validation --> ValStatus["Status Validations (card, cardholder, establishment,<br>terminal, product)"]
-    ValStatus --> ValTemporal["Temporal Validations<br>(expiration, admission,<br>accreditation)"]
-    ValTemporal --> ValBusiness["Business Rules<br>MCC x Modality<br>CNAE x Product"]
-    ValBusiness --> ValBalance["Balance &amp; Limits<br>saldo, limite diário,<br>limite mensal"]
-    ValBalance --> ValInfra["Infrastructure<br>terminal/acquirer match"]
-    ValInfra --> Decision{"Todas validações<br>passaram?"}
-    Decision -- Sim --> Approved["Status: 00 - Aprovada"]
-    Decision -- Não --> Declined["Status: 13-96 - Recusada<br>código específico por regra"]
-    Approved --> InsertTrans["INSERT INTO transactions"]
-    Declined --> InsertTrans
-    InsertTrans --> InsertAuth["INSERT INTO authorizations"]
-    InsertAuth --> UpdateBalance{"Transação<br>aprovada?"}
-    UpdateBalance -- Sim --> DeductBalance["UPDATE card_products<br>current_balance -= amount"]
-    UpdateBalance -- Não --> SkipBalance["Não altera saldo"]
-    DeductBalance --> InsertHistory["INSERT INTO balance_history"]
-    SkipBalance --> InsertHistory
-    InsertHistory --> CheckVolume{"Volume alvo<br>atingido?"}
-    CheckVolume -- Não --> TransGen
-    CheckVolume -- Sim --> Phase4{"Fase 4: ETL para OLAP"}
-    Phase4 --> Extract["Extract: Ler PostgreSQL"]
-    Extract --> ReadTables["SELECT * FROM<br>transactions, authorizations,<br>cards, cardholders, etc"]
-    ReadTables --> Load["Load: Carregar no DuckDB"]
-    Load --> CreateDuckDB[("DuckDB OLAP<br>Schema Star/Snowflake")]
-    CreateDuckDB --> Transform["Transform: SQL no DuckDB"]
-    Transform --> DimTables["Criar Dimensões:<br>dim_cards, dim_establishments,<br>dim_products, dim_time"]
-    DimTables --> FactTables["Criar Fatos:<br>fact_transactions,<br>fact_authorizations"]
-    FactTables --> Aggregations["Agregações Opcionais:<br>transações por dia/produto,<br>taxa de aprovação, etc"]
-    Aggregations --> DataReady["Dataset Pronto para Kaggle"]
-    DataReady --> End(["Fim"])
-    style Start fill:#e1f5e1
-    style PrefectOrch fill:#fff4e6
+    Start(["main.py setup / simulate / etl / export"]) --> Phase1{"1. Setup"}
+
+    Phase1 --> Schema["setup<br>oltp_schema.sql → PostgreSQL (17 tables)"]
+    Schema --> RefLoad["Load reference tables from config/<br>wallets, card_programs, card_program_wallets,<br>transaction_modalities, acquirers,<br>cnae_wallets, mcc_wallets, mcc_modalities"]
+
+    RefLoad --> Phase2{"2. Entities"}
+    Phase2 --> Seed["fake.seed(n, today)"]
+    Seed --> GenCompanies["Companies<br>segment by weight<br>holdings, then branches"]
+    GenCompanies --> GenCardholders["Cardholders<br>as many as the segment says"]
+    GenCardholders --> GenCards["Cards<br>one per program of the company's bundle<br>OWN or Visa / Mastercard / Elo"]
+    GenCards --> GenWallets["Card wallets<br>monthly credit, balance, limits"]
+    Seed --> GenEstab["Establishments<br>category → CNAE → MCC"]
+    GenEstab --> GenTerminals["Terminals<br>POS / TEF, e-commerce, ATM"]
+    GenWallets --> EntitiesReady["Entities in OLTP"]
+    GenTerminals --> EntitiesReady
+
+    EntitiesReady --> Phase3{"3. Simulation"}
+    Phase3 --> Credit["Credit day:<br>balance.credit, monthly credit"]
+    Credit --> TransGen["TransactionGenerator<br>card by activity, place, hour,<br>ticket, capture, PIN<br>+ FraudGenerator incidents"]
+    TransGen --> Network{"Card network?"}
+    Network -- "OWN (3-party)" --> Chosen["Cardholder picks Food,<br>Meal or Others"]
+    Network -- "brand (4-party)" --> Unrouted["The issuer routes by MCC<br>(cash: GIFT only)"]
+    Chosen --> ValStatus
+    Unrouted --> ValStatus
+    ValStatus["Status<br>card, cardholder, establishment,<br>terminal, modality, acquirer"] --> ValTemporal["Temporal<br>expiry, admission,<br>accreditation, installation"]
+    ValTemporal --> ValPin["Security<br>PIN (chip, stripe)"]
+    ValPin --> ValBusiness{"Business rules"}
+    ValBusiness -- OWN --> Cnae["Route inside the option<br>CNAE × wallet (longest prefix)"]
+    ValBusiness -- brand --> Mcc["Brand × MCC<br>then route_wallet by MCC:<br>MEAL → FOOD → … → GIFT"]
+    Cnae --> ValBalance["Balance and limits<br>on that wallet"]
+    Mcc --> ValBalance
+    ValBalance --> ValInfra["Infrastructure<br>capture × terminal type"]
+    ValInfra --> Decision{"All passed?"}
+    Decision -- Yes --> Approved["00 approved"]
+    Decision -- No --> Declined["First failure:<br>ISO 8583 code + decline_reason"]
+    Approved --> Debit["balance.debit<br>wallet balance − amount<br>balance_history row"]
+    Debit --> Reversal["Now and then a reversal later:<br>balance back, related_transaction_id"]
+    Declined --> GiveUp["Declined for balance:<br>the cardholder mostly stops<br>until the next credit"]
+    Reversal --> Disputes["Disputes: most approved fraud,<br>a few legit purchases"]
+    Disputes --> InsertTrans["COPY transactions,<br>balance_history, final balances"]
+    GiveUp --> InsertTrans
+    InsertTrans --> Phase4{"4. Analytics"}
+
+    Phase4 --> ETL["etl: PostgreSQL → DuckDB<br>10 dimensions, 2 facts, views"]
+    ETL --> Export["export: 49 quality checks,<br>16 Parquet files, dictionary, report"]
+    Export --> End(["Kaggle dataset"])
+
+    classDef planned stroke-dasharray: 5 5
+    class End planned
     style Phase1 fill:#e3f2fd
     style Phase2 fill:#f3e5f5
     style Phase3 fill:#fce4ec
+    style Phase4 fill:#e0f2f1
     style Approved fill:#c8e6c9
     style Declined fill:#ffcdd2
-    style Phase4 fill:#e0f2f1
-    style DataReady fill:#c8e6c9
-    style End fill:#e1f5e1

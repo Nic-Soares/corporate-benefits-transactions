@@ -1,0 +1,223 @@
+"""The simulator over generated tables: answers, ledger and time order."""
+
+from datetime import date, datetime, timedelta
+
+import polars as pl
+import pytest
+
+from src.entities import fake
+from src.reference import build_reference_tables
+from src.simulation import seasons
+from src.simulation import simulator as transaction_simulator
+from src.simulation.simulator import (
+    TransactionSimulator,
+    credit_moments,
+    first_credit,
+)
+
+TODAY = date(2026, 10, 30)
+END = datetime(2026, 10, 30)
+START = END - timedelta(days=45)
+
+
+@pytest.fixture
+def world(build_tables, sources):
+    fake.seed(5, today=TODAY)
+    tables = build_tables() | build_reference_tables(sources.cnae, sources.mcc)
+    return tables
+
+
+def simulate(world, transaction_generator, attempts: int = 800):
+    generator = transaction_generator(world, days_back=45)
+    txs = [generator.generate() for _ in range(attempts)]
+    return TransactionSimulator(world).run(txs, START, END)
+
+
+def test_credit_moments():
+    moments = credit_moments(datetime(2026, 8, 15), datetime(2026, 10, 30))
+    assert moments == [datetime(2026, 9, 1, 6), datetime(2026, 10, 1, 6)]
+
+
+def test_answers(world, transaction_generator, sources):
+    result = simulate(world, transaction_generator)
+    tx = result.transactions
+    codes = set(build_reference_tables(sources.cnae, sources.mcc)["response_codes"]["id"])
+    assert set(tx["response_code"]) <= codes
+
+    approved = tx.filter(response_code="00")
+    assert approved["card_wallet_id"].is_not_null().all()
+    assert approved["authorization_code"].str.len_chars().eq(6).all()
+    assert approved["decline_reason"].is_null().all()
+    declined = tx.filter(pl.col("response_code") != "00")
+    assert declined["decline_reason"].is_not_null().all()
+    assert declined["authorization_code"].is_null().all()
+    # most attempts pass; lack of balance is the commonest decline
+    assert 0.6 < len(approved) / len(tx) < 0.97
+    assert tx["date"].is_sorted()
+
+
+def test_ledger(world, transaction_generator):
+    result = simulate(world, transaction_generator)
+    history = result.balance_history.sort("card_wallet_id", "sequence_number")
+
+    # each movement does its math, and starts where the previous one ended
+    sign = pl.when(pl.col("operation_type").is_in(["credit", "reversal"])).then(1).otherwise(-1)
+    error = pl.col("previous_balance") + sign * pl.col("operation_amount")
+    assert history.select((error - pl.col("posterior_balance")).abs().max()).item() < 0.005
+    chained = history.with_columns(
+        before=pl.col("posterior_balance").shift().over("card_wallet_id")
+    ).filter(pl.col("before").is_not_null())
+    assert (chained["before"] == chained["previous_balance"]).all()
+    assert (history["posterior_balance"] >= 0).all()
+
+    # one movement per approved attempt; the final balance is the last movement
+    approved = result.transactions.filter(response_code="00")
+    moved = history.filter(pl.col("transaction_id").is_not_null())
+    assert sorted(moved["transaction_id"]) == sorted(approved["id"])
+    last = history.group_by("card_wallet_id").agg(pl.col("posterior_balance").last())
+    final = result.card_wallets.join(last, left_on="id", right_on="card_wallet_id")
+    assert (final["current_balance"] == final["posterior_balance"]).all()
+
+
+def test_limits_hold(world, transaction_generator):
+    result = simulate(world, transaction_generator, attempts=1500)
+    per_day = (
+        result.transactions.filter(response_code="00", transaction_type="purchase")
+        .group_by("card_wallet_id", pl.col("date").dt.date())
+        .len()
+        .join(
+            world["card_wallets"].select("id", "daily_count_limit"),
+            left_on="card_wallet_id",
+            right_on="id",
+        )
+    )
+    assert per_day.filter(
+        pl.col("daily_count_limit") > 0, pl.col("len") > pl.col("daily_count_limit")
+    ).is_empty()
+
+
+def test_reversals(world, transaction_generator, monkeypatch):
+    monkeypatch.setitem(transaction_simulator.SIMULATION, "reversal_ratio", 0.3)
+    tx = simulate(world, transaction_generator).transactions
+    reversals = tx.filter(transaction_type="reversal")
+    assert reversals.height > 0
+    originals = reversals.join(tx, left_on="related_transaction_id", right_on="id", suffix="_o")
+    assert originals.height == reversals.height
+    assert (originals["response_code_o"] == "00").all()
+    assert (originals["transaction_type_o"] == "purchase").all()
+    assert (originals["date"] > originals["date_o"]).all()
+    assert (originals["amount"] == originals["amount_o"]).all()
+
+
+def test_gives_up_after_insufficient_balance(world, transaction_generator, monkeypatch):
+    """With a give-up share of 1, after a decline for balance the cardholder doesn't
+    try that option (or kind of place, on a brand card) again until the next credit."""
+    monkeypatch.setitem(transaction_simulator.SIMULATION, "give_up_after_insufficient_balance", 1)
+    tx = simulate(world, transaction_generator, attempts=1500).transactions
+    credits = credit_moments(START, END)
+    category = world["establishments"].select(pl.col("id").alias("establishment_id"), "category")
+    intent = pl.coalesce("wallet_option", "category")
+    period = pl.col("date").map_elements(
+        lambda d: sum(d >= c for c in credits), return_dtype=pl.Int64
+    )
+    purchases = (
+        tx.filter(~pl.col("is_fraud"), pl.col("transaction_type") != "reversal")
+        .join(category, on="establishment_id")
+        .with_columns(period=period, intent=intent)
+    )
+    for key, rows in purchases.group_by("card_id", "intent", "period"):
+        reasons = rows.sort("date")["decline_reason"].to_list()
+        if "insufficient_balance" in reasons:
+            assert reasons.index("insufficient_balance") == len(reasons) - 1, key
+
+
+def test_same_seed_same_simulation(build_tables, sources, transaction_generator):
+    def run():
+        fake.seed(9, today=TODAY)
+        world = build_tables() | build_reference_tables(sources.cnae, sources.mcc)
+        return simulate(world, transaction_generator, attempts=300)
+
+    first, second = run(), run()
+    assert first.transactions.equals(second.transactions)
+    assert first.balance_history.equals(second.balance_history)
+
+
+def test_ledger_sequence(world, transaction_generator):
+    """The sequence orders the movements in time; ties of the same second keep the
+    order they happened in."""
+    history = simulate(world, transaction_generator).balance_history
+    assert history["sequence_number"].to_list() == list(range(1, history.height + 1))
+    assert history["operation_date"].is_sorted()
+
+
+def test_first_credit_pro_rata():
+    assert first_credit(300.0, date(2026, 9, 1)) == 300.0
+    assert first_credit(300.0, date(2026, 9, 21)) == 100.0
+
+
+def test_wallet_activated_in_the_window_starts_empty(world, transaction_generator):
+    """Its first movement is a pro rata credit on the activation day, from zero."""
+    result = simulate(world, transaction_generator)
+    activated = world["card_wallets"].filter(pl.col("activation_date") >= START.date())
+    first = (
+        result.balance_history.sort("sequence_number")
+        .group_by("card_wallet_id")
+        .first()
+        .join(activated, left_on="card_wallet_id", right_on="id")
+    )
+    assert first.height
+    assert (first["previous_balance"] == 0).all()
+    assert (first["operation_type"] == "credit").all()
+
+
+def test_no_credit_after_cancellation(world, transaction_generator):
+    """The employer stops crediting a wallet once cancelled."""
+    result = simulate(world, transaction_generator)
+    cancelled = world["card_wallets"].filter(status="cancelled")
+    credits = result.balance_history.filter(operation_type="credit").join(
+        cancelled, left_on="card_wallet_id", right_on="id"
+    )
+    assert (credits["operation_date"].dt.date() < credits["status_since"]).all()
+
+
+def test_year_end_credit(world, transaction_generator):
+    """The companies that give it credit their wallets of its kind on its day."""
+    generator = transaction_generator(world, days_back=365)
+    txs = [generator.generate() for _ in range(800)]
+    result = TransactionSimulator(world).run(txs, END - timedelta(days=365), END)
+    landing = seasons.year_end_credit_day(2025)
+    extra = result.balance_history.filter(
+        pl.col("operation_type") == "credit", pl.col("operation_date").dt.date() == landing
+    )
+    assert extra.height
+    company = (
+        world["card_wallets"]
+        .select("id", "card_id", "wallet_id")
+        .join(world["cards"].select(pl.col("id").alias("card_id"), "cardholder_id"), on="card_id")
+        .join(
+            world["cardholders"].select(pl.col("id").alias("cardholder_id"), "company_id"),
+            on="cardholder_id",
+        )
+    )
+    extra = extra.join(company, left_on="card_wallet_id", right_on="id")
+    assert (extra["wallet_id"] == seasons.YEAR_END_CREDIT["wallet"]).all()
+    for amount, company_id in extra.select("operation_amount", "company_id").iter_rows():
+        assert amount == seasons.year_end_credit(company_id, 2025)
+
+
+def test_opening_balances(world, transaction_generator):
+    """Wallets in use before the window open with a balance; savers have more."""
+    generator = transaction_generator(world, days_back=45)
+    opening = generator.opening_balances()
+    wallets = world["card_wallets"]
+    before = wallets.filter(pl.col("activation_date") < START.date())
+    assert set(opening) == set(before["id"])
+    assert all(balance >= 0 for balance in opening.values())
+    credit = dict(wallets.select("id", "monthly_credit").iter_rows())
+    id_of = generator.demand.card_wallet_id
+    savers = [
+        opening[id_of[key]] / credit[id_of[key]]
+        for key in id_of
+        if id_of[key] in opening and generator.demand.ratio_of.get(key[0], 1) < 1
+    ]
+    assert max(savers) > 0.5
