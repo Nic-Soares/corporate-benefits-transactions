@@ -1,0 +1,13 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Nic-Soares/my-portfolio/develop/shared/schema/project.v1.json",
+  "schemaVersion": 1,
+  "slug": "corporate-benefits-transactions",
+  "areas": [
+    "Data",
+    "Backend"
+  ],
+  "order": 20,
+  "hero": {
+    "image": "images/hero.webp"
+  }
+}

@@ -1,0 +1,33 @@
+erDiagram
+  fact_transactions }o--|| dim_cards : card_id
+  fact_transactions }o--|| dim_card_wallets : card_wallet_id
+  fact_transactions }o--|| dim_establishments : establishment_id
+  fact_transactions }o--|| dim_terminals : terminal_id
+  fact_transactions }o--|| dim_companies : company_id
+  fact_transactions }o--|| ref_response_codes : response_code
+  fact_balance_movements }o--|| dim_card_wallets : card_wallet_id
+  fact_balance_movements }o--o| fact_transactions : transaction_id
+  dim_card_wallets }o--|| dim_cards : card_id
+  dim_cards }o--|| dim_cardholders : cardholder_id
+  dim_cardholders }o--|| dim_companies : company_id
+  dim_terminals }o--|| dim_establishments : establishment_id
+
+  fact_transactions {
+    string id
+    timestamp date
+    decimal amount
+    string response_code
+    string decline_reason
+    boolean is_fraud
+  }
+  fact_balance_movements {
+    string operation_type
+    decimal operation_amount
+    decimal posterior_balance
+    bigint sequence_number
+  }
+  dim_card_wallets {
+    string wallet_id
+    decimal monthly_credit
+    date status_since
+  }

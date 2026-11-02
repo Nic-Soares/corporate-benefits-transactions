@@ -617,3 +617,7 @@ Found on the way: `src/adapters/`, an empty folder left by an old commit.
 ### ST-13.5 — Architecture docs
 - [x] `docs/technical-architecture.md` describes the layout and the data flow as they are; ADR-019 records the layout
 
+### ST-13.6 — README and portfolio page (2026-11-03)
+- [x] README in the Best-README-Template layout: badges, table of contents, usage, architecture, data sources, roadmap, contributing, contact
+- [x] `.portfolio/` for the portfolio site: `project.json`, content in English, Portuguese and Spanish, charts drawn from the official dataset and diagrams from Mermaid (`*.mmd` next to each `.svg`); checked with the portfolio's own ingestion. The repository needs the `portfolio` topic on GitHub
+

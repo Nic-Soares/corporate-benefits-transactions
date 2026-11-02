@@ -1,14 +1,85 @@
-# Corporate Benefits Transactions
+<a id="readme-top"></a>
 
-A synthetic dataset of Brazilian corporate benefits card transactions — food, meal, multi-benefit, mobility and incentive cards — built to behave like the real market: every purchase attempt goes through the checks an issuer runs before approving or declining it.
+<!-- PROJECT SHIELDS -->
+[![CI][ci-shield]][ci-url]
+[![MIT License][license-shield]][license-url]
+[![Python][python-shield]][python-url]
+[![Last commit][commit-shield]][commit-url]
 
-The goal is a public dataset on Kaggle for studying approval rates, decline reasons and spending patterns in the Brazilian benefits market.
+<!-- PROJECT LOGO -->
+<br />
+<div align="center">
+  <a href="https://github.com/Nic-Soares/corporate-benefits-transactions">
+    <img src=".portfolio/images/hero.webp" alt="Daily purchase attempts over a simulated year" width="720">
+  </a>
 
-> **Status:** the existing code was refined and made consistent (`EP-01`–`EP-05`), the transaction core was reshaped after how benefits issuers work (`EP-06`), `python -m src.main setup` fills the database (`EP-07`) and `simulate` answers months of purchase attempts, fraud included (`EP-08`), and `etl` builds the DuckDB star schema (`EP-09`) and `export` checks it and writes the dataset as Parquet (`EP-10`). Next: the Kaggle release (`EP-11`). See the [roadmap](docs/planning/ROADMAP.md).
+  <h3 align="center">Corporate Benefits Transactions</h3>
 
-## Business context
+  <p align="center">
+    A synthetic dataset of Brazilian benefit-card transactions, answered by a simulated issuer the way the market does.
+    <br />
+    <a href="docs/technical-architecture.md"><strong>Explore the docs »</strong></a>
+    <br />
+    <br />
+    <a href="docs/data-dictionary.md">Data dictionary</a>
+    &middot;
+    <a href="https://github.com/Nic-Soares/corporate-benefits-transactions/issues/new?labels=bug">Report Bug</a>
+    &middot;
+    <a href="https://github.com/Nic-Soares/corporate-benefits-transactions/issues/new?labels=enhancement">Request Feature</a>
+  </p>
+</div>
 
-In Brazil, employers give employees benefit cards whose balances can only be spent on specific things. A card belongs to a **program**, and the program fixes the **wallets** (*carteiras*) the card holds — one balance each — and the network it runs on:
+
+
+<!-- TABLE OF CONTENTS -->
+<details>
+  <summary>Table of Contents</summary>
+  <ol>
+    <li>
+      <a href="#about-the-project">About The Project</a>
+      <ul>
+        <li><a href="#the-market-it-models">The market it models</a></li>
+        <li><a href="#whats-in-the-dataset">What's in the dataset</a></li>
+        <li><a href="#built-with">Built With</a></li>
+      </ul>
+    </li>
+    <li>
+      <a href="#getting-started">Getting Started</a>
+      <ul>
+        <li><a href="#prerequisites">Prerequisites</a></li>
+        <li><a href="#installation">Installation</a></li>
+      </ul>
+    </li>
+    <li><a href="#usage">Usage</a></li>
+    <li><a href="#architecture">Architecture</a></li>
+    <li><a href="#data-sources">Data sources</a></li>
+    <li><a href="#roadmap">Roadmap</a></li>
+    <li><a href="#contributing">Contributing</a></li>
+    <li><a href="#license">License</a></li>
+    <li><a href="#contact">Contact</a></li>
+    <li><a href="#acknowledgments">Acknowledgments</a></li>
+  </ol>
+</details>
+
+
+
+<!-- ABOUT THE PROJECT -->
+## About The Project
+
+A public, synthetic dataset of Brazilian corporate benefit-card transactions — meal, food, mobility, multi-benefit and incentive cards. No row is real, but every row went through what a real one goes through: an issuer that checks the card, the cardholder, the shop, the terminal, the PIN, which wallet the shop accepts and whether there is balance, then approves or declines with an ISO 8583 response code and a specific reason.
+
+The aim is a dataset that **behaves like the market** — relationships that hold, distributions that look right, business rules followed everywhere — for testing dashboards, metrics and data pipelines at volume. Not a pile of random rows.
+
+* **Simulated, not sampled:** approvals and declines come out of the rules applied in time order, so rates, reasons and balances agree with each other.
+* **Shaped like the market:** spending follows each wallet's monthly credit; lunch and evening peaks; holidays, Christmas Eve and Black Friday; months that vary with no drift (85–90% approved).
+* **Checked before it ships:** the export refuses to write a dataset that breaks a key, the balance ledger or the statistical profile.
+* **Reproducible:** the same seed gives the same dataset anywhere; `dataset_metadata.json` records seed, window, code commit and the hashes of the config and the sources.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+### The market it models
+
+Employers give employees cards whose balances can only be spent on certain things. A card belongs to a **program**, and the program fixes the **wallets** (*carteiras*) the card holds — one balance each — and the network it runs on:
 
 | Program | Wallets | Network |
 |---|---|---|
@@ -19,113 +90,245 @@ In Brazil, employers give employees benefit cards whose balances can only be spe
 | Presente / Premiação | Gift / Premium | Proprietary |
 | Combustível | Mobility | Proprietary |
 
-The two networks authorize differently:
+* **The issuer's proprietary network** (`OWN`, 3-party): the cardholder picks *Food*, *Meal* or *Others* on the terminal, and the establishment's **CNAE** (Brazil's economic activity code) must accept the wallet — the most specific code prefix with a rule decides.
+* **Brand networks** (Visa, Mastercard, Elo — 4-party: acquirer → brand → issuer): the brand must accept the establishment's **MCC**, and the issuer picks the wallet from it (meal first, then food, the other wallets, gift last). Brand cards can withdraw cash from the gift wallet.
 
-- **The issuer's proprietary network** (`OWN`, the 3-party model): the cardholder picks *Food*, *Meal* or *Others* on the terminal, the issuer routes inside that option, and the establishment's **CNAE** (Brazil's economic activity code) must accept the wallet — the most specific code prefix with a rule decides.
-- **Brand networks** (Visa, Mastercard, Elo — the 4-party model: acquirer → brand → issuer): the brand must accept the establishment's **MCC** (Merchant Category Code), and the issuer picks the wallet from it (meal first, then food, the other wallets, gift last).
+Every decline carries an ISO 8583 code and a reason (wrong PIN, wallet not accepted here, insufficient balance…). An approved purchase spends the wallet, and the benefit is credited again each month. Details: [`docs/business-rule.md`](docs/business-rule.md).
 
-Every decline carries an ISO 8583 response code and a specific reason (wrong PIN, wallet not accepted here, insufficient balance…). An approved purchase spends the wallet's balance, and the benefit is credited again each month. Brand cards can also withdraw cash from the gift wallet.
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-Fraud is labeled: `is_fraud`, `fraud_scenario` (mobile wallet after an account takeover, online use of a brand card, a card intercepted before delivery, skimming at a point of compromise) and `disputed`, which also catches legit purchases contested by mistake. See [`docs/fraud-scenarios.md`](docs/fraud-scenarios.md).
+### What's in the dataset
 
-The data is shaped like the market, with synthetic numbers: lunch and evening peaks, more spending early in the month, small tickets with a long tail, spending that follows each wallet's monthly credit (most cardholders spend nearly all of it, a few let it build up), companies from a handful to thousands of employees (SME up to 250, Middle up to 1,999, Corporate from 2,000, and Public), and declines that are mostly for lack of balance.
+The official build (seed 42, Sep 2025 – Aug 2026, scale 4):
 
-Details in [`docs/business-rule.md`](docs/business-rule.md).
+| | |
+|---|---|
+| Purchase attempts | **5.7 million**, with the issuer's answer and decline reason |
+| Balance movements | **5.6 million** credits, debits and reversals, chained |
+| World | 800 companies · 34 thousand cardholders · 8 thousand establishments · 12 thousand terminals, in real IBGE municipalities |
+| Fraud | labelled by scenario (account takeover, card not present, intercepted card, skimming), plus disputes including friendly fraud — [`docs/fraud-scenarios.md`](docs/fraud-scenarios.md) |
+| Tables | 10 dimensions, 2 facts, 5 reference tables (the rules behind each decline) as Parquet, with a [data dictionary](docs/data-dictionary.md), a quality report and the run metadata |
 
+No CPF, CNPJ, card number or person name: the ids identify.
+
+<div align="center">
+  <img src=".portfolio/images/monthly.webp" alt="Monthly attempts and the share approved" width="49%">
+  <img src=".portfolio/images/hours.webp" alt="Share of attempts per hour by kind of place" width="49%">
+</div>
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+### Built With
+
+* [![Python][python-badge]][python-url]
+* [![Polars][polars-badge]][polars-url]
+* [![PostgreSQL][postgres-badge]][postgres-url]
+* [![DuckDB][duckdb-badge]][duckdb-url]
+* [![Apache Parquet][parquet-badge]][parquet-url]
+* [![Docker][docker-badge]][docker-url]
+* [![uv][uv-badge]][uv-url]
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- GETTING STARTED -->
+## Getting Started
+
+### Prerequisites
+
+* [uv](https://docs.astral.sh/uv/) — it installs Python 3.14 when missing
+  ```sh
+  brew install uv
+  ```
+* Docker with Compose (Docker Desktop, OrbStack, Colima…) and `make`
+
+### Installation
+
+1. Clone the repo
+   ```sh
+   git clone https://github.com/Nic-Soares/corporate-benefits-transactions.git
+   cd corporate-benefits-transactions
+   ```
+2. Install the dependencies and run the offline checks
+   ```sh
+   make install
+   make check
+   ```
+3. Start PostgreSQL (local defaults; copy `.env.example` to `.env` only to change them)
+   ```sh
+   make db
+   ```
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- USAGE -->
+## Usage
+
+Build the dataset — `setup → simulate → etl → export`:
+
+```sh
+make dataset                 # a year at scale 1: about 2.5 million transactions, 4 minutes
+make dataset SCALE=4         # the official size: about 5.7 million, 7 minutes, 3 GB of memory
+make dataset DAYS=90 TODAY=2026-10-30 SEED=7
+make help                    # every target
+```
+
+The window is the `DAYS` before `TODAY`. The output lands in `data/dataset/` (Parquet, `data_dictionary.md`, `quality_report.md`, `dataset_metadata.json`) and the analytical database in `data/olap/olap_corporate_benefits.duckdb`:
+
+```sql
+-- DuckDB: approval and the main decline reason, month by month
+SELECT strftime(date, '%Y-%m') AS month,
+       count(*) AS attempts,
+       round(avg((response_code = '00')::INT), 3) AS approved,
+       mode(decline_reason) AS top_decline
+FROM fact_transactions
+GROUP BY 1 ORDER BY 1;
+```
+
+The commands also run one by one with `uv run benefits setup | simulate | etl | export`; a variant of the rules runs with `uv run benefits --config DIR …`. Step by step, with troubleshooting: [`docs/runbooks/local-setup.md`](docs/runbooks/local-setup.md).
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- ARCHITECTURE -->
+## Architecture
+
+<div align="center">
+  <img src=".portfolio/images/architecture.svg" alt="Pipeline: config and public data feed the generators into PostgreSQL; the simulation and the issuer's checks answer the attempts; the ETL loads DuckDB; the export checks it and writes Parquet" width="560">
+</div>
+
+* **`setup`** generates the world — companies, cardholders, cards and wallets, establishments, terminals — into PostgreSQL, the OLTP model and column contract.
+* **`simulate`** plans every purchase attempt (who buys follows the credit, when follows the calendar, where follows the shops near home that take the wallet), then month by month lets the issuer answer them in time order: balances move, limits count, reversals arrive later. Memory follows a month, not the window.
+* **`etl`** loads a DuckDB star schema with plain SQL; **`export`** runs the quality checks and the statistical profile, and only then writes Parquet.
+
+```
+config/          reference.yaml · authorization.yaml · simulation.yaml · database.yaml
+data/            raw/ (public sources, versioned) · olap/ · dataset/ (generated)
+database/        model/ (DBML) · oltp/ (PostgreSQL schema) · olap/ (star schema, load SQL, dictionary)
+src/
+├── main.py      command line          ├── entities/    the world's generators, seeded fake data
+├── config.py    YAML, read once       ├── domain/      rules both sides share: acceptance, status
+├── postgres.py  COPY, bulk loads      ├── simulation/  demand, calendar, pools, attempts, fraud, issuer
+├── reference.py reference tables      ├── validators/  the issuer's authorization checks
+├── table.py     indexed rows          └── pipeline/    the commands, provenance, statistical profile
+└── sources/     IBGE and MCC downloads
+```
+
+More in [`docs/technical-architecture.md`](docs/technical-architecture.md) and the decision records in [`docs/adr/`](docs/adr/).
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- DATA SOURCES -->
 ## Data sources
 
-Every record is synthetic. The generators draw on public reference data, versioned in `data/raw/` so the same seed gives the same dataset (`dataset_metadata.json` records the seed, the code commit and the hashes of the config and the sources):
+Every record is synthetic. The generators draw on public reference data, versioned in `data/raw/`:
 
 | Data | Source | Used for |
 |---|---|---|
 | CNAE 2.3 classes and subclasses | [IBGE CNAE API](https://servicodados.ibge.gov.br/api/docs/cnae) (CONCLA), official | Establishment activities, CNAE rule descriptions |
 | Municipalities | [IBGE localities API](https://servicodados.ibge.gov.br/api/docs/localidades), official | Where companies, cardholders and establishments are |
-| Population estimates | [IBGE aggregates API](https://servicodados.ibge.gov.br/api/docs/agregados), table 6579, official | Weighting municipalities: cardholders and establishments where people live |
-| Municipal GDP | [IBGE aggregates API](https://servicodados.ibge.gov.br/api/docs/agregados), table 5938, official | Weighting municipalities: companies where the economy is |
-| Merchant Category Codes | [greggles/mcc-codes](https://github.com/greggles/mcc-codes) (Unlicense), compiled from the card brands' public manuals; the ISO 18245 list itself isn't free | MCC codes and descriptions |
+| Population estimates | [IBGE aggregates API](https://servicodados.ibge.gov.br/api/docs/agregados), table 6579, official | Cardholders and establishments where people live |
+| Municipal GDP | [IBGE aggregates API](https://servicodados.ibge.gov.br/api/docs/agregados), table 5938, official | Companies where the economy is |
+| Merchant Category Codes | [greggles/mcc-codes](https://github.com/greggles/mcc-codes) (Unlicense), compiled from the card brands' public manuals | MCC codes and descriptions |
 
-**Synthetic by design:** which brand accepts each MCC (`reference.yaml → mcc_acceptance_rules`), which wallet each CNAE and MCC takes, the CNAE → MCC mapping, and every weight, balance, limit and ticket in `config/simulation.yaml`. They follow how the Brazilian benefits market works, not any company's data.
+**Synthetic by design:** which brand accepts each MCC, which wallet each CNAE and MCC takes, the CNAE → MCC mapping, and every weight, balance, limit and ticket in `config/`. They follow how the Brazilian benefits market works, not any company's data.
 
-## How it works
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-```
-config/*.yaml ──► reference data ──┐
-                                   ├──► PostgreSQL (OLTP) ──► DuckDB (OLAP) ──► Parquet ──► Kaggle
-generators (seeded) ──► entities ──┤
-                                   │
-transactions ──► validators ───────┘   approved / declined with a response code
-```
 
-- **Entities** (`src/entities/`) create companies (by segment and size), cardholders, cards (the programs the company contracts, with their wallets), establishments (CNAE and the matching MCC) and terminals (POS, TEF, e-commerce gateway, ATM) with real IBGE municipalities, statuses weighted as configured, and dates that follow their parent records. **Simulation** (`src/simulation/`) draws the purchase attempts with the demand, calendar and places in `config/simulation.yaml`, and the issuer answers them in time order. One seed reproduces a whole run.
-- **Validators** (`src/validators/`) check status, dates, PIN, network rules and wallet routing (CNAE for the proprietary network, MCC for brands), balance and limits (amount and purchases per day), and capture technology. Each returns the ISO 8583 code configured in `config/authorization.yaml` and a `decline_reason`.
-- **Config** (`config/`: `reference.yaml`, `authorization.yaml`, `simulation.yaml`, `database.yaml`) is the source of truth for business rules; the **OLTP schema** is the source of truth for table and column names.
 
-Architecture: [`docs/technical-architecture.md`](docs/technical-architecture.md). Decisions: [`docs/adr/`](docs/adr/).
+<!-- ROADMAP -->
+## Roadmap
 
-## Project structure
+- [x] Toolchain, tests and CI; the existing code cleaned up and documented (EP-01 – EP-05)
+- [x] Transaction core after how benefits issuers work: programs, wallets, two networks (EP-06)
+- [x] Setup pipeline and the transaction simulator, fraud included (EP-07, EP-08)
+- [x] DuckDB star schema and the checked Parquet export (EP-09, EP-10)
+- [x] Architecture review: reproducible, one acceptance rule, volume, statistical profile (EP-12)
+- [x] Flat layout, config by purpose, `make` (EP-13)
+- [ ] Kaggle release: dataset page and an example notebook (EP-11)
 
-```
-corporate-benefits-transactions/
-├── config/                 # reference, authorization, simulation, database (YAML)
-├── data/
-│   ├── raw/                # Public sources (IBGE, MCC), versioned
-│   ├── olap/               # The DuckDB file (generated)
-│   └── dataset/            # The export (generated)
-├── database/
-│   ├── model/              # DBML models (OLTP and OLAP)
-│   ├── oltp/               # PostgreSQL schema
-│   └── olap/               # DuckDB star schema, load SQL, data dictionary
-├── docs/
-│   ├── adr/                # Architecture decision records
-│   ├── planning/           # Roadmap
-│   └── runbooks/           # Local setup, dependency upgrades
-├── src/
-│   ├── main.py             # Command line: setup, simulate, etl, export
-│   ├── config.py           # The YAML config, read once
-│   ├── postgres.py         # Connection, COPY, bulk loads
-│   ├── reference.py        # Reference tables from the config
-│   ├── table.py            # Rows indexed by column (constant-time lookups)
-│   ├── sources/            # Public data: IBGE (CNAE, municipalities, population, GDP), MCC list
-│   ├── entities/           # Companies, cardholders, cards, wallets, establishments, terminals; seeded fake data
-│   ├── domain/             # Rules the generator and the issuer share: acceptance, status over time
-│   ├── simulation/         # Calendar, demand, terminal pools, attempts, fraud, the issuer over time
-│   ├── validators/         # The issuer's authorization checks
-│   └── pipeline/           # The commands, provenance, statistical profile
-├── tests/
-├── Makefile                # make help
-└── docker-compose.yaml     # PostgreSQL 18
-```
+See the [roadmap](docs/planning/ROADMAP.md) for every story.
 
-## Getting started
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-Prerequisites: [uv](https://docs.astral.sh/uv/) (it installs Python 3.14 if needed), Docker and `make`.
 
-```bash
-make install                   # dependencies from uv.lock
-make check                     # lint, format, offline tests
-make dataset                   # Postgres up, then setup → simulate → etl → export (a year)
-make dataset SCALE=4           # a world 4× bigger: about 5.7 million transactions
-make help                      # every target
-```
 
-`make dataset` runs the four commands of `uv run benefits` (the same as `python -m src.main`), with `SEED=42 TODAY=2026-09-01 DAYS=365 SCALE=1` unless given:
+<!-- CONTRIBUTING -->
+## Contributing
 
-- `setup` creates the OLTP schema, loads the reference tables from `config/` and writes the generated companies, cardholders, cards, wallets, establishments and terminals. The same `--seed`, `--today` and `--scale` give the same data.
-- `simulate` plans the purchase attempts of the `--days` before `--today`, then month by month lets the issuer answer them in time order and writes `transactions`, `balance_history` and the final balances: monthly credits, debits, reversals, cardholders who stop trying once their balance runs out.
-- `etl` rebuilds `data/olap/olap_corporate_benefits.duckdb`: 10 dimensions, `fact_transactions` and `fact_balance_movements`, plus analytical views.
-- `export` runs the quality checks (keys, ledger, rates, no personal documents, and the statistical profile: monthly approval, tickets, hours, geography…) and, only if all pass, writes `data/dataset/`: one Parquet file per table, `data_dictionary.md`, `quality_report.md` and `dataset_metadata.json` (seed, window, code commit, config and source hashes).
+Suggestions and fixes are welcome.
 
-Postgres needs no `.env`: local defaults work; copy `.env.example` to change them. Step by step, with troubleshooting: [`docs/runbooks/local-setup.md`](docs/runbooks/local-setup.md). How it fits together: [`docs/technical-architecture.md`](docs/technical-architecture.md).
+1. Fork the project
+2. Create a branch from `develop`: `<type>/st-XX.Y-<slug>` (`feat`, `fix`, `docs`, `refactor`…)
+3. Commit with [Conventional Commits](https://www.conventionalcommits.org/) (`feat(simulation): …`)
+4. Run `make check` (and `make test-db` when touching the database)
+5. Open a pull request to `develop`
 
-## Development workflow
+`main` holds released code; `develop` integrates every story with a `merge(<scope>): …` commit. Dependencies: [`docs/runbooks/dependency-upgrades.md`](docs/runbooks/dependency-upgrades.md).
 
-- `main` = released code. `develop` = integration; every epic or story is merged into it with a `merge(<scope>): …` commit.
-- One branch per epic/story, cut from `develop`: `<type>/ep-XX-<slug>` or `<type>/st-XX.Y-<slug>`, where `<type>` is the conventional-commit type (`feat`, `fix`, `chore`, `docs`, `test`, `ci`, `refactor`).
-- Commits follow [Conventional Commits](https://www.conventionalcommits.org/).
-- Before committing: `make check` (ruff check, ruff format, pytest). CI runs it, then the database tests and the pipeline on 30 days.
-- Tests that need the network or the database are behind markers: `uv run pytest -m network`, `make test-db`.
-- Dependencies: [`docs/runbooks/dependency-upgrades.md`](docs/runbooks/dependency-upgrades.md).
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
+
+
+<!-- LICENSE -->
 ## License
 
-MIT — see [LICENSE](LICENSE).
+Distributed under the MIT License. See [`LICENSE`](LICENSE) for more information.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- CONTACT -->
+## Contact
+
+Nicolas Santos — [github.com/Nic-Soares](https://github.com/Nic-Soares)
+
+Project link: [github.com/Nic-Soares/corporate-benefits-transactions](https://github.com/Nic-Soares/corporate-benefits-transactions)
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- ACKNOWLEDGMENTS -->
+## Acknowledgments
+
+* [IBGE](https://www.ibge.gov.br/) — open APIs for CNAE, municipalities, population and GDP
+* [greggles/mcc-codes](https://github.com/greggles/mcc-codes) — the public MCC list
+* [mimesis](https://mimesis.name/) — localized fake data
+* [Best-README-Template](https://github.com/othneildrew/Best-README-Template) — this README's layout
+* [Shields.io](https://shields.io/) — badges
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
+
+
+<!-- MARKDOWN LINKS & IMAGES -->
+[ci-shield]: https://img.shields.io/github/actions/workflow/status/Nic-Soares/corporate-benefits-transactions/ci.yml?branch=main&style=for-the-badge&label=CI
+[ci-url]: https://github.com/Nic-Soares/corporate-benefits-transactions/actions/workflows/ci.yml
+[license-shield]: https://img.shields.io/github/license/Nic-Soares/corporate-benefits-transactions.svg?style=for-the-badge
+[license-url]: https://github.com/Nic-Soares/corporate-benefits-transactions/blob/main/LICENSE
+[python-shield]: https://img.shields.io/badge/python-3.14-3776AB?style=for-the-badge&logo=python&logoColor=white
+[commit-shield]: https://img.shields.io/github/last-commit/Nic-Soares/corporate-benefits-transactions.svg?style=for-the-badge
+[commit-url]: https://github.com/Nic-Soares/corporate-benefits-transactions/commits/main
+[python-badge]: https://img.shields.io/badge/Python-3776AB?style=for-the-badge&logo=python&logoColor=white
+[python-url]: https://www.python.org/
+[polars-badge]: https://img.shields.io/badge/Polars-CD792C?style=for-the-badge&logo=polars&logoColor=white
+[polars-url]: https://pola.rs/
+[postgres-badge]: https://img.shields.io/badge/PostgreSQL-4169E1?style=for-the-badge&logo=postgresql&logoColor=white
+[postgres-url]: https://www.postgresql.org/
+[duckdb-badge]: https://img.shields.io/badge/DuckDB-FFF000?style=for-the-badge&logo=duckdb&logoColor=black
+[duckdb-url]: https://duckdb.org/
+[parquet-badge]: https://img.shields.io/badge/Apache%20Parquet-50ABF1?style=for-the-badge&logo=apacheparquet&logoColor=white
+[parquet-url]: https://parquet.apache.org/
+[docker-badge]: https://img.shields.io/badge/Docker-2496ED?style=for-the-badge&logo=docker&logoColor=white
+[docker-url]: https://www.docker.com/
+[uv-badge]: https://img.shields.io/badge/uv-DE5FE9?style=for-the-badge&logo=uv&logoColor=white
+[uv-url]: https://docs.astral.sh/uv/
