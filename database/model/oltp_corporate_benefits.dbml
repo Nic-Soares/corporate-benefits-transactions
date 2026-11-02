@@ -210,6 +210,7 @@ Table balance_history {
   previous_balance decimal(15,2) [not null]
   posterior_balance decimal(15,2) [not null]
   operation_date timestamp [not null]
+  sequence_number bigint [not null, note: 'Order of the movements; breaks ties of operation_date']
   created_at timestamp [default: `now()`]
 }
 

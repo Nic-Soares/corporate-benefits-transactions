@@ -52,6 +52,7 @@ Every change of a wallet's balance: the monthly credit, debits of approved purch
 | `previous_balance` | DECIMAL(15,2) | Balance before the movement |
 | `posterior_balance` | DECIMAL(15,2) | Balance after the movement |
 | `operation_date` | TIMESTAMP | Date and time of the movement |
+| `sequence_number` | BIGINT | Order of the movements, 1 = first; breaks ties of movements at the same second |
 
 ## `dim_card_wallets`
 
