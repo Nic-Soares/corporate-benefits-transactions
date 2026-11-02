@@ -11,7 +11,7 @@
 | OLAP | DuckDB, star schema, plain SQL | [ADR-001](adr/001-postgres-duckdb-parquet.md), [ADR-012](adr/012-olap-plain-sql.md) |
 | Distribution | Parquet | [ADR-001](adr/001-postgres-duckdb-parquet.md), [ADR-014](adr/014-public-dataset.md) |
 | Rules | YAML in `config/` | [ADR-004](adr/004-reference-data-in-yaml.md) |
-| Quality | ruff, pytest, GitHub Actions (with Postgres), Dependabot | [ADR-005](adr/005-python-toolchain.md) |
+| Quality | ruff, pytest, GitHub Actions (with Postgres) | [ADR-005](adr/005-python-toolchain.md) |
 | Layout | Flat packages, one config file per purpose | [ADR-019](adr/019-layout.md) |
 
 ## Data flow
