@@ -105,7 +105,7 @@ def test_olap_schema_and_reference_dimensions(reference_tables):
 
     tables = {row[0] for row in conn.execute("SHOW TABLES").fetchall()}
     assert {"fact_transactions", "fact_balance_movements", "dim_card_wallets"} <= tables
-    assert len(tables) == 16
+    assert len(tables) == 17
 
 
 @pytest.mark.db

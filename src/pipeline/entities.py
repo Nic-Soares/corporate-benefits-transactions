@@ -30,7 +30,7 @@ def build_entities(
         "companies": companies,
         "cardholders": cardholders,
         "cards": cards,
-        "card_wallets": generate_card_wallets(cards),
+        "card_wallets": generate_card_wallets(cards, cardholders),
         "establishments": establishments,
         "terminals": generate_terminals(
             volumes["terminals"], establishments, load_pre_populated_data()

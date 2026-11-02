@@ -88,7 +88,7 @@ def route_wallet(
     the card, active (card wallet and wallet), accepted here (CNAE on the
     proprietary network, MCC on a brand; GIFT takes any MCC) and have the
     balance; the first that passes wins. The first step no candidate passes
-    gives the reason (57), and balance is last (51).
+    gives the reason (57), and balance is last (51), with the first candidate.
     """
     card, establishment, failure = _card_and_establishment(transaction, cards_df, establishments_df)
     if failure:
@@ -132,5 +132,6 @@ def route_wallet(
     for card_wallet in candidates:
         if card_wallet["current_balance"] >= transaction["amount"]:
             return PASS | {"card_wallet_id": card_wallet["id"]}
+    # Declined for balance: the wallet it would have charged first comes back too
     balance_code = RULES["balance_and_limits_validations"]["current_balance"]["error_code"]
-    return fail(balance_code, "insufficient_balance")
+    return fail(balance_code, "insufficient_balance") | {"card_wallet_id": candidates[0]["id"]}

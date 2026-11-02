@@ -12,7 +12,7 @@ fact_transactions:
     company_id: "Cardholder's employer (dim_companies)"
     program_id: "Card program (dim_card_programs)"
     modality_id: "Network the card runs on: OWN (issuer's proprietary network, 3-party) or VISA, MASTERCARD, ELO (4-party)"
-    card_wallet_id: "Wallet of the card the issuer charged (dim_card_wallets); empty when none could be routed"
+    card_wallet_id: "Wallet of the card the issuer charged (dim_card_wallets); on a decline for balance, the wallet it would have charged; empty when the decline came before a wallet was chosen"
     wallet_id: "Type of that wallet: FOOD, MEAL, MOBILITY, HEALTH, HOME_OFFICE, EDUCATION, GIFT, PREMIUM"
     transaction_type: "purchase, withdrawal (cash, brand cards, GIFT wallet) or reversal"
     wallet_option: "Proprietary network: the option picked on the terminal (FOOD, MEAL, OTHERS); empty on brand cards"
@@ -47,7 +47,7 @@ fact_balance_movements:
     operation_date: "Date and time of the movement"
 
 dim_card_wallets:
-  description: "Each wallet a card holds, with its monthly credit and limits."
+  description: "Each wallet a card holds, with its monthly credit and limits. The employer picks, per program, which of the program's wallets (ref_program_wallets) its employees get."
   columns:
     id: "Card wallet id"
     card_id: "Card (dim_cards)"
@@ -57,7 +57,7 @@ dim_card_wallets:
     monthly_limit: "Most that can be spent per month, BRL; 0 = no limit"
     daily_count_limit: "Most approved purchases per day; 0 = no limit"
     final_balance: "Balance at the end of the simulated period"
-    activation_date: "Date the wallet was activated"
+    activation_date: "Date the wallet was activated, a few days after the card's issue"
     status: "active, suspended or cancelled"
 
 dim_cards:
@@ -158,6 +158,12 @@ ref_response_codes:
   columns:
     id: "Code"
     description: "Meaning, in Portuguese"
+
+ref_program_wallets:
+  description: "Wallets each card program allows. A multi-benefit card holds the ones its employer picked out of these."
+  columns:
+    program_id: "Program (dim_card_programs)"
+    wallet_id: "Wallet the program allows (dim_wallets)"
 
 ref_cnae_wallets:
   description: "Proprietary network: which wallets an establishment's CNAE accepts. The longest matching prefix of the CNAE decides. Synthetic rules."
