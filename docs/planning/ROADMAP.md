@@ -1,7 +1,7 @@
 # Development Roadmap — Corporate Benefits Transactions
 
 **Repository:** `corporate-benefits-transactions` (Python 3.14 + uv + polars + mimesis, PostgreSQL in Docker as OLTP, DuckDB as OLAP, Parquet → Kaggle)
-**Last updated:** 2026-10-30
+**Last updated:** 2026-11-03
 
 ---
 
@@ -16,10 +16,11 @@
 | `EP-05` Documentation | ✅ Done — merged into `develop` 2026-10-30 | `README.md`, `docs/` |
 | `EP-06` Transaction core review | ✅ Done — merged into `develop` 2026-10-31 (ADR-007, 008, 009) | `docs/`, then `config/`, `database/`, `src/` |
 | `EP-07` Setup pipeline (reference data + entities) | ✅ Done — merged into `develop` 2026-10-31; ST-07.5 2026-11-01 (ADR-018) | code (`src/main.py`, `src/processors/`) |
-| `EP-08` Transaction simulator | ✅ Done — merged into `develop` 2026-11-01 (ADR-010, 011, 013, 015, 016, 017) | code (`src/processors/transaction_simulator.py`) |
+| `EP-08` Transaction simulator | ✅ Done — merged into `develop` 2026-11-01 (ADR-010, 011, 013, 015, 016, 017); ST-08.9–08.12 2026-11-03 | code (`src/processors/transaction_simulator.py`) |
 | `EP-09` OLAP: Postgres → DuckDB | ✅ Done — merged into `develop` 2026-11-01 (ADR-012) | code + `database/olap_duck/` |
 | `EP-10` Dataset export and quality | ✅ Done — merged into `develop` 2026-11-01 (ADR-014) | code + `data/final_datasets/` |
-| `EP-11` Kaggle release | Not started | Kaggle |
+| `EP-11` Kaggle release | Not started — after `EP-12` | Kaggle |
+| `EP-12` Architecture review: a coherent dataset at volume | In progress | code, `config/`, `database/`, `.github/` |
 
 ### Git workflow
 
@@ -447,7 +448,7 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] Fraudsters don't give up after a balance decline, pick shops the card works at, and are never reversed
 - [x] Brazilian company and shop names from surnames, activity and legal type (mimesis pt-BR returned real companies' names); the shop's trade name says its business
 - [x] Done earlier: MCC drawn from the CNAE (`ST-06.5`)
-- [ ] Idea, not done: acquirer × network acceptance (an acquirer takes the proprietary network only once integrated with it). Blocking the card after a dispute dropped: the dataset is not an anti-fraud system
+- Dropped ideas: acquirer × network acceptance; blocking the card after a dispute (the dataset is not an anti-fraud system)
 
 ### ST-08.4 — Spending follows the credit (2026-11-01, ADR-013)
 
@@ -541,8 +542,46 @@ Second pass against how benefits cards are used in the market. The model held; t
 
 ## EP-11 — Kaggle release
 
-**Dependencies:** `EP-10`. **Size:** S (~1 day).
+**Dependencies:** `EP-10`, `EP-12`. **Size:** S (~1 day).
 
 - [ ] Dataset page (description, benefits-market context, license)
 - [ ] Example notebook
 - [ ] Publish and link from the README
+
+---
+
+## EP-12 — Architecture review: a coherent dataset at volume
+
+**Dependencies:** `EP-10`. **Size:** M (~2 days). Review of 2026-11-03.
+
+**Goal:** not random rows but a statistically coherent dataset: relationships that hold, distributions that look like the market, business rules followed everywhere, reproducible, at a volume that tests dashboards, metrics and data pipelines.
+
+### ST-12.1 — Dead code
+- [ ] Remove `infrastructure/schema/schema_creator.py`, `infrastructure/database/duckdb_manager.py`, `utils/csv_utils.py`, `utils/parquet_utils.py`, the loaders used only by tests (`capture_technologies`, `segment`) and the unused keys of `config/database.yaml`
+
+### ST-12.2 — Reproducible dataset
+- [ ] The export writes `dataset_metadata.json`: seed, reference day, window, code commit, config hash, source files and their hashes, row counts
+- [ ] Public sources pinned: the IBGE and MCC files the setup used are versioned (a manifest with hashes), and the setup refuses changed files unless told to refresh
+
+### ST-12.3 — One acceptance rule
+- [ ] One module answers "which wallets does this establishment take on this network", used by the generator and the issuer; inactive rules count in both; `OPEN_WALLET` defined once
+
+### ST-12.4 — One schema contract
+- [ ] Tests keep the DBML files in line with the SQL schemas
+- [ ] `setup --reset` recreates the tables, so a schema change needs no `docker compose down -v`
+
+### ST-12.5 — CI runs the pipeline
+- [ ] CI starts Postgres as a service and runs the `db` tests: setup → simulate → etl → export on a small world, with the quality checks
+
+### ST-12.6 — Structure
+- [ ] `TransactionGenerator` split by job: terminal pools and geography, demand (slots and rates), calendar, opening balances; the simulation's demand model leaves `data_generators/entities`
+- [ ] `Table` moves out of `validators/`; validator modules named alike
+- [ ] Config read once and passed in, not at import time, so a run or a test can use another config
+
+### ST-12.7 — Volume
+- [ ] Simulate month by month (balances carried over), so memory follows a month, not the window: years and tens of millions of attempts on a laptop
+- [ ] A `--scale` for the world (companies, cardholders, establishments, terminals) to pick the volume
+- [ ] Faster writes to Postgres at volume
+
+### ST-12.8 — Statistical profile
+- [ ] The quality report gains a profile: tickets per category (median, p90), hour and weekday curves, monthly approval and its range, decline mix, fraud share, geography, cards per cardholder; each against the expected range from the config, so a change that breaks the shape fails the export
