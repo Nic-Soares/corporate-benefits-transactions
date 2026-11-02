@@ -1,0 +1,25 @@
+flowchart TB
+  config["config/*.yaml<br/>rules · calendar · volumes"]
+  raw["data/raw<br/>IBGE + MCC, versioned"]
+  entities["setup · entities/<br/>companies, cardholders, cards,<br/>shops, terminals"]
+  pg[("PostgreSQL<br/>OLTP · 17 tables")]
+  demand["simulation/<br/>demand · calendar · places"]
+  issuer["validators/<br/>the issuer's checks"]
+  duck[("DuckDB<br/>star schema")]
+  export["export<br/>quality checks + profile"]
+  parquet["Parquet dataset<br/>+ metadata"]
+
+  config --> entities
+  raw --> entities
+  entities --> pg
+  pg -- "simulate, month by month" --> demand
+  demand --> issuer
+  issuer -- "approved / declined" --> pg
+  pg -- etl --> duck
+  duck --> export
+  export --> parquet
+
+  class config,raw neutral
+  class entities,demand secondary
+  class issuer,export tertiary
+  class pg,duck,parquet primary

@@ -1,6 +1,6 @@
 [project]
 name = "corporate-benefits-transactions"
-version = "0.1.0"
+version = "1.0.0"
 description = "Synthetic dataset of Brazilian corporate benefits card transactions"
 readme = "README.md"
 license = "MIT"

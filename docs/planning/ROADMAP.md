@@ -617,3 +617,13 @@ Found on the way: `src/adapters/`, an empty folder left by an old commit.
 ### ST-13.5 — Architecture docs
 - [x] `docs/technical-architecture.md` describes the layout and the data flow as they are; ADR-019 records the layout
 
+### ST-13.7 — Branches and releases (2026-11-03)
+- [x] Releases by hand, one per published dataset version: `CHANGELOG.md`, the version in `pyproject.toml`, a signed tag and a GitHub Release (`docs/runbooks/releases.md`); `v1.0.0` is the first
+- [x] CI also on pull requests and by hand, with a timeout
+- [x] Left out on purpose, for a data project with one author and no deploy: Dependabot (removed), automated releases, required pull requests; GitHub's own secret scanning replaces a gitleaks job
+- [ ] GitHub settings applied by hand: a `main` ruleset (no deletion, no force push), secret scanning with push protection, topics
+
+### ST-13.6 — README and portfolio page (2026-11-03)
+- [x] README in the Best-README-Template layout: badges, table of contents, usage, architecture, data sources, roadmap, contributing, contact
+- [x] `.portfolio/` for the portfolio site: `project.json`, content in English, Portuguese and Spanish, charts drawn from the official dataset and diagrams from Mermaid (`*.mmd` next to each `.svg`); checked with the portfolio's own ingestion. The repository needs the `portfolio` topic on GitHub
+

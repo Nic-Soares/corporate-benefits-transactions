@@ -1,0 +1,346 @@
+{
+  "$schema": "https://raw.githubusercontent.com/Nic-Soares/my-portfolio/develop/shared/schema/content.v1.json",
+  "name": "Corporate Benefits Transactions",
+  "description": "Un dataset sintético de 5,7 millones de transacciones de tarjetas de beneficios brasileñas, generado por un emisor simulado que aprueba o rechaza cada compra como lo hace el mercado.",
+  "context": "Proyecto personal",
+  "heroAlt": "Gráfico de área de los intentos de compra por día de septiembre de 2025 a agosto de 2026, con picos en el día del crédito, Nochebuena, Carnaval y Viernes Santo",
+  "facts": [
+    {
+      "label": "Rol",
+      "value": "Desarrollador solo — modelado del dominio, simulación, pipeline de datos"
+    },
+    {
+      "label": "Stack",
+      "value": "Python · Polars · PostgreSQL · DuckDB · Parquet"
+    },
+    {
+      "label": "Año",
+      "value": "2026"
+    },
+    {
+      "label": "Escala",
+      "value": "5,7 millones de transacciones en un año simulado"
+    }
+  ],
+  "tabs": [
+    {
+      "id": "overview",
+      "title": "Visión general",
+      "sidebarItems": [
+        {
+          "label": "Qué es",
+          "anchorId": "what-it-is"
+        },
+        {
+          "label": "El mercado",
+          "anchorId": "market"
+        },
+        {
+          "label": "Qué hay en los datos",
+          "anchorId": "data"
+        }
+      ],
+      "content": [
+        {
+          "type": "intro",
+          "id": "what-it-is",
+          "text": "Corporate Benefits Transactions es un dataset público y sintético de transacciones de tarjetas de beneficios brasileñas — comida, alimentación, movilidad, multibeneficios e incentivos. Ninguna fila es real, pero cada fila pasó por lo que pasa una real: un emisor que verifica la tarjeta, el titular, el comercio, la terminal, el PIN, qué billetera acepta el comercio y si hay saldo, y luego aprueba o rechaza con un código ISO 8583. El objetivo es un dataset que se comporte como el mercado, para probar dashboards, métricas y pipelines de datos, no un montón de filas aleatorias."
+        },
+        {
+          "type": "header",
+          "level": 2,
+          "text": "El mercado que modela",
+          "id": "market"
+        },
+        {
+          "type": "paragraph",
+          "text": "Las empresas dan a sus empleados tarjetas cuyo saldo solo se puede gastar en ciertas cosas. Una tarjeta pertenece a un **programa** que fija sus **billeteras** (alimentación, comida, movilidad, salud…) y su red: la **red propia** del emisor, donde el CNAE del comercio (código de actividad económica) decide qué billetera acepta, o una **marca** (Visa, Mastercard, Elo), donde decide el MCC. Cada billetera recibe crédito cada mes y se gasta hasta agotarse."
+        },
+        {
+          "type": "header",
+          "level": 2,
+          "text": "Qué hay en los datos",
+          "id": "data"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**5,7 millones** de intentos de compra en un año (sep/2025 – ago/2026), con la respuesta del emisor y el motivo específico de cada rechazo",
+            "**800** empresas, **34 mil** titulares, **8 mil** comercios y **12 mil** terminales en municipios reales del IBGE",
+            "Un libro de saldos: cada crédito, débito y reverso, encadenado movimiento a movimiento",
+            "Fraude etiquetado por escenario (toma de cuenta, tarjeta no presente, tarjeta interceptada, clonación) y disputas, incluidas las de mala fe"
+          ]
+        },
+        {
+          "type": "columns",
+          "columns": [
+            [
+              {
+                "type": "image",
+                "src": "images/monthly.webp",
+                "alt": "Gráfico de barras de los intentos por mes con una línea de la tasa de aprobación entre 85 y 90 por ciento",
+                "aspectRatio": "3 / 2",
+                "caption": "Volumen por mes y la parte aprobada: del 85% al 90%, sube y baja sin tendencia"
+              }
+            ],
+            [
+              {
+                "type": "image",
+                "src": "images/hours.webp",
+                "alt": "Gráfico de líneas de la parte de intentos por hora en restaurantes, supermercados y gasolineras",
+                "aspectRatio": "3 / 2",
+                "caption": "Los restaurantes tienen pico al mediodía; el combustible, antes y después del trabajo"
+              }
+            ]
+          ]
+        }
+      ]
+    },
+    {
+      "id": "architecture",
+      "title": "Arquitectura",
+      "sidebarItems": [
+        {
+          "label": "Pipeline",
+          "anchorId": "pipeline"
+        },
+        {
+          "label": "Stack técnico",
+          "anchorId": "tech-stack"
+        },
+        {
+          "label": "Modelo de datos",
+          "anchorId": "data-model"
+        }
+      ],
+      "content": [
+        {
+          "type": "header",
+          "level": 2,
+          "text": "Arquitectura & stack",
+          "id": "pipeline"
+        },
+        {
+          "type": "paragraph",
+          "text": "Cuatro comandos construyen el dataset. `setup` genera el mundo en PostgreSQL; `simulate` planifica cada intento de compra y, mes a mes, deja que el emisor los responda en orden cronológico — el saldo se mueve, los límites cuentan, los reversos llegan después; `etl` carga un esquema estrella en DuckDB; `export` ejecuta los controles de calidad y escribe Parquet. `make dataset SCALE=4` ejecuta todo."
+        },
+        {
+          "type": "image",
+          "src": "images/architecture.svg",
+          "alt": "Diagrama: el config y los datos públicos del IBGE alimentan los generadores de entidades, que escriben en PostgreSQL; la simulación sortea los intentos y los validadores los responden de vuelta en PostgreSQL; el ETL carga DuckDB; el export lo controla y escribe el dataset en Parquet",
+          "aspectRatio": "1 / 1"
+        },
+        {
+          "type": "table",
+          "id": "tech-stack",
+          "headers": [
+            "Capa",
+            "Tecnología"
+          ],
+          "rows": [
+            [
+              "Lenguaje",
+              "Python 3.14 · uv · Polars"
+            ],
+            [
+              "OLTP",
+              "PostgreSQL 18 (Docker)"
+            ],
+            [
+              "OLAP",
+              "DuckDB, esquema estrella en SQL puro"
+            ],
+            [
+              "Distribución",
+              "Parquet + diccionario de datos + metadatos"
+            ],
+            [
+              "Reglas",
+              "YAML: datos de referencia, controles de autorización, simulación"
+            ],
+            [
+              "Calidad",
+              "pytest · ruff · GitHub Actions con Postgres"
+            ]
+          ]
+        },
+        {
+          "type": "header",
+          "level": 3,
+          "text": "Modelo de datos",
+          "id": "data-model"
+        },
+        {
+          "type": "paragraph",
+          "text": "Un esquema estrella: `fact_transactions` (una fila por intento, ya con la red, el adquirente y la empresa) y `fact_balance_movements` (el libro), diez dimensiones y cinco tablas de referencia con las reglas que explican cada rechazo. Sin CPF, CNPJ, número de tarjeta ni nombre: los ids identifican."
+        },
+        {
+          "type": "image",
+          "src": "images/data-model.svg",
+          "alt": "Diagrama de entidades del esquema estrella: las dos tablas de hechos y las dimensiones de tarjeta, billetera, titular, empresa, comercio y terminal",
+          "aspectRatio": "1 / 1"
+        }
+      ]
+    },
+    {
+      "id": "quality",
+      "title": "Calidad de los datos",
+      "sidebarItems": [
+        {
+          "label": "Reproducible",
+          "anchorId": "reproducible"
+        },
+        {
+          "label": "Controles & perfil",
+          "anchorId": "checks"
+        },
+        {
+          "label": "Volumen",
+          "anchorId": "volume"
+        }
+      ],
+      "content": [
+        {
+          "type": "header",
+          "level": 2,
+          "text": "Reproducible por diseño",
+          "id": "reproducible"
+        },
+        {
+          "type": "paragraph",
+          "text": "La misma semilla da el mismo dataset en cualquier máquina: las fuentes públicas (municipios, población, PIB y CNAE del IBGE; la lista de MCC) se versionan con el código, y cada export escribe `dataset_metadata.json` con la semilla, la ventana, el commit del código y los hashes del config y de las fuentes."
+        },
+        {
+          "type": "header",
+          "level": 2,
+          "text": "Controles y perfil estadístico",
+          "id": "checks"
+        },
+        {
+          "type": "paragraph",
+          "text": "El export se niega a escribir un dataset roto. Antes corren **83 controles**: ids únicos, toda clave resuelta, el libro encadenado, ningún saldo negativo, ninguna aprobación sobre un registro que no estaba activo ese día — y un **perfil estadístico** comparado con rangos del config:"
+        },
+        {
+          "type": "table",
+          "headers": [
+            "Medida",
+            "Esperado",
+            "Dataset oficial"
+          ],
+          "rows": [
+            [
+              "Aprobación, cada mes",
+              "82% – 93%",
+              "85,3% – 90,3%"
+            ],
+            [
+              "Hora pico de los restaurantes",
+              "11h – 13h",
+              "12h"
+            ],
+            [
+              "Rechazos por falta de saldo",
+              "35% – 75%",
+              "cerca de la mitad"
+            ],
+            [
+              "Compras en el estado del titular",
+              "65% – 95%",
+              "cerca del 80%"
+            ],
+            [
+              "Nochebuena en los supermercados",
+              "≥ 1,3× un día normal",
+              "cerca de 1,5×"
+            ]
+          ]
+        },
+        {
+          "type": "header",
+          "level": 2,
+          "text": "Volumen",
+          "id": "volume"
+        },
+        {
+          "type": "paragraph",
+          "text": "La memoria sigue a un mes, no a la ventana: el simulador guarda cada intento planificado como tres enteros pequeños y arma, responde y escribe un mes a la vez; la carga reconstruye claves e índices una sola vez. Un año en escala 4 toma unos 7 minutos y 3 GB en una laptop."
+        }
+      ]
+    },
+    {
+      "id": "repository",
+      "title": "Repositorio",
+      "sidebarItems": [
+        {
+          "label": "Setup & enlaces",
+          "anchorId": "setup-links"
+        },
+        {
+          "label": "Decisiones clave",
+          "anchorId": "key-decisions"
+        },
+        {
+          "label": "Próximos pasos",
+          "anchorId": "next-steps"
+        }
+      ],
+      "content": [
+        {
+          "type": "header",
+          "level": 2,
+          "text": "Setup & enlaces",
+          "id": "setup-links"
+        },
+        {
+          "type": "paragraph",
+          "text": "Un repositorio, un `Makefile`. Postgres arranca con valores locales; no hace falta `.env`."
+        },
+        {
+          "type": "list",
+          "items": [
+            "Código fuente — [GitHub](https://github.com/Nic-Soares/corporate-benefits-transactions)",
+            "Dataset — Kaggle (próximamente)"
+          ]
+        },
+        {
+          "type": "code",
+          "title": "Ejecutar",
+          "language": "bash",
+          "code": "make install        # dependencies (uv)\nmake db             # PostgreSQL in Docker\nmake dataset SCALE=4  # setup → simulate → etl → export\nmake help           # every target"
+        },
+        {
+          "type": "header",
+          "level": 2,
+          "text": "Decisiones clave & resultado",
+          "id": "key-decisions"
+        },
+        {
+          "type": "list",
+          "items": [
+            "**Simular el emisor, no sortear filas.** Aprobaciones y rechazos salen de las reglas aplicadas en orden cronológico, así que tasas, motivos y saldos son coherentes entre sí.",
+            "**Una regla para ambos lados.** Dónde se acepta cada billetera vive en un módulo que leen el generador de intentos y el emisor, así que los datos no se alejan de sus propias reglas.",
+            "**Forma sobre ruido.** El gasto sigue el crédito mensual de cada billetera; los días siguen la semana, los feriados y el Black Friday; los meses varían al azar, sin tendencia.",
+            "**Calidad como compuerta.** El perfil estadístico es parte del export: si un cambio rompe la forma, el dataset no se escribe."
+          ]
+        },
+        {
+          "type": "paragraph",
+          "text": "El resultado es un dataset de 5,7 millones de filas con modelo documentado, diccionario de datos, reporte de calidad y el código que lo reproduce — construido a lo largo de 13 épicas planificadas, con registros de decisión en el camino."
+        },
+        {
+          "type": "header",
+          "level": 3,
+          "text": "Próximos pasos",
+          "id": "next-steps"
+        },
+        {
+          "type": "list",
+          "items": [
+            "Publicar en Kaggle con un notebook de ejemplo",
+            "Un segundo escenario con otra carpeta de config (más fraude, otros volúmenes)"
+          ]
+        }
+      ]
+    }
+  ]
+}
