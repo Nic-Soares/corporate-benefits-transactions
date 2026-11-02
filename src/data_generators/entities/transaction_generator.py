@@ -19,7 +19,7 @@ from typing import NamedTuple
 import polars as pl
 
 from src.data_generators.entities.establishment_generator import CATEGORIES
-from src.data_generators.providers import fake
+from src.data_generators.providers import fake, seasons
 from src.utils.read_yamls import (
     load_business_rules,
     load_pre_populated_data,
@@ -180,13 +180,16 @@ class TransactionGenerator:
         end = datetime.combine(fake.reference_date, datetime.min.time())
         self.days = [end - timedelta(days=d) for d in range(days_back, 0, -1)]
         self.dates = [day.date() for day in self.days]
-        # Cumulative day weights, per category with its own week (None: the others)
+        # Cumulative day weights per category (None: any): its week and the calendar
+        weeks = USAGE["weekday_weights_by_category"]
         self.day_cum = {
-            category: list(accumulate(self._day_weight(day, week) for day in self.days))
-            for category, week in [
-                (None, USAGE["weekday_weights"]),
-                *USAGE["weekday_weights_by_category"].items(),
-            ]
+            category: list(
+                accumulate(
+                    self._day_weight(day, weeks.get(category, USAGE["weekday_weights"]), category)
+                    for day in self.days
+                )
+            )
+            for category in [None, *CATEGORIES]
         }
 
         # The wallets a cardholder means to use: the ones active when the window
@@ -265,11 +268,13 @@ class TransactionGenerator:
             wallet_out[key] = _out_from(row)
         self.slot_out: dict[tuple[str, str], date] = {}
         factor = USAGE["inactive_usage_factor"]
-        self.slots: list[tuple[dict, str]] = []
+        # A slot can be bound to a window of days (first, last): the year-end credit
+        self.slots: list[tuple[dict, str, tuple[date, date] | None]] = []
         weights = []
+        ratio_of = {}
         for card in self.cards:
             card_out = _earliest(_out_from(card), holder_out[card["cardholder_id"]])
-            ratio = spending_ratio()
+            ratio = ratio_of[card["id"]] = spending_ratio()
             network = self._network(card)
             for wallet in sorted(self.wallets_by_card.get(card["id"], ())):
                 if not self._places(wallet, network):
@@ -283,8 +288,34 @@ class TransactionGenerator:
                 if out:
                     self.slot_out[card["id"], wallet] = out
                 monthly = credit[card["id"], wallet] * ratio / wallet_mean_ticket(wallet, network)
-                self.slots.append((card, wallet))
+                self.slots.append((card, wallet, None))
                 weights.append(monthly * days / days_back)
+
+        # The year-end credit: the attempts it pays for, over the days after it
+        # lands (`simulation.year_end_credit`), on cards in use by then
+        bonus = seasons.YEAR_END_CREDIT
+        wallet = bonus["wallet"]
+        company_of = dict(cardholders_df.select("id", "company_id").iter_rows())
+        for year in sorted({day.year for day in self.dates}):
+            landing = seasons.year_end_credit_day(year)
+            if not self.dates[0] <= landing <= self.dates[-1]:
+                continue
+            window = landing, landing + timedelta(days=bonus["spend_days"] - 1)
+            for card in self.cards:
+                network = self._network(card)
+                out = self.slot_out.get((card["id"], wallet))
+                if (
+                    wallet not in self.wallets_by_card.get(card["id"], ())
+                    or not self._places(wallet, network)
+                    or self._usable_from(card, wallet) > landing
+                    or (out and out <= landing)
+                ):
+                    continue
+                amount = seasons.year_end_credit(company_of[card["cardholder_id"]], year)
+                if amount:
+                    attempts = amount * ratio_of[card["id"]] / wallet_mean_ticket(wallet, network)
+                    self.slots.append((card, wallet, window))
+                    weights.append(attempts * 30 / days_back)
         self.slot_cum_weights = list(accumulate(weights))
         self.monthly_attempts = sum(weights)
         self.days_back = days_back
@@ -307,11 +338,17 @@ class TransactionGenerator:
         return [c for c in wallet_categories(wallet, network) if c in self.terminals]
 
     @staticmethod
-    def _day_weight(day: datetime, week: list[float]) -> float:
-        """The weekday's weight, higher early in the month (the credit lands)."""
+    def _day_weight(day: datetime, week: list[float], category: str | None) -> float:
+        """The weekday's weight (a holiday's is Saturday's), higher early in the
+        month (the credit lands), times the calendar's (`seasons.day_factor`)."""
         month = USAGE["month_day_weights"]
         progress = (day.day - 1) / 30
-        return week[day.weekday()] * (month["first"] + (month["last"] - month["first"]) * progress)
+        weekday = 5 if seasons.is_holiday(day.date()) else day.weekday()
+        return (
+            week[weekday]
+            * (month["first"] + (month["last"] - month["first"]) * progress)
+            * seasons.day_factor(day.date(), category)
+        )
 
     def _fits(self, category: str, card: dict) -> bool:
         """Some wallet of the card is meant for this kind of place."""
@@ -358,16 +395,17 @@ class TransactionGenerator:
                 return "MOBILE_NFC"
         return fake.weighted_key(weights)
 
-    def _day(self, earliest: date, category: str) -> datetime:
-        """A day of the window from `earliest` on, by the category's day weights
-        (the last day when `earliest` is after the window)."""
+    def _day(self, earliest: date, category: str, latest: date | None = None) -> datetime:
+        """A day of the window from `earliest` on (to `latest`), by the category's
+        day weights (the nearest day when none is left)."""
         first = bisect_left(self.dates, earliest)
-        if first == len(self.days):
-            return self.days[-1]
+        stop = bisect_right(self.dates, latest) if latest else len(self.days)
+        if first >= stop:
+            return self.days[min(first, len(self.days) - 1)]
         cum = self.day_cum.get(category) or self.day_cum[None]
         low = cum[first - 1] if first else 0.0
-        point = low + random.random() * (cum[-1] - low)
-        return self.days[min(bisect_right(cum, point, first), len(self.days) - 1)]
+        point = low + random.random() * (cum[stop - 1] - low)
+        return self.days[min(bisect_right(cum, point, first, stop), stop - 1)]
 
     @staticmethod
     def _at(day: datetime, category: str) -> datetime:
@@ -380,18 +418,23 @@ class TransactionGenerator:
         """A day of the window from `earliest` on, then an hour of the category's day."""
         return self._at(self._day(earliest, category), category)
 
-    def _slot_day(self, card: dict, wallet: str, category: str) -> datetime:
-        """A day once the wallet is usable; after the card, cardholder or wallet
-        stopped being active, kept only now and then (`inactive_usage_factor`)."""
-        start = self._usable_from(card, wallet)
+    def _slot_day(
+        self, card: dict, wallet: str, category: str, window: tuple[date, date] | None = None
+    ) -> datetime:
+        """A day once the wallet is usable (within the slot's window, if any);
+        after the card, cardholder or wallet stopped being active, kept only now
+        and then (`inactive_usage_factor`)."""
+        start, latest = self._usable_from(card, wallet), None
+        if window:
+            start, latest = max(start, window[0]), window[1]
         out = self.slot_out.get((card["id"], wallet))
-        day = self._day(start, category)
+        day = self._day(start, category, latest)
         if out is None or start >= out:
             return day
         for _ in range(DRAWS):
             if day.date() < out or random.random() < USAGE["inactive_usage_factor"]:
                 break
-            day = self._day(start, category)
+            day = self._day(start, category, latest)
         return day
 
     def _terminal(self, pool: Pool, day: datetime, virtual: bool) -> dict | None:
@@ -433,12 +476,12 @@ class TransactionGenerator:
 
     def generate(self) -> dict:
         """One attempt: columns of `transactions`, before the issuer answers."""
-        card, wallet = random.choices(self.slots, cum_weights=self.slot_cum_weights)[0]
+        card, wallet, window = random.choices(self.slots, cum_weights=self.slot_cum_weights)[0]
         category = self._category(card, wallet)
         # The day first (once the wallet is usable), then a terminal installed by
         # then: nearby if there is one, else anywhere in the category. A virtual
         # card goes where it can be used
-        day = self._slot_day(card, wallet, category)
+        day = self._slot_day(card, wallet, category, window)
         virtual = card["card_type"] == "virtual"
         terminal = self._terminal(
             self._nearby(category, card, wallet), day, virtual

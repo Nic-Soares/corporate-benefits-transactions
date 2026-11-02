@@ -5,7 +5,7 @@ from datetime import date, datetime, timedelta
 import polars as pl
 import pytest
 
-from src.data_generators.providers import fake
+from src.data_generators.providers import fake, seasons
 from src.pipeline.reference import build_reference_tables
 from src.processors import transaction_simulator
 from src.processors.transaction_simulator import (
@@ -177,3 +177,28 @@ def test_no_credit_after_cancellation(world, transaction_generator):
         cancelled, left_on="card_wallet_id", right_on="id"
     )
     assert (credits["operation_date"].dt.date() < credits["status_since"]).all()
+
+
+def test_year_end_credit(world, transaction_generator):
+    """The companies that give it credit their wallets of its kind on its day."""
+    generator = transaction_generator(world, days_back=365)
+    txs = [generator.generate() for _ in range(800)]
+    result = TransactionSimulator(world).run(txs, END - timedelta(days=365), END)
+    landing = seasons.year_end_credit_day(2025)
+    extra = result.balance_history.filter(
+        pl.col("operation_type") == "credit", pl.col("operation_date").dt.date() == landing
+    )
+    assert extra.height
+    company = (
+        world["card_wallets"]
+        .select("id", "card_id", "wallet_id")
+        .join(world["cards"].select(pl.col("id").alias("card_id"), "cardholder_id"), on="card_id")
+        .join(
+            world["cardholders"].select(pl.col("id").alias("cardholder_id"), "company_id"),
+            on="cardholder_id",
+        )
+    )
+    extra = extra.join(company, left_on="card_wallet_id", right_on="id")
+    assert (extra["wallet_id"] == seasons.YEAR_END_CREDIT["wallet"]).all()
+    for amount, company_id in extra.select("operation_amount", "company_id").iter_rows():
+        assert amount == seasons.year_end_credit(company_id, 2025)
