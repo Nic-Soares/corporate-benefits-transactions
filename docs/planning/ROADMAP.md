@@ -618,10 +618,10 @@ Found on the way: `src/adapters/`, an empty folder left by an old commit.
 - [x] `docs/technical-architecture.md` describes the layout and the data flow as they are; ADR-019 records the layout
 
 ### ST-13.7 — Branches and releases (2026-11-03)
-- [x] release-please (`.github/release-please-*.json`, `release-please.yml`): a release PR on `main` with the next version and `CHANGELOG.md`; `v1.0.0` written by hand as the first public release
-- [x] CI: on pull requests, `workflow_dispatch`, timeouts, and a `secrets` job (gitleaks over the whole history); Dependabot opens its PRs on `develop`
-- [x] `docs/runbooks/releases.md`: the flow and the GitHub settings (rulesets on `main` and `develop`, secret scanning, the release token, topics)
-- [ ] GitHub settings applied by hand (they live in GitHub, not in the repository)
+- [x] Releases by hand, one per published dataset version: `CHANGELOG.md`, the version in `pyproject.toml`, a signed tag and a GitHub Release (`docs/runbooks/releases.md`); `v1.0.0` is the first
+- [x] CI also on pull requests and by hand, with a timeout
+- [x] Left out on purpose, for a data project with one author and no deploy: Dependabot (removed), automated releases, required pull requests; GitHub's own secret scanning replaces a gitleaks job
+- [ ] GitHub settings applied by hand: a `main` ruleset (no deletion, no force push), secret scanning with push protection, topics
 
 ### ST-13.6 — README and portfolio page (2026-11-03)
 - [x] README in the Best-README-Template layout: badges, table of contents, usage, architecture, data sources, roadmap, contributing, contact
