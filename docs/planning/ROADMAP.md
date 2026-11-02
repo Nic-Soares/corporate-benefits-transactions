@@ -18,7 +18,7 @@
 | `EP-07` Setup pipeline (reference data + entities) | ✅ Done — merged into `develop` 2026-10-31 | code (`src/main.py`, `src/processors/`) |
 | `EP-08` Transaction simulator | ✅ Done — merged into `develop` 2026-11-01 (ADR-010, ADR-011) | code (`src/processors/transaction_simulator.py`) |
 | `EP-09` OLAP: Postgres → DuckDB | ✅ Done — merged into `develop` 2026-11-01 (ADR-012) | code + `database/olap_duck/` |
-| `EP-10` Dataset export and quality | Not started | code + `data/final_datasets/` |
+| `EP-10` Dataset export and quality | ✅ Done — merged into `develop` 2026-11-01 (ADR-014) | code + `data/final_datasets/` |
 | `EP-11` Kaggle release | Not started | Kaggle |
 
 ### Git workflow
@@ -461,9 +461,11 @@ Second pass against how benefits cards are used in the market. The model held; t
 
 **Dependencies:** `EP-09`. **Size:** S (~1 day).
 
-- [ ] Export dimensions and facts to `data/final_datasets/*.parquet`
-- [ ] Quality checks: foreign keys, nulls, approval rates vs. config
-- [ ] Data dictionary (one line per column)
+- [x] `python -m src.main export` (`src/pipeline/export.py`): one Parquet file per table in `data/final_datasets/` (zstd)
+- [x] Quality checks, 49 with seed 42: unique ids, every key resolves, answers consistent (authorization, reasons, disputes, fraud labels, reversals), the balance ledger holds, approval and fraud rates in range, no personal documents; a failure writes nothing
+- [x] Data dictionary (`database/olap_duck/dictionary.yaml`, one line per column) rendered to `data_dictionary.md` and `docs/data-dictionary.md`; tests keep both complete and current
+- [x] Public tables without CNPJ, CPF, card number or cardholder name (ADR-014); acceptance rules and ISO codes exported as `ref_*` tables
+- [x] Tests: dictionary coverage, checks on simulated data, export writes every table, a broken dataset is refused, rates are checked
 
 ---
 

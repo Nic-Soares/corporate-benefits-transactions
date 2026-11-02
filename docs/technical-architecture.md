@@ -27,7 +27,7 @@ simulator ─► validators ────────────┘
         DuckDB (10 dimensions + 2 facts + views) ─► Parquet ─► Kaggle
 ```
 
-Exists today: config, extractors, loaders, generators, validators, both schemas, the setup pipeline, the simulator and the ETL (`python -m src.main setup | simulate | etl`, `src/pipeline/`, `src/processors/transaction_simulator.py`, `database/olap_duck/03_load.sql`). Planned: the export (`EP-10`).
+Exists today: config, extractors, loaders, generators, validators, both schemas, the setup pipeline, the simulator and the ETL (`python -m src.main setup | simulate | etl`, `src/pipeline/`, `src/processors/transaction_simulator.py`, `database/olap_duck/03_load.sql`) and the export (`python -m src.main export`, `src/pipeline/export.py`). Planned: the Kaggle release (`EP-11`).
 
 ## Data models
 
