@@ -37,6 +37,9 @@ STAGED = [
     "terminals",
     "transactions",
     "balance_history",
+    "cnae_wallets",
+    "mcc_wallets",
+    "mcc_modalities",
 ]
 OLAP_TABLES = [
     "dim_wallets",
@@ -51,6 +54,10 @@ OLAP_TABLES = [
     "dim_terminals",
     "fact_transactions",
     "fact_balance_movements",
+    "ref_response_codes",
+    "ref_cnae_wallets",
+    "ref_mcc_wallets",
+    "ref_mcc_modalities",
 ]
 
 
