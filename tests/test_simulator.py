@@ -8,7 +8,11 @@ import pytest
 from src.data_generators.providers import fake
 from src.pipeline.reference import build_reference_tables
 from src.processors import transaction_simulator
-from src.processors.transaction_simulator import TransactionSimulator, credit_moments
+from src.processors.transaction_simulator import (
+    TransactionSimulator,
+    credit_moments,
+    first_credit,
+)
 
 TODAY = date(2026, 10, 30)
 END = datetime(2026, 10, 30)
@@ -143,3 +147,33 @@ def test_ledger_sequence(world, transaction_generator):
     history = simulate(world, transaction_generator).balance_history
     assert history["sequence_number"].to_list() == list(range(1, history.height + 1))
     assert history["operation_date"].is_sorted()
+
+
+def test_first_credit_pro_rata():
+    assert first_credit(300.0, date(2026, 9, 1)) == 300.0
+    assert first_credit(300.0, date(2026, 9, 21)) == 100.0
+
+
+def test_wallet_activated_in_the_window_starts_empty(world, transaction_generator):
+    """Its first movement is a pro rata credit on the activation day, from zero."""
+    result = simulate(world, transaction_generator)
+    activated = world["card_wallets"].filter(pl.col("activation_date") >= START.date())
+    first = (
+        result.balance_history.sort("sequence_number")
+        .group_by("card_wallet_id")
+        .first()
+        .join(activated, left_on="card_wallet_id", right_on="id")
+    )
+    assert first.height
+    assert (first["previous_balance"] == 0).all()
+    assert (first["operation_type"] == "credit").all()
+
+
+def test_no_credit_after_cancellation(world, transaction_generator):
+    """The employer stops crediting a wallet once cancelled."""
+    result = simulate(world, transaction_generator)
+    cancelled = world["card_wallets"].filter(status="cancelled")
+    credits = result.balance_history.filter(operation_type="credit").join(
+        cancelled, left_on="card_wallet_id", right_on="id"
+    )
+    assert (credits["operation_date"].dt.date() < credits["status_since"]).all()

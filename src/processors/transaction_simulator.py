@@ -1,12 +1,15 @@
 """The issuer over time.
 
-Attempts, monthly credits and reversals run in time order. Each attempt goes
+Attempts, monthly credits and reversals run in time order. A wallet activated
+in the window starts empty and gets its first credit, pro rata to the days
+left in the month, on the activation day. Each attempt goes
 through the validators in `validation_rules.yaml → validation_order`; the
 first failure declines it with its ISO code and reason, an approval debits the
 routed card wallet. The daily amount, daily count and monthly amount of each
 wallet are tracked for the limits.
 """
 
+import calendar
 import heapq
 import random
 import string
@@ -28,7 +31,7 @@ from src.validators import infrastructure_validations as infrastructure
 from src.validators import security_validators as security
 from src.validators import status_validators as status
 from src.validators import temporal_validators as temporal
-from src.validators._common import RULES, Table
+from src.validators._common import RULES, Table, find_one
 
 SIMULATION = load_simulation_config()["simulation"]
 CREDIT_DAY: int = fake.SETTINGS["benefit_credit_day"]
@@ -56,6 +59,17 @@ class SimulationResult:
     transactions: pl.DataFrame
     balance_history: pl.DataFrame
     card_wallets: pl.DataFrame  # with the balances at the end
+
+
+def _status_on(day: pl.Expr, status: str = "status", since: str = "status_since") -> pl.Expr:
+    """The status on `day`: active before the current status began."""
+    return pl.when(pl.col(since) > day).then(pl.lit("active")).otherwise(pl.col(status))
+
+
+def first_credit(monthly_credit: float, day: date) -> float:
+    """The month's credit pro rata to the days left from `day` on."""
+    days = calendar.monthrange(day.year, day.month)[1]
+    return round(monthly_credit * (days - day.day + 1) / days, 2)
 
 
 def credit_moments(start: datetime, end: datetime) -> list[datetime]:
@@ -172,23 +186,57 @@ class TransactionSimulator:
         return tx
 
     def credit(self, moment: datetime) -> None:
-        """The monthly credit, to every wallet still in use: not cancelled, on a card
-        not cancelled, of an active cardholder (the employer stops crediting the
-        others), already activated."""
-        cards = self.t["cards"].join(
-            self.t["cardholders"].select(pl.col("id").alias("cardholder_id"), holder="status"),
-            on="cardholder_id",
-        )
-        in_use = cards.filter(pl.col("status") != "cancelled", pl.col("holder") == "active").select(
-            pl.col("id").alias("card_id")
-        )
-        eligible = (
-            self.t["card_wallets"]
-            .join(in_use, on="card_id")
-            .filter(pl.col("status") != "cancelled", pl.col("activation_date") <= moment.date())
-        )
+        """The monthly credit, to every wallet in use that day (`_in_use`)."""
+        eligible = self._in_use(pl.lit(moment.date()))
         self.history += [credit(self.card_wallets, id_, moment) for id_ in eligible["id"]]
         self.out_of_balance.clear()
+
+    def _in_use(self, day: pl.Expr) -> pl.DataFrame:
+        """The card wallets the employer credits on `day` (a date, or a column of
+        card_wallets): activated, not cancelled, on a card not cancelled, of an
+        active cardholder."""
+        holders = self.t["cardholders"].select(
+            pl.col("id").alias("cardholder_id"), holder="status", holder_since="status_since"
+        )
+        cards = (
+            self.t["cards"]
+            .join(holders, on="cardholder_id")
+            .select(
+                pl.col("id").alias("card_id"),
+                "holder",
+                "holder_since",
+                card="status",
+                card_since="status_since",
+            )
+        )
+        return (
+            self.t["card_wallets"]
+            .join(cards, on="card_id")
+            .filter(
+                pl.col("activation_date") <= day,
+                _status_on(day) != "cancelled",
+                _status_on(day, "card", "card_since") != "cancelled",
+                _status_on(day, "holder", "holder_since") == "active",
+            )
+        )
+
+    def _first_credits(self, start: datetime, end: datetime) -> list[tuple[datetime, str]]:
+        """Wallets activated in the window: emptied (their balance at the start
+        is for the wallets already in use), and the moment and id of their first
+        credit, unless the monthly credit lands that day."""
+        first = start.date()
+        for row in self.card_wallets.rows:
+            if row["activation_date"] >= first:
+                row["current_balance"] = 0.0
+        activated = self._in_use(pl.col("activation_date")).filter(
+            pl.col("activation_date") >= first,
+            pl.col("activation_date") < end.date(),
+            pl.col("activation_date").dt.day() != CREDIT_DAY,
+        )
+        return [
+            (datetime.combine(day, datetime.min.time()), id_)
+            for id_, day in activated.select("id", "activation_date").iter_rows()
+        ]
 
     def _intent(self, tx: dict[str, Any]) -> tuple[str, str]:
         """What the cardholder was spending: the option picked on the terminal, or on a
@@ -221,6 +269,8 @@ class TransactionSimulator:
         events: list[tuple[datetime, int, str, Any]] = []
         for moment in credit_moments(start, end):
             events.append((moment, 0, "credit", None))
+        for moment, card_wallet_id in self._first_credits(start, end):
+            events.append((moment, 0, "first_credit", card_wallet_id))
         for seq, tx in enumerate(sorted(attempts, key=lambda tx: tx["date"]), start=1):
             events.append((tx["date"], seq, "attempt", tx))
         heapq.heapify(events)
@@ -232,6 +282,11 @@ class TransactionSimulator:
             moment, _, kind, payload = heapq.heappop(events)
             if kind == "credit":
                 self.credit(moment)
+                continue
+            if kind == "first_credit":
+                wallet = find_one(self.card_wallets, id=payload)
+                amount = first_credit(wallet["monthly_credit"], moment.date())
+                self.history.append(credit(self.card_wallets, payload, moment, amount))
                 continue
             if kind == "reversal":
                 answered.append(self.reverse(payload, moment))

@@ -53,13 +53,14 @@ dim_card_wallets:
     id: "Card wallet id"
     card_id: "Card (dim_cards)"
     wallet_id: "Wallet type (dim_wallets)"
-    monthly_credit: "Benefit credited on the 1st of each month, BRL"
+    monthly_credit: "Benefit credited on the 1st of each month, BRL; a wallet activated in the period first gets a share of it, pro rata to the days left in that month, on the activation day"
     daily_limit: "Most that can be spent per day, BRL; 0 = no limit"
     monthly_limit: "Most that can be spent per month, BRL; 0 = no limit"
     daily_count_limit: "Most approved purchases per day; 0 = no limit"
     final_balance: "Balance at the end of the simulated period"
     activation_date: "Date the wallet was activated, a few days after the card's issue"
     status: "active, suspended or cancelled"
+    status_since: "Date the current status began; the wallet was active before it"
 
 dim_cards:
   description: "Benefit cards. The program fixes the wallets and the network."
@@ -72,6 +73,7 @@ dim_cards:
     expiration_date: "Last day of the current plastic; a card is renewed on expiry and keeps its id"
     issue_date: "Date first issued, a few days after the cardholder's admission"
     status: "active, inactive (not unlocked yet), blocked or cancelled"
+    status_since: "Date the current status began; the card was active before it (an inactive card never was: since its issue)"
 
 dim_cardholders:
   description: "Employees who hold the cards. No names or documents."
@@ -84,6 +86,7 @@ dim_cardholders:
     department: "Department"
     admission_date: "Date hired"
     status: "active, inactive or terminated"
+    status_since: "Date the current status began; the cardholder was active before it"
 
 dim_companies:
   description: "Employers that give the benefits. Holdings and their branches. No CNPJ."
@@ -92,7 +95,7 @@ dim_companies:
     parent_id: "Holding of a branch; empty for a holding"
     name: "Legal name (synthetic)"
     trade_name: "Trade name (synthetic)"
-    segment: "SME (1-250 employees), Middle (251-1,999), Corporate (2,000+) or Public (government)"
+    segment: "Size of the employer: SME (1-250 employees), Middle (251-1,999), Corporate (2,000+) or Public (government). The dataset holds a sample of each company's cardholders, not its whole headcount"
     city: "Municipality (IBGE name)"
     state: "State (UF)"
     status: "active, inactive or suspended"
@@ -110,6 +113,7 @@ dim_establishments:
     city: "Municipality (IBGE name)"
     state: "State (UF)"
     status: "active, inactive, suspended or terminated"
+    status_since: "Date the current status began; the establishment was active before it"
     accreditation_date: "Date accredited to accept the cards"
 
 dim_terminals:
@@ -121,6 +125,7 @@ dim_terminals:
     model: "Terminal model"
     type: "POS, TEF, ECOMMERCE (online gateway) or ATM"
     status: "active, inactive or maintenance"
+    status_since: "Date the current status began; the terminal was active before it"
     installation_date: "Date installed"
 
 dim_wallets:

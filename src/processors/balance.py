@@ -75,7 +75,11 @@ def reverse(card_wallets: Table, reversal: dict[str, Any]) -> dict[str, Any]:
     )
 
 
-def credit(card_wallets: Table, card_wallet_id: str, moment: datetime) -> dict[str, Any]:
-    """Credit one wallet's `monthly_credit` (the benefit landing on the credit day)."""
-    amount = find_one(card_wallets, id=card_wallet_id)["monthly_credit"]
+def credit(
+    card_wallets: Table, card_wallet_id: str, moment: datetime, amount: float | None = None
+) -> dict[str, Any]:
+    """Credit one wallet: `amount`, by default its `monthly_credit` (the benefit
+    landing on the credit day)."""
+    if amount is None:
+        amount = find_one(card_wallets, id=card_wallet_id)["monthly_credit"]
     return _move(card_wallets, card_wallet_id, amount, "credit", moment, None)
