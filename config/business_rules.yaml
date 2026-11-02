@@ -38,7 +38,7 @@ status_options:
 # Capture technologies: which need a physical card
 # =====================================
 # A virtual card only uses the captures that don't need the physical card
-# (read by src/data_generators/entities/transaction_generator.py).
+# (read by src/simulation/pools.py).
 transaction_technology_rules:
   CHIP:
     requires_physical_card: true

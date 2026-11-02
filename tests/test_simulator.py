@@ -214,10 +214,10 @@ def test_opening_balances(world, transaction_generator):
     assert set(opening) == set(before["id"])
     assert all(balance >= 0 for balance in opening.values())
     credit = dict(wallets.select("id", "monthly_credit").iter_rows())
-    id_of = generator.card_wallet_id
+    id_of = generator.demand.card_wallet_id
     savers = [
         opening[id_of[key]] / credit[id_of[key]]
         for key in id_of
-        if id_of[key] in opening and generator.ratio_of.get(key[0], 1) < 1
+        if id_of[key] in opening and generator.demand.ratio_of.get(key[0], 1) < 1
     ]
     assert max(savers) > 0.5

@@ -77,15 +77,16 @@ corporate-benefits-transactions/
 │   └── runbooks/           # Local setup, dependency upgrades
 ├── src/
 │   ├── data_generators/
-│   │   ├── entities/       # Companies, cardholders, cards, establishments, terminals, transactions
+│   │   ├── entities/       # Companies, cardholders, cards, card wallets, establishments, terminals
 │   │   ├── providers/      # Seeded fake-data sources, CPF/CNPJ
-│   │   └── reference_data/ # Loaders for the config's reference tables, MCC and CNAE
+│   │   └── reference_data/ # Loaders for the config's reference tables
+│   ├── domain/             # Rules shared by generator and issuer: acceptance, status over time
 │   ├── extractors/         # IBGE (CNAE, municipalities, population, GDP), MCC list
-│   ├── infrastructure/     # PostgreSQL / DuckDB connections, schema creation
-│   ├── pipeline/           # setup: sources, reference tables, entities
-│   ├── processors/         # Wallet balance movements
+│   ├── infrastructure/     # PostgreSQL connection and COPY
+│   ├── pipeline/           # Commands: setup, simulate, etl, export; provenance
+│   ├── simulation/         # Calendar, demand, terminal pools, attempts, fraud, the issuer over time
 │   ├── main.py             # Command line (python -m src.main setup)
-│   ├── utils/              # YAML, CSV and Parquet helpers
+│   ├── utils/              # YAML loading, indexed tables
 │   └── validators/         # Authorization rules
 ├── tests/
 └── docker-compose.yaml     # PostgreSQL 18
