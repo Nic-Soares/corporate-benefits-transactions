@@ -34,11 +34,11 @@ class FraudGenerator:
         # States with terminals of each category, for "far from home"
         self.states: dict[str, list[str]] = {}
         self.state_of: dict[str, str] = {}  # terminal id → state
-        for key, (terminals, _) in generator.local.items():
+        for key, pool in generator.local.items():
             if len(key) == 2:
                 category, state = key
                 self.states.setdefault(category, []).append(state)
-                self.state_of |= {t["id"]: state for t in terminals}
+                self.state_of |= {t["id"]: state for t in pool.terminals}
 
     # --- helpers ------------------------------------------------------------
 
@@ -46,8 +46,12 @@ class FraudGenerator:
         return self.g.home[card["cardholder_id"]][1]
 
     def _terminal(self, category: str, state: str, types: tuple[str, ...]) -> dict | None:
-        terminals, weights = self.g.local.get((category, state), ([], []))
-        usable = [(t, w) for t, w in zip(terminals, weights, strict=True) if t["type"] in types]
+        pool = self.g.local.get((category, state))
+        if pool is None:
+            return None
+        usable = [
+            (t, w) for t, w in zip(pool.terminals, pool.weights, strict=True) if t["type"] in types
+        ]
         if not usable:
             return None
         return random.choices([t for t, _ in usable], weights=[w for _, w in usable])[0]

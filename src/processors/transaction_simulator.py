@@ -77,6 +77,9 @@ class TransactionSimulator:
         self.t = tables
         # The balances move in place (`Table`); every lookup is indexed
         self.card_wallets = Table(tables["card_wallets"])
+        # The validators get Tables: no DataFrame-to-Table lookup per check
+        self.lookup = {name: Table(df) for name, df in tables.items()}
+        self.lookup["card_wallets"] = self.card_wallets
         self.history: list[dict[str, Any]] = []
         self.daily_amount: dict[tuple[str, date], float] = defaultdict(float)
         self.daily_count: dict[tuple[str, date], int] = defaultdict(int)
@@ -88,39 +91,39 @@ class TransactionSimulator:
 
     def _checks(self) -> dict[str, list[Callable[[dict], dict]]]:
         """The validators of each group, bound to the tables."""
-        t = self
+        t, db = self, self.lookup
         return {
             "status_validations": [
-                lambda tx: status.validate_card_status(tx, t.t["cards"]),
-                lambda tx: status.validate_cardholder_status(tx, t.t["cards"], t.t["cardholders"]),
-                lambda tx: status.validate_establishment_status(tx, t.t["establishments"]),
-                lambda tx: status.validate_terminal_status(tx, t.t["terminals"]),
+                lambda tx: status.validate_card_status(tx, db["cards"]),
+                lambda tx: status.validate_cardholder_status(tx, db["cards"], db["cardholders"]),
+                lambda tx: status.validate_establishment_status(tx, db["establishments"]),
+                lambda tx: status.validate_terminal_status(tx, db["terminals"]),
                 lambda tx: status.validate_modality_active(
-                    tx, t.t["cards"], t.t["transaction_modalities"]
+                    tx, db["cards"], db["transaction_modalities"]
                 ),
-                lambda tx: status.validate_acquirer_active(tx, t.t["terminals"], t.t["acquirers"]),
+                lambda tx: status.validate_acquirer_active(tx, db["terminals"], db["acquirers"]),
             ],
             "temporal_validations": [
-                lambda tx: temporal.validate_card_expiration(tx, t.t["cards"]),
+                lambda tx: temporal.validate_card_expiration(tx, db["cards"]),
                 lambda tx: temporal.validate_cardholder_admission(
-                    tx, t.t["cards"], t.t["cardholders"]
+                    tx, db["cards"], db["cardholders"]
                 ),
-                lambda tx: temporal.validate_establishment_accreditation(tx, t.t["establishments"]),
-                lambda tx: temporal.validate_terminal_installation(tx, t.t["terminals"]),
+                lambda tx: temporal.validate_establishment_accreditation(tx, db["establishments"]),
+                lambda tx: temporal.validate_terminal_installation(tx, db["terminals"]),
             ],
             "security_validations": [security.validate_pin],
             "business_rules_validations": [
                 lambda tx: business.validate_mcc_brand(
-                    tx, t.t["cards"], t.t["establishments"], t.t["mcc_modalities"]
+                    tx, db["cards"], db["establishments"], db["mcc_modalities"]
                 ),
                 lambda tx: business.route_wallet(
                     tx,
-                    t.t["cards"],
-                    t.t["establishments"],
+                    db["cards"],
+                    db["establishments"],
                     t.card_wallets,
-                    t.t["wallets"],
-                    t.t["cnae_wallets"],
-                    t.t["mcc_wallets"],
+                    db["wallets"],
+                    db["cnae_wallets"],
+                    db["mcc_wallets"],
                 ),
             ],
             "balance_and_limits_validations": [
@@ -136,7 +139,7 @@ class TransactionSimulator:
                 ),
             ],
             "infrastructure_validations": [
-                lambda tx: infrastructure.validate_capture_type_support(tx, t.t["terminals"])
+                lambda tx: infrastructure.validate_capture_type_support(tx, db["terminals"])
             ],
         }
 
@@ -149,19 +152,19 @@ class TransactionSimulator:
         return tx["card_wallet_id"], tx["date"].year, tx["date"].month
 
     def authorize(self, tx: dict[str, Any]) -> dict[str, Any]:
-        """Answer one attempt: the first failing validator declines it."""
+        """Answer one attempt, in place: the first failing validator declines it."""
         for group in RULES["validation_order"]:
             for check in self.checks[group]:
                 result = check(tx)
                 if "card_wallet_id" in result:  # the routing chose the wallet
                     tx["card_wallet_id"] = result["card_wallet_id"]
                 if not result["passed"]:
-                    return tx | {
-                        "response_code": result["error_code"],
-                        "decline_reason": result["reason"],
-                    }
+                    tx["response_code"] = result["error_code"]
+                    tx["decline_reason"] = result["reason"]
+                    return tx
 
-        tx = tx | {"response_code": APPROVED, "authorization_code": authorization_code()}
+        tx["response_code"] = APPROVED
+        tx["authorization_code"] = authorization_code()
         self.history.append(debit(self.card_wallets, tx))
         self.daily_amount[self._day(tx)] += tx["amount"]
         self.daily_count[self._day(tx)] += 1
