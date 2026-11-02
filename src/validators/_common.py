@@ -37,10 +37,57 @@ def not_found(entity: str) -> dict[str, Any]:
     return fail(NOT_FOUND[entity], f"{entity}_not_found")
 
 
-def find_one(df: pl.DataFrame, **match: Any) -> dict[str, Any] | None:
+class Table:
+    """The rows of a DataFrame as dicts, indexed by the columns they are looked up
+    by (each index built on first use). Lookups are constant time, where a
+    DataFrame filter scans the whole table. Rows are shared by every index, so a
+    value changed in place (a balance) shows in all of them."""
+
+    def __init__(self, df: pl.DataFrame) -> None:
+        self.schema = df.schema
+        self.rows: list[dict[str, Any]] = df.to_dicts()
+        self._indexes: dict[tuple[str, ...], dict[tuple, list[dict[str, Any]]]] = {}
+
+    def find_all(self, **match: Any) -> list[dict[str, Any]]:
+        """Rows whose columns equal `match`."""
+        columns = tuple(sorted(match))
+        if columns not in self._indexes:
+            index: dict[tuple, list[dict[str, Any]]] = {}
+            for row in self.rows:
+                index.setdefault(tuple(row[c] for c in columns), []).append(row)
+            self._indexes[columns] = index
+        return self._indexes[columns].get(tuple(match[c] for c in columns), [])
+
+    def to_frame(self) -> pl.DataFrame:
+        return pl.DataFrame(self.rows, schema=self.schema)
+
+
+# A Table per DataFrame passed to a validator, kept with the DataFrame so that a
+# reused id() can't point to another one
+_TABLES: dict[int, tuple[pl.DataFrame, Table]] = {}
+
+
+def as_table(data: pl.DataFrame | Table) -> Table:
+    """`data` itself if a Table; otherwise the Table of that DataFrame, built once."""
+    if isinstance(data, Table):
+        return data
+    cached = _TABLES.get(id(data))
+    if cached is None or cached[0] is not data:
+        if len(_TABLES) > 64:
+            _TABLES.clear()
+        cached = _TABLES[id(data)] = (data, Table(data))
+    return cached[1]
+
+
+def find_all(data: pl.DataFrame | Table, **match: Any) -> list[dict[str, Any]]:
+    """Rows whose columns equal `match`."""
+    return as_table(data).find_all(**match)
+
+
+def find_one(data: pl.DataFrame | Table, **match: Any) -> dict[str, Any] | None:
     """First row whose columns equal `match`, or None."""
-    rows = df.filter(**match)
-    return rows.row(0, named=True) if rows.height else None
+    rows = find_all(data, **match)
+    return rows[0] if rows else None
 
 
 def transaction_date(transaction: dict[str, Any]) -> date:
