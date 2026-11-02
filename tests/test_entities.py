@@ -22,7 +22,7 @@ def _schema_columns(table: str) -> list[str]:
     """Columns of an OLTP table, without the audit columns the database fills."""
     from pathlib import Path
 
-    sql = (Path(__file__).parent.parent / "database/oltp_postgres/oltp_schema.sql").read_text()
+    sql = (Path(__file__).parent.parent / "database/oltp/oltp_schema.sql").read_text()
     body = sql.split(f"CREATE TABLE IF NOT EXISTS {table} (")[1].split(");")[0]
     columns = [line.split()[0] for line in body.strip().splitlines() if line.strip()]
     return [

@@ -1,7 +1,7 @@
 """`etl`: the OLTP database into the DuckDB star schema.
 
 The OLTP tables are staged in DuckDB as `stg_<table>` and transformed by
-plain SQL (`database/olap_duck/03_load.sql`); `04_views.sql` adds the
+plain SQL (`database/olap/03_load.sql`); `04_views.sql` adds the
 analytical views. Full refresh: a new database file each run.
 """
 
@@ -18,9 +18,9 @@ from src.postgres import read_chunks, read_table, table_schema
 
 log = logging.getLogger(__name__)
 
-OLAP_DIR = ROOT / "database" / "olap_duck"
+OLAP_DIR = ROOT / "database" / "olap"
 OLAP_SQL = ["01_dimensions.sql", "02_facts.sql", "03_load.sql", "04_views.sql"]
-OLAP_FILE = ROOT / load_database()["olap_duck"]["file_path"]
+OLAP_FILE = ROOT / load_database()["olap"]["file_path"]
 
 # OLTP tables the load reads
 STAGED = [

@@ -22,7 +22,7 @@ from src.sources import Sources
 
 log = logging.getLogger(__name__)
 
-OLTP_SCHEMA = ROOT / load_database()["oltp_postgres"]["schema"]
+OLTP_SCHEMA = ROOT / load_database()["oltp"]["schema"]
 # Filled by simulate (counted in the summary)
 SIMULATED_TABLES = ["balance_history", "transactions"]
 
