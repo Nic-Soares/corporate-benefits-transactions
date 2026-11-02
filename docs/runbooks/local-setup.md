@@ -92,7 +92,8 @@ uv run python -m src.main export   # quality checks, then data/final_datasets/
 ```
 
 `export` writes one Parquet file per table, `data_dictionary.md`,
-`quality_report.md` and `dataset_metadata.json` (seed, reference day, window, code
+`quality_report.md` (the checks and the statistical profile, each against
+`quality_profile` in the config) and `dataset_metadata.json` (seed, reference day, window, code
 commit, config and source hashes, row counts) into `data/final_datasets/` (git-ignored). If a check
 fails it writes nothing and names the check. After changing
 `database/olap_duck/dictionary.yaml`, regenerate the copy in `docs/`:

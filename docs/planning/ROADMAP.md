@@ -20,7 +20,7 @@
 | `EP-09` OLAP: Postgres → DuckDB | ✅ Done — merged into `develop` 2026-11-01 (ADR-012) | code + `database/olap_duck/` |
 | `EP-10` Dataset export and quality | ✅ Done — merged into `develop` 2026-11-01 (ADR-014) | code + `data/final_datasets/` |
 | `EP-11` Kaggle release | Not started — after `EP-12` | Kaggle |
-| `EP-12` Architecture review: a coherent dataset at volume | In progress | code, `config/`, `database/`, `.github/` |
+| `EP-12` Architecture review: a coherent dataset at volume | ✅ Done — merged into `develop` 2026-11-03 | code, `config/`, `database/`, `.github/` |
 
 ### Git workflow
 
@@ -587,4 +587,4 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] Result: a year at scale 4, 5.7 million transactions, `simulate` 7 min and 2.9 GB, every check passed
 
 ### ST-12.8 — Statistical profile
-- [ ] The quality report gains a profile: tickets per category (median, p90), hour and weekday curves, monthly approval and its range, decline mix, fraud share, geography, cards per cardholder; each against the expected range from the config, so a change that breaks the shape fails the export
+- [x] `src/pipeline/profile.py`: monthly approval (each month), median ticket per kind of place, restaurant peak hour and weekend dip, the share of declines for balance, reversals, purchases in the cardholder's state, the busiest fifth of the shops, the Christmas Eve lift; each against `quality_profile` in the config. The export fails when one is off and writes the profile into `quality_report.md` (70 checks on a full dataset)
