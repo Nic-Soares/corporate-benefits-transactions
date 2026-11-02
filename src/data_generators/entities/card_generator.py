@@ -30,7 +30,8 @@ class Card:
         program_id: str,
         issued_from: date | None = None,
     ) -> None:
-        """`issued_from`: earliest issue date (the cardholder's admission)."""
+        """`issued_from`: the cardholder's admission; the card comes a few days after
+        (`card_issue_days_after_admission`), no later than today."""
         self.id: str = fake.new_id("card")
         self.cardholder_id: str = cardholder_id
         self.program_id: str = program_id
@@ -38,11 +39,19 @@ class Card:
         self.card_number: str = "".join(str(random.randint(0, 9)) for _ in range(16))
         self.card_type: str = fake.weighted_choice("card_type_distribution")
         self.status: str = fake.status("card")
-        self.issue_date: date = fake.date_in_range("card_issuance", issued_from)
+        delay = fake.SETTINGS["card_issue_days_after_admission"]
+        admission = issued_from or fake.date_in_range("cardholder_admission")
+        self.issue_date: date = min(
+            admission + timedelta(days=random.randint(delay["min"], delay["max"])),
+            fake.reference_date,
+        )
 
+        # Renewed on expiry: the current plastic expires after today
         validity = fake.SETTINGS["card_validity_years"]
-        years = random.randint(validity["min"], validity["max"])
-        self.expiration_date: date = self.issue_date + timedelta(days=365 * years)
+        plastic = timedelta(days=365 * random.randint(validity["min"], validity["max"]))
+        self.expiration_date: date = self.issue_date + plastic
+        while self.expiration_date <= fake.reference_date:
+            self.expiration_date += plastic
 
     def to_dict(self) -> dict[str, str | date]:
         """Columns of the `cards` table; the card number is stored hashed."""

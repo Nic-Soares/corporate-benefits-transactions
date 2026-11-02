@@ -46,6 +46,16 @@ uv run python -m src.main setup --seed 42 --today 2026-10-30    # schema + refer
 uv run python -m src.main simulate --seed 42 --today 2026-10-30 # 90 days of transactions
 ```
 
+A full year, from 2025-09-01 to 2026-08-31: the window is the `--days` before
+`--today`, so `--today 2026-09-01 --days 365` (same `--today` in `setup`).
+About 5 minutes for `simulate` and 4 GB of memory; 2.5 million transactions
+and about 280 MB of Parquet.
+
+```bash
+uv run python -m src.main setup --seed 42 --today 2026-09-01 --reset
+uv run python -m src.main simulate --seed 42 --today 2026-09-01 --days 365
+```
+
 `setup` creates the 17 OLTP tables, upserts the reference tables from
 `config/` and writes the generated entities, then prints the rows per table.
 The first run downloads the public sources into `data/raw/` (CNAE from
