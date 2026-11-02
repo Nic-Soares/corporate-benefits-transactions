@@ -560,8 +560,8 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] Removed `infrastructure/schema/schema_creator.py`, `infrastructure/database/duckdb_manager.py`, `utils/csv_utils.py`, `utils/parquet_utils.py`, the loaders used only by tests (`capture_technologies`, `segment`), the unused `segments` list and the unused keys of `config/database.yaml`
 
 ### ST-12.2 — Reproducible dataset
-- [ ] The export writes `dataset_metadata.json`: seed, reference day, window, code commit, config hash, source files and their hashes, row counts
-- [ ] Public sources pinned: the IBGE and MCC files the setup used are versioned (a manifest with hashes), and the setup refuses changed files unless told to refresh
+- [x] The export writes `dataset_metadata.json`: seed, reference day, window, code commit (`-dirty` with local changes), config hash, source hashes, row counts (`src/pipeline/provenance.py`, OLTP table `run_metadata`, carried by the ETL)
+- [x] Public sources pinned: the `data/raw/*.parquet` files are versioned in git (about 200 KB, public data); delete one to download a newer version
 
 ### ST-12.3 — One acceptance rule
 - [ ] One module answers "which wallets does this establishment take on this network", used by the generator and the issuer; inactive rules count in both; `OPEN_WALLET` defined once

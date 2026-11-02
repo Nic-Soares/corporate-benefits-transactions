@@ -1,9 +1,10 @@
 """`setup` against the real Postgres (`pytest -m db`), in a scratch schema rolled back."""
 
-from datetime import date
+from datetime import date, timedelta
 
 import pytest
 
+from src.pipeline import provenance
 from src.pipeline.setup import SetupError, run_setup
 
 VOLUMES = {"companies": 6, "cardholder_scale": 0.02, "establishments": 40, "terminals": 50}
@@ -105,3 +106,8 @@ def test_etl_after_simulate(conn, sources, tmp_path):
     assert counts["fact_balance_movements"] == summary["balance_history"]
     with duckdb.connect(str(tmp_path / "olap.duckdb"), read_only=True) as duck:
         assert duck.sql("SELECT count(*) FROM v_declines").fetchall()[0][0] > 0
+        run = provenance.read(duck.sql("SELECT key, value FROM run_metadata").fetchall())
+    # how the data was made travels with it
+    assert run["seed"] == 1 and run["reference_date"] == str(TODAY)
+    assert run["window_days"] == 30 and run["window_end"] == str(TODAY - timedelta(days=1))
+    assert run["sources"] and run["setup_config_hash"] == run["simulate_config_hash"]

@@ -252,6 +252,13 @@ CREATE TABLE IF NOT EXISTS balance_history (
   FOREIGN KEY (transaction_id) REFERENCES transactions(id)
 );
 
+-- How the data was made: seed, reference day, window, code, config and
+-- sources (src/pipeline/provenance.py); one JSON value per key
+CREATE TABLE IF NOT EXISTS run_metadata (
+  key VARCHAR PRIMARY KEY,
+  value VARCHAR NOT NULL
+);
+
 -- ============================================================================
 -- INDEXES FOR PERFORMANCE
 -- ============================================================================

@@ -1,4 +1,8 @@
-"""The public data the setup needs, cached in `data/raw` after the first download."""
+"""The public data the setup needs, cached in `data/raw` after the first download.
+
+The cached files are versioned, so the same seed gives the same dataset on any
+machine; their hashes go into `run_metadata` (`provenance.source_hashes`).
+Delete a file to download a newer version."""
 
 import logging
 from dataclasses import dataclass
