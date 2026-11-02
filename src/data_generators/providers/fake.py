@@ -73,13 +73,12 @@ def status(entity: str) -> str:
 
 def status_since(status: str, start: date) -> date:
     """The day `status` began: the record's start when active; otherwise a day
-    from the start to today, no more than `status_since_max_days` back for a
-    status that doesn't last (a terminal in maintenance)."""
+    from the start to today, leaning to early in the record's life
+    (`status_since_skew`)."""
     if status == "active":
         return start
-    limit = SETTINGS["status_since_max_days"].get(status)
-    earliest = max(start, reference_date - timedelta(days=limit)) if limit else start
-    return date_between(min(earliest, reference_date), reference_date)
+    span = max((reference_date - start).days, 0)
+    return start + timedelta(days=round(span * random.random() ** SETTINGS["status_since_skew"]))
 
 
 class Municipalities:

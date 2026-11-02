@@ -202,3 +202,21 @@ def test_year_end_credit(world, transaction_generator):
     assert (extra["wallet_id"] == seasons.YEAR_END_CREDIT["wallet"]).all()
     for amount, company_id in extra.select("operation_amount", "company_id").iter_rows():
         assert amount == seasons.year_end_credit(company_id, 2025)
+
+
+def test_opening_balances(world, transaction_generator):
+    """Wallets in use before the window open with a balance; savers have more."""
+    generator = transaction_generator(world, days_back=45)
+    opening = generator.opening_balances()
+    wallets = world["card_wallets"]
+    before = wallets.filter(pl.col("activation_date") < START.date())
+    assert set(opening) == set(before["id"])
+    assert all(balance >= 0 for balance in opening.values())
+    credit = dict(wallets.select("id", "monthly_credit").iter_rows())
+    id_of = generator.card_wallet_id
+    savers = [
+        opening[id_of[key]] / credit[id_of[key]]
+        for key in id_of
+        if id_of[key] in opening and generator.ratio_of.get(key[0], 1) < 1
+    ]
+    assert max(savers) > 0.5

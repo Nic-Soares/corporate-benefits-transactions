@@ -279,9 +279,17 @@ class TransactionSimulator:
         return reversal
 
     def run(
-        self, attempts: list[dict[str, Any]], start: datetime, end: datetime
+        self,
+        attempts: list[dict[str, Any]],
+        start: datetime,
+        end: datetime,
+        opening: dict[str, float] | None = None,
     ) -> SimulationResult:
-        """Credits, attempts and reversals in time order within [start, end)."""
+        """Credits, attempts and reversals in time order within [start, end).
+        `opening`: balances at the start by card wallet id (else the tables')."""
+        for row in self.card_wallets.rows:
+            if opening and row["id"] in opening:
+                row["current_balance"] = opening[row["id"]]
         events: list[tuple[datetime, int, str, Any]] = []
         for moment in credit_moments(start, end):
             events.append((moment, 0, "credit", None))
