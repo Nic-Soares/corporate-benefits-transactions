@@ -11,8 +11,10 @@ the wallet and answers later (`src/validators/`).
 
 import math
 import random
+from bisect import bisect_left, bisect_right
 from datetime import date, datetime, timedelta
 from itertools import accumulate
+from typing import NamedTuple
 
 import polars as pl
 
@@ -35,6 +37,14 @@ PHYSICAL_CAPTURES = {
     if rule["requires_physical_card"]
 }
 PIN_CAPTURES = {"CHIP", "MAG_STRIPE"}
+# Terminal types a virtual card can't use: every capture needs the plastic
+PHYSICAL_TERMINALS = {
+    kind
+    for kind, captures in USAGE["capture_by_terminal_type"].items()
+    if not set(captures) - PHYSICAL_CAPTURES
+}
+# Draws of a pool before giving up on a terminal that fits the day and the card
+DRAWS = 20
 PROPRIETARY_MODALITIES = {
     m["id"] for m in _REFERENCE["transaction_modalities"] if m["type"] == "proprietary_network"
 }
@@ -116,6 +126,18 @@ def pin_status(capture_type: str) -> str:
     return "wrong" if random.random() < USAGE["wrong_pin_ratio"] else "ok"
 
 
+class Pool(NamedTuple):
+    """Terminals with their weights, and the cumulative weights to draw from."""
+
+    terminals: list[dict]
+    weights: list[float]
+    cum: list[float]
+
+
+def _pool(terminals: list[dict], weights: list[float]) -> Pool:
+    return Pool(terminals, weights, list(accumulate(weights)))
+
+
 def _activity(sigma: float, active: bool) -> float:
     weight = random.lognormvariate(0, sigma)
     return weight if active else weight * USAGE["inactive_usage_factor"]
@@ -146,7 +168,9 @@ class TransactionGenerator:
         ).to_dicts()
         end = datetime.combine(fake.reference_date, datetime.min.time())
         self.days = [end - timedelta(days=d) for d in range(days_back, 0, -1)]
+        self.dates = [day.date() for day in self.days]
         self.day_weights = [self._day_weight(day) for day in self.days]
+        self.day_cum = list(accumulate(self.day_weights))
 
         # The wallets a cardholder means to use: the active ones (all, if none is)
         self.wallets_by_card: dict[str, set[str]] = {}
@@ -170,10 +194,9 @@ class TransactionGenerator:
             id_: _activity(USAGE["establishment_popularity_sigma"], e["status"] == "active")
             for id_, e in establishments.items()
         }
-        self.terminals: dict[str, list[dict]] = {}
-        self.terminal_weights: dict[str, list[float]] = {}
-        self.local: dict[tuple, tuple[list[dict], list[float]]] = {}
-        self.fitting: dict[tuple, tuple[list[dict], list[float]]] = {}
+        everywhere: dict[str, tuple[list[dict], list[float]]] = {}
+        local: dict[tuple, tuple[list[dict], list[float]]] = {}
+        fitting: dict[tuple, tuple[list[dict], list[float]]] = {}
         self.open: set[tuple] = set()
         for t in terminals_df.select(
             "id", "establishment_id", "type", "status", "installation_date"
@@ -183,24 +206,28 @@ class TransactionGenerator:
             weight = popularity[t["establishment_id"]]
             if t["status"] != "active":
                 weight *= USAGE["inactive_usage_factor"]
-            # Like a card, in proportion to the days it was installed
-            weight *= sum(day.date() >= t["installation_date"] for day in self.days) / days_back
-            if not weight:
-                continue
-            self.terminals.setdefault(category, []).append(t)
-            self.terminal_weights.setdefault(category, []).append(weight)
+            if t["installation_date"] > self.dates[-1]:
+                continue  # installed after the window
             working = t["status"] == "active" and shop["status"] == "active"
             places = [(category, shop["city"], shop["state"]), (category, shop["state"])]
             scopes = accepted_wallets(shop["main_cnae"], shop["mcc_code"])
-            keys = [(self.local, key) for key in places] + [
-                (self.fitting, (scope, *key)) for scope in scopes for key in [(category,), *places]
-            ]
+            keys = (
+                [(everywhere, category)]
+                + [(local, key) for key in places]
+                + [(fitting, (scope, *key)) for scope in scopes for key in [(category,), *places]]
+            )
             for pools, key in keys:
                 terminals, weights = pools.setdefault(key, ([], []))
                 terminals.append(t)
                 weights.append(weight)
                 if working:
                     self.open.add(key)
+        # A terminal installed in the window is drawn only on the days after
+        # (`_terminal`), so it takes its share of those days and no more
+        self.everywhere = {key: _pool(*pool) for key, pool in everywhere.items()}
+        self.terminals = {key: pool.terminals for key, pool in self.everywhere.items()}
+        self.local = {key: _pool(*pool) for key, pool in local.items()}
+        self.fitting = {key: _pool(*pool) for key, pool in fitting.items()}
 
         # Who buys: one slot per active wallet of a card, weighted by the
         # attempts a month it makes, the days the wallet was activated in the
@@ -224,7 +251,7 @@ class TransactionGenerator:
                 if (card["id"], wallet) not in credit or not self._places(wallet, network):
                     continue
                 start = self._usable_from(card, wallet)
-                alive = sum(day.date() >= start for day in self.days) / days_back
+                alive = (len(self.dates) - bisect_left(self.dates, start)) / days_back
                 if not alive:
                     continue
                 monthly = credit[card["id"], wallet] * ratio / wallet_mean_ticket(wallet, network)
@@ -304,29 +331,46 @@ class TransactionGenerator:
                 return "MOBILE_NFC"
         return fake.weighted_key(weights)
 
-    def _moment(self, category: str, earliest: date) -> datetime:
-        """A day of the window from `earliest` on, then an hour of the category's day."""
-        days = [
-            (d, w) for d, w in zip(self.days, self.day_weights, strict=True) if d.date() >= earliest
-        ]
-        days = days or [(self.days[-1], 1.0)]
-        day = random.choices([d for d, _ in days], weights=[w for _, w in days])[0]
+    def _day(self, earliest: date) -> datetime:
+        """A day of the window from `earliest` on, by the day weights (the last
+        day when `earliest` is after the window)."""
+        first = bisect_left(self.dates, earliest)
+        if first == len(self.days):
+            return self.days[-1]
+        low = self.day_cum[first - 1] if first else 0.0
+        point = low + random.random() * (self.day_cum[-1] - low)
+        return self.days[min(bisect_right(self.day_cum, point, first), len(self.days) - 1)]
+
+    @staticmethod
+    def _at(day: datetime, category: str) -> datetime:
+        """A moment of `day` at an hour of the category's day."""
         hours = USAGE["hour_weights_by_category"].get(category, USAGE["hour_weights"])
         hour = random.choices(range(24), weights=hours)[0]
         return day + timedelta(hours=hour, seconds=random.randint(0, 3599))
 
-    def _everywhere(self, category: str) -> tuple[list[dict], list[float]]:
-        return self.terminals[category], self.terminal_weights[category]
+    def _moment(self, category: str, earliest: date) -> datetime:
+        """A day of the window from `earliest` on, then an hour of the category's day."""
+        return self._at(self._day(earliest), category)
 
-    def _nearby(
-        self, category: str, card: dict, wallet: str | None = None
-    ) -> tuple[list[dict], list[float]]:
+    @staticmethod
+    def _terminal(pool: Pool, day: datetime, virtual: bool) -> dict | None:
+        """A terminal of the pool by weight, installed by `day` and, for a virtual
+        card, with a capture it can use; None when a few draws find none."""
+        for _ in range(DRAWS):
+            terminal = random.choices(pool.terminals, cum_weights=pool.cum)[0]
+            if terminal["installation_date"] <= day.date() and not (
+                virtual and terminal["type"] in PHYSICAL_TERMINALS
+            ):
+                return terminal
+        return None
+
+    def _nearby(self, category: str, card: dict, wallet: str | None = None) -> Pool:
         """The category's terminals in the cardholder's city, else state, most of the
         time (`local_purchase_ratio`); anywhere otherwise and for online businesses.
         Mostly (`known_acceptance_ratio`) only shops that take the wallet, and near
         home only where some terminal works."""
         pools, scope = self.local, ()
-        everywhere = self.terminals[category], self.terminal_weights[category]
+        everywhere = self.everywhere[category]
         if wallet and random.random() < USAGE["known_acceptance_ratio"]:
             scope = ((self._network(card), wallet),)
             if (*scope, category) in self.fitting:
@@ -346,28 +390,23 @@ class TransactionGenerator:
         """One attempt: columns of `transactions`, before the issuer answers."""
         card, wallet = random.choices(self.slots, cum_weights=self.slot_cum_weights)[0]
         category = self._category(card, wallet)
-        terminals, weights = self._nearby(category, card, wallet)
-        if card["card_type"] == "virtual":
-            # A virtual card goes where it can be used: nearby if there is such a
-            # terminal, else anywhere in the category
-            for pool in ((terminals, weights), self._everywhere(category)):
-                usable = [
-                    (t, w)
-                    for t, w in zip(*pool, strict=True)
-                    if set(USAGE["capture_by_terminal_type"][t["type"]]) - PHYSICAL_CAPTURES
-                ]
-                if usable:
-                    terminals, weights = [t for t, _ in usable], [w for _, w in usable]
-                    break
-        terminal = random.choices(terminals, weights=weights)[0]
+        # The day first (once the wallet is usable), then a terminal installed by
+        # then: nearby if there is one, else anywhere in the category. A virtual
+        # card goes where it can be used
+        day = self._day(self._usable_from(card, wallet))
+        virtual = card["card_type"] == "virtual"
+        terminal = self._terminal(
+            self._nearby(category, card, wallet), day, virtual
+        ) or self._terminal(self.everywhere[category], day, virtual)
+        if terminal is None:  # none installed yet: a day after one is
+            pool = self.everywhere[category]
+            terminal = random.choices(pool.terminals, cum_weights=pool.cum)[0]
+            day = self._day(max(day.date(), terminal["installation_date"]))
         return self.attempt(
             card,
             category,
             terminal,
-            # Not before the wallet is usable or the terminal is installed
-            self._moment(
-                category, max(self._usable_from(card, wallet), terminal["installation_date"])
-            ),
+            self._at(day, category),
             self._capture(terminal["type"], card["card_type"]),
             wallet=wallet,
         )

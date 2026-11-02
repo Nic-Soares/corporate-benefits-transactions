@@ -67,11 +67,14 @@ def validate_mcc_brand(
 
 def _accepted_by_cnae(cnae: str, cnae_wallets_df: pl.DataFrame | Table) -> set[str]:
     """Wallets the CNAE takes: the active rules of its longest matching prefix."""
-    matching = [r for r in as_table(cnae_wallets_df).rows if cnae.startswith(r["cnae_code"])]
-    if not matching:
-        return set()
-    longest = max(len(r["cnae_code"]) for r in matching)
-    return {r["wallet_id"] for r in matching if len(r["cnae_code"]) == longest and r["active"]}
+    table = as_table(cnae_wallets_df)
+    if cnae not in table.memo:
+        matching = [r for r in table.rows if cnae.startswith(r["cnae_code"])]
+        longest = max((len(r["cnae_code"]) for r in matching), default=0)
+        table.memo[cnae] = {
+            r["wallet_id"] for r in matching if len(r["cnae_code"]) == longest and r["active"]
+        }
+    return table.memo[cnae]
 
 
 def route_wallet(

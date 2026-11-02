@@ -483,6 +483,12 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] Off-pattern attempts of proprietary-network cards never go to a cash machine (they can't withdraw)
 - [x] `balance_history.sequence_number` / `fact_balance_movements.sequence_number`: the order of the movements, so two at the same second chain correctly; the ledger checks use it
 
+### ST-08.9 — Day first, then the terminal (2026-11-02)
+
+- [x] An attempt draws its day first, then a terminal installed by that day (`TransactionGenerator._terminal`). Before, the terminal came first and pushed the day past its installation: terminals installed in the window piled extra attempts on the last months, and on a year the approval fell from 89% to 84%. Now it holds at 86–87% every month
+- [x] A branch is registered after its holding (83 were before)
+- [x] Faster on a year (2.5 million attempts): the day is drawn by bisection over cumulative weights, pools keep cumulative weights, the validators get `Table`s, the CNAE acceptance is memoized, attempts are answered in place. Generation and answers take about 1.5 minutes instead of 5
+
 ---
 
 ## EP-09 — OLAP: Postgres → DuckDB
