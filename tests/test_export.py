@@ -8,12 +8,12 @@ import duckdb
 import polars as pl
 import pytest
 
-from src.data_generators.entities.fraud_generator import FraudGenerator
 from src.data_generators.providers import fake
 from src.pipeline import export
 from src.pipeline.etl import OLAP_DIR, OLAP_TABLES, build_olap
 from src.pipeline.reference import build_reference_tables
-from src.processors.transaction_simulator import TransactionSimulator
+from src.simulation.fraud import FraudGenerator
+from src.simulation.simulator import TransactionSimulator
 
 TODAY = date(2026, 10, 30)
 DOCS_DICTIONARY = Path(__file__).parent.parent / "docs" / "data-dictionary.md"

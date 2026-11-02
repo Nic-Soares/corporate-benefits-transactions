@@ -5,10 +5,11 @@ from datetime import date, datetime, timedelta
 import polars as pl
 import pytest
 
-from src.data_generators.providers import fake, seasons
+from src.data_generators.providers import fake
 from src.pipeline.reference import build_reference_tables
-from src.processors import transaction_simulator
-from src.processors.transaction_simulator import (
+from src.simulation import seasons
+from src.simulation import simulator as transaction_simulator
+from src.simulation.simulator import (
     TransactionSimulator,
     credit_moments,
     first_credit,

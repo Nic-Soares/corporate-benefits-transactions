@@ -22,9 +22,10 @@ from typing import Any
 
 import polars as pl
 
-from src.data_generators.providers import fake, seasons
-from src.processors.balance import HISTORY_SCHEMA, credit, debit, reverse
-from src.processors.disputes import mark_disputes
+from src.data_generators.providers import fake
+from src.simulation import seasons
+from src.simulation.balance import HISTORY_SCHEMA, credit, debit, reverse
+from src.simulation.disputes import mark_disputes
 from src.utils.read_yamls import load_simulation_config
 from src.validators import balance_and_limits_validations as balance
 from src.validators import business_rules_validators as business

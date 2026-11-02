@@ -2,7 +2,7 @@
 
 from datetime import date
 
-from src.data_generators.providers import seasons
+from src.simulation import seasons
 
 
 def test_easter_and_the_holidays_it_moves():

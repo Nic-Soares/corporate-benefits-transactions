@@ -20,8 +20,9 @@ from typing import NamedTuple
 import polars as pl
 
 from src.data_generators.entities.establishment_generator import CATEGORIES
-from src.data_generators.providers import fake, seasons
+from src.data_generators.providers import fake
 from src.domain.acceptance import OPEN_WALLET, Acceptance
+from src.simulation import seasons
 from src.utils.read_yamls import (
     load_business_rules,
     load_pre_populated_data,
