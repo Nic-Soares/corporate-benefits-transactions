@@ -42,23 +42,35 @@ PROPRIETARY_MODALITIES = {
 NATURAL_OPTION = {"supermarket": "FOOD", "food_retail": "FOOD", "restaurant": "MEAL"}
 
 
+MCC_WALLETS = {
+    wallet: set(mccs) for wallet, mccs in _REFERENCE["mcc_wallets"].items() if mccs != "any"
+}
+
+
 def _category_wallets() -> dict[str, dict[str, set[str]]]:
     """Wallets each category takes, per network: by its CNAEs (own) and MCCs (brand)."""
     cnae_wallets = _REFERENCE["cnae_wallets"]
-    mcc_wallets = {
-        wallet: set(mccs) for wallet, mccs in _REFERENCE["mcc_wallets"].items() if mccs != "any"
-    }
     result = {}
     for name, category in CATEGORIES.items():
         own = {w for cnae, ws in cnae_wallets.items() if _in(cnae, category) for w in ws}
         mccs = {mcc for cnae, mcc in _REFERENCE["cnae_mcc"].items() if _in(cnae, category)}
-        brand = {wallet for wallet, codes in mcc_wallets.items() if codes & mccs}
+        brand = {wallet for wallet, codes in MCC_WALLETS.items() if codes & mccs}
         result[name] = {"own": own, "brand": brand}
     return result
 
 
 def _in(cnae: str, category: dict) -> bool:
     return any(cnae.startswith(prefix) for prefix in category["cnae"])
+
+
+def accepted_wallets(cnae: str, mcc: str) -> set[tuple[str, str]]:
+    """(network, wallet) pairs an establishment takes: on the proprietary network
+    the wallets of its CNAE's longest matching prefix, on a brand the wallets of
+    its MCC plus the open one."""
+    prefixes = [p for p in _REFERENCE["cnae_wallets"] if cnae.startswith(p)]
+    own = _REFERENCE["cnae_wallets"][max(prefixes, key=len)] if prefixes else []
+    brand = {w for w, codes in MCC_WALLETS.items() if mcc in codes} | {OPEN_WALLET}
+    return {("own", w) for w in own} | {("brand", w) for w in brand}
 
 
 CATEGORY_WALLETS = _category_wallets()
@@ -149,23 +161,25 @@ class TransactionGenerator:
             self.wallets_by_card.setdefault(card_id, wallets)
 
         # Terminals of each category, weighted by the shop's popularity; also
-        # indexed by the shop's city and state, for purchases near home
+        # indexed by the shop's city and state, for purchases near home. The
+        # same pools per (network, wallet) the shop takes are in `fitting`,
+        # keyed ((network, wallet), category[, city], state). `open` holds the
+        # pool keys with a working terminal (active, in an active shop).
+        establishments = {row["id"]: row for row in establishments_df.to_dicts()}
         popularity = {
-            row["id"]: _activity(USAGE["establishment_popularity_sigma"], row["status"] == "active")
-            for row in establishments_df.select("id", "status").iter_rows(named=True)
-        }
-        category_of = dict(establishments_df.select("id", "category").iter_rows())
-        place_of = {
-            row["id"]: (row["city"], row["state"])
-            for row in establishments_df.select("id", "city", "state").iter_rows(named=True)
+            id_: _activity(USAGE["establishment_popularity_sigma"], e["status"] == "active")
+            for id_, e in establishments.items()
         }
         self.terminals: dict[str, list[dict]] = {}
         self.terminal_weights: dict[str, list[float]] = {}
         self.local: dict[tuple, tuple[list[dict], list[float]]] = {}
+        self.fitting: dict[tuple, tuple[list[dict], list[float]]] = {}
+        self.open: set[tuple] = set()
         for t in terminals_df.select(
             "id", "establishment_id", "type", "status", "installation_date"
         ).to_dicts():
-            category = category_of[t["establishment_id"]]
+            shop = establishments[t["establishment_id"]]
+            category = shop["category"]
             weight = popularity[t["establishment_id"]]
             if t["status"] != "active":
                 weight *= USAGE["inactive_usage_factor"]
@@ -175,11 +189,18 @@ class TransactionGenerator:
                 continue
             self.terminals.setdefault(category, []).append(t)
             self.terminal_weights.setdefault(category, []).append(weight)
-            city, state = place_of[t["establishment_id"]]
-            for key in ((category, city, state), (category, state)):
-                terminals, weights = self.local.setdefault(key, ([], []))
+            working = t["status"] == "active" and shop["status"] == "active"
+            places = [(category, shop["city"], shop["state"]), (category, shop["state"])]
+            scopes = accepted_wallets(shop["main_cnae"], shop["mcc_code"])
+            keys = [(self.local, key) for key in places] + [
+                (self.fitting, (scope, *key)) for scope in scopes for key in [(category,), *places]
+            ]
+            for pools, key in keys:
+                terminals, weights = pools.setdefault(key, ([], []))
                 terminals.append(t)
                 weights.append(weight)
+                if working:
+                    self.open.add(key)
 
         # Who buys: one slot per active wallet of a card, weighted by the
         # attempts a month it makes, the days the card existed in the window,
@@ -284,23 +305,35 @@ class TransactionGenerator:
     def _everywhere(self, category: str) -> tuple[list[dict], list[float]]:
         return self.terminals[category], self.terminal_weights[category]
 
-    def _nearby(self, category: str, card: dict) -> tuple[list[dict], list[float]]:
+    def _nearby(
+        self, category: str, card: dict, wallet: str | None = None
+    ) -> tuple[list[dict], list[float]]:
         """The category's terminals in the cardholder's city, else state, most of the
-        time (`local_purchase_ratio`); anywhere otherwise and for online businesses."""
+        time (`local_purchase_ratio`); anywhere otherwise and for online businesses.
+        Mostly (`known_acceptance_ratio`) only shops that take the wallet, and near
+        home only where some terminal works."""
+        pools, scope = self.local, ()
         everywhere = self.terminals[category], self.terminal_weights[category]
+        if wallet and random.random() < USAGE["known_acceptance_ratio"]:
+            scope = ((self._network(card), wallet),)
+            if (*scope, category) in self.fitting:
+                pools, everywhere = self.fitting, self.fitting[(*scope, category)]
+            else:
+                scope = ()
         online = CATEGORIES[category].get("online")
         if online or random.random() >= USAGE["local_purchase_ratio"]:
             return everywhere
         city, state = self.home[card["cardholder_id"]]
-        return self.local.get((category, city, state)) or self.local.get(
-            (category, state), everywhere
-        )
+        for key in ((*scope, category, city, state), (*scope, category, state)):
+            if key in self.open:
+                return pools[key]
+        return everywhere
 
     def generate(self) -> dict:
         """One attempt: columns of `transactions`, before the issuer answers."""
         card, wallet = random.choices(self.slots, cum_weights=self.slot_cum_weights)[0]
         category = self._category(card, wallet)
-        terminals, weights = self._nearby(category, card)
+        terminals, weights = self._nearby(category, card, wallet)
         if card["card_type"] == "virtual":
             # A virtual card goes where it can be used: nearby if there is such a
             # terminal, else anywhere in the category
