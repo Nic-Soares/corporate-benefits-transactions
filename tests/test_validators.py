@@ -4,6 +4,7 @@ import polars as pl
 import pytest
 
 from src.processors.balance import credit, debit
+from src.validators._common import Table, find_all, find_one
 from src.validators.balance_and_limits_validations import (
     validate_current_balance,
     validate_daily_count,
@@ -363,15 +364,16 @@ def test_daily_count(tx, data):
 
 
 def test_debit(tx, data):
-    card_wallets, history = debit(data["card_wallets"], tx)
+    card_wallets = Table(data["card_wallets"])
+    history = debit(card_wallets, tx)
 
-    meal = card_wallets.filter(id="cw_1").row(0, named=True)
-    assert meal["current_balance"] == 450.0
+    assert find_one(card_wallets, id="cw_1")["current_balance"] == 450.0
     assert history["card_wallet_id"] == "cw_1"
     assert history["operation_type"] == "purchase"
     assert (history["previous_balance"], history["posterior_balance"]) == (500.0, 450.0)
     # only that wallet moved
-    others = card_wallets.filter(pl.col("id") != "cw_1")["current_balance"]
+    after = card_wallets.to_frame()
+    others = after.filter(pl.col("id") != "cw_1")["current_balance"]
     assert (
         others.to_list()
         == data["card_wallets"].filter(pl.col("id") != "cw_1")["current_balance"].to_list()
@@ -380,13 +382,25 @@ def test_debit(tx, data):
 
 def test_credit(data):
     moment = datetime(2026, 7, 1, 6, 0)
-    card_wallets, history = credit(data["card_wallets"], "cw_9", moment)
+    card_wallets = Table(data["card_wallets"])
+    history = credit(card_wallets, "cw_9", moment)
 
-    assert card_wallets.filter(id="cw_9")["current_balance"].item() == 880.0
+    assert find_one(card_wallets, id="cw_9")["current_balance"] == 880.0
     assert history["operation_type"] == "credit"
     assert history["transaction_id"] is None
     assert (history["previous_balance"], history["posterior_balance"]) == (80.0, 880.0)
     assert history["operation_date"] == moment
+
+
+def test_table_lookups(data):
+    """A Table finds the same rows as a filter, and sees a value changed in place."""
+    card_wallets = Table(data["card_wallets"])
+    rows = find_all(card_wallets, card_id="card_brand")
+    assert rows == data["card_wallets"].filter(card_id="card_brand").to_dicts()
+    assert find_one(card_wallets, id="missing") is None
+    rows[0]["current_balance"] = 1.0
+    assert find_one(card_wallets, id=rows[0]["id"])["current_balance"] == 1.0
+    assert card_wallets.to_frame().schema == data["card_wallets"].schema
 
 
 # --- infrastructure -------------------------------------------------------

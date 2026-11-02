@@ -6,15 +6,16 @@
 # taken from one.
 # =====================================
 
-# Volumes — Not read by the code yet (EP-07). Cardholders follow each
-# company's segment and cards follow its program bundle.
+# Volumes of the setup. Cardholders follow each company's segment and cards
+# follow its program bundle: with seed 42, about 9 thousand cardholders, 12
+# thousand cards and 380 thousand attempts in 90 days.
 data_volumes:
-  companies: 30
+  companies: 200
   # Share of each company's headcount that is generated: a Corporate client
   # has thousands of employees, more than a dataset needs
   cardholder_scale: 0.1
-  establishments: 300
-  terminals: 450
+  establishments: 2000
+  terminals: 3000
   # No attempt count: the volume follows the credits (usage_patterns.spend_profile)
 
 # Expected share of approved attempts — checked by the simulator (EP-08)
