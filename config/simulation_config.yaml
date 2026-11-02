@@ -122,10 +122,11 @@ generation_settings:
     inactive: 0.05
     maintenance: 0.05
 
-  # A record not active was active until its status began (`status_since`):
-  # any day since its start, or at most these days back for a status that
-  # doesn't last
-  status_since_max_days: {maintenance: 30, suspended: 180}
+  # A record not active was active until its status began (`status_since`),
+  # a day between its start and today drawn as start + U^skew of the span:
+  # above 1 it leans to early in the record's life, so the share of records
+  # out of use barely grows within a simulated year (none comes back)
+  status_since_skew: 3.0
 
   # Acquirer of a physical terminal: a few large ones and a tail
   acquirer_distribution:
@@ -247,6 +248,9 @@ usage_patterns:
   seasonality:
     # January to December: vacations early in the year, Black Friday, Christmas
     month_weights: [0.94, 0.95, 1.00, 1.00, 1.02, 1.00, 1.00, 1.00, 1.00, 1.00, 1.03, 1.10]
+    # Each month of the window also draws its own intensity (log-normal with
+    # this sigma): some months spend more than others, and approve less
+    month_noise_sigma: 0.08
     holiday: {all: 1.25, supermarket: 1.30, food_retail: 1.25, fuel: 1.40, restaurant: 1.65}
     eve: {all: 1.10, supermarket: 1.45, food_retail: 1.30, fuel: 1.35}
     special_days:
@@ -263,7 +267,13 @@ usage_patterns:
   spend_profile:
     saver_share: 0.10
     saver: {min: 0.10, max: 0.50}
-    spender: {min: 1.00, max: 1.50}
+    spender: {min: 1.00, max: 1.35}
+  # Balance of a wallet in use when the window starts, as a share of its
+  # credit: a spender keeps a little of past months; a saver what built up,
+  # (1 - ratio) a month for up to `saver_months` months
+  opening_balance:
+    spender_leftover: {min: 0.10, max: 0.40}
+    saver_months: 12
   # Share of in-person purchases in the cardholder's city (else state, when
   # the kind of place exists there); online businesses are anywhere
   local_purchase_ratio: 0.8

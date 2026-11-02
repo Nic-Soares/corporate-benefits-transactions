@@ -63,7 +63,9 @@ def run_simulation(conn: psycopg.Connection, seed: int, today: date, days: int) 
     log.info("%s attempts generated (%s in fraud incidents)", f"{len(attempts):,}", len(fraud))
 
     end = datetime.combine(today, time())
-    result = TransactionSimulator(tables).run(attempts, end - timedelta(days=days), end)
+    result = TransactionSimulator(tables).run(
+        attempts, end - timedelta(days=days), end, generator.opening_balances()
+    )
     log.info("Attempts answered")
 
     copy_dataframe(conn, "transactions", result.transactions)
