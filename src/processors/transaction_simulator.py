@@ -19,7 +19,7 @@ from typing import Any
 import polars as pl
 
 from src.data_generators.providers import fake
-from src.processors.balance import HISTORY_SCHEMA, credit_many, debit, reverse
+from src.processors.balance import HISTORY_SCHEMA, credit, debit, reverse
 from src.processors.disputes import mark_disputes
 from src.utils.read_yamls import load_simulation_config
 from src.validators import balance_and_limits_validations as balance
@@ -28,7 +28,7 @@ from src.validators import infrastructure_validations as infrastructure
 from src.validators import security_validators as security
 from src.validators import status_validators as status
 from src.validators import temporal_validators as temporal
-from src.validators._common import RULES
+from src.validators._common import RULES, Table
 
 SIMULATION = load_simulation_config()["simulation"]
 CREDIT_DAY: int = fake.SETTINGS["benefit_credit_day"]
@@ -75,9 +75,9 @@ def authorization_code() -> str:
 class TransactionSimulator:
     def __init__(self, tables: dict[str, pl.DataFrame]) -> None:
         self.t = tables
-        self.card_wallets = tables["card_wallets"]
+        # The balances move in place (`Table`); every lookup is indexed
+        self.card_wallets = Table(tables["card_wallets"])
         self.history: list[dict[str, Any]] = []
-        self.credit_frames: list[pl.DataFrame] = []
         self.daily_amount: dict[tuple[str, date], float] = defaultdict(float)
         self.daily_count: dict[tuple[str, date], int] = defaultdict(int)
         self.monthly_amount: dict[tuple[str, int, int], float] = defaultdict(float)
@@ -162,8 +162,7 @@ class TransactionSimulator:
                     }
 
         tx = tx | {"response_code": APPROVED, "authorization_code": authorization_code()}
-        self.card_wallets, history = debit(self.card_wallets, tx)
-        self.history.append(history)
+        self.history.append(debit(self.card_wallets, tx))
         self.daily_amount[self._day(tx)] += tx["amount"]
         self.daily_count[self._day(tx)] += 1
         self.monthly_amount[self._month(tx)] += tx["amount"]
@@ -180,13 +179,12 @@ class TransactionSimulator:
         in_use = cards.filter(pl.col("status") != "cancelled", pl.col("holder") == "active").select(
             pl.col("id").alias("card_id")
         )
-        eligible = self.card_wallets.join(in_use, on="card_id").filter(
-            pl.col("status") != "cancelled", pl.col("activation_date") <= moment.date()
+        eligible = (
+            self.t["card_wallets"]
+            .join(in_use, on="card_id")
+            .filter(pl.col("status") != "cancelled", pl.col("activation_date") <= moment.date())
         )
-        self.card_wallets, history = credit_many(
-            self.card_wallets, eligible["id"].to_list(), moment
-        )
-        self.credit_frames.append(history)
+        self.history += [credit(self.card_wallets, id_, moment) for id_ in eligible["id"]]
         self.out_of_balance.clear()
 
     def _intent(self, tx: dict[str, Any]) -> tuple[str, str]:
@@ -210,8 +208,7 @@ class TransactionSimulator:
             "fraud_scenario": None,
             "disputed": False,
         }
-        self.card_wallets, history = reverse(self.card_wallets, reversal)
-        self.history.append(history)
+        self.history.append(reverse(self.card_wallets, reversal))
         return reversal
 
     def run(
@@ -257,11 +254,9 @@ class TransactionSimulator:
                     seq += 1
                     heapq.heappush(events, (when, seq, "reversal", tx))
 
-        history = pl.concat(
-            [*self.credit_frames, pl.DataFrame(self.history, schema=HISTORY_SCHEMA)]
-        )
+        history = pl.DataFrame(self.history, schema=HISTORY_SCHEMA)
         return SimulationResult(
             transactions=mark_disputes(pl.DataFrame(answered, infer_schema_length=None)),
             balance_history=history.sort("operation_date"),
-            card_wallets=self.card_wallets,
+            card_wallets=self.card_wallets.to_frame(),
         )

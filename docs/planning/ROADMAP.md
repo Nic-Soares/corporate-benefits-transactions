@@ -16,7 +16,7 @@
 | `EP-05` Documentation | ✅ Done — merged into `develop` 2026-10-30 | `README.md`, `docs/` |
 | `EP-06` Transaction core review | ✅ Done — merged into `develop` 2026-10-31 (ADR-007, 008, 009) | `docs/`, then `config/`, `database/`, `src/` |
 | `EP-07` Setup pipeline (reference data + entities) | ✅ Done — merged into `develop` 2026-10-31 | code (`src/main.py`, `src/processors/`) |
-| `EP-08` Transaction simulator | ✅ Done — merged into `develop` 2026-11-01 (ADR-010, 011, 013, 015) | code (`src/processors/transaction_simulator.py`) |
+| `EP-08` Transaction simulator | ✅ Done — merged into `develop` 2026-11-01 (ADR-010, 011, 013, 015, 016) | code (`src/processors/transaction_simulator.py`) |
 | `EP-09` OLAP: Postgres → DuckDB | ✅ Done — merged into `develop` 2026-11-01 (ADR-012) | code + `database/olap_duck/` |
 | `EP-10` Dataset export and quality | ✅ Done — merged into `develop` 2026-11-01 (ADR-014) | code + `data/final_datasets/` |
 | `EP-11` Kaggle release | Not started | Kaggle |
@@ -449,6 +449,12 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] Wallets activated 0–15 days after the card's issue (`wallet_activation_days`), so the credited cards follow the issues
 - [x] Declines for balance keep the wallet that fell short; check: none without it
 - [x] Result (seed 42): 2–6 wallets per multi-benefit company; approval 87.5%; 53 checks, 17 tables
+
+### ST-08.6 — Speed and volume (2026-11-01, ADR-016)
+
+- [x] Validators look rows up through an indexed `Table`; balances move in place: `simulate` about 30× faster, same data
+- [x] `data_volumes`: 200 companies, 2,000 establishments, 3,000 terminals
+- [x] Result (seed 42): all four segments, 9.4k cardholders, 376k attempts in about 35 s, approval 86.9%, 44 MB of Parquet
 
 ---
 

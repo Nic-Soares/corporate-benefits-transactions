@@ -15,7 +15,10 @@ from src.validators._common import (
     PASS,
     PROPRIETARY_MODALITIES,
     RULES,
+    Table,
+    as_table,
     fail,
+    find_all,
     find_one,
     not_found,
 )
@@ -61,21 +64,20 @@ def validate_mcc_brand(
     return PASS
 
 
-def _accepted_by_cnae(cnae: str, cnae_wallets_df: pl.DataFrame) -> set[str]:
+def _accepted_by_cnae(cnae: str, cnae_wallets_df: pl.DataFrame | Table) -> set[str]:
     """Wallets the CNAE takes: the active rules of its longest matching prefix."""
-    matching = cnae_wallets_df.filter(pl.lit(cnae).str.starts_with(pl.col("cnae_code")))
-    if not matching.height:
+    matching = [r for r in as_table(cnae_wallets_df).rows if cnae.startswith(r["cnae_code"])]
+    if not matching:
         return set()
-    prefix_len = pl.col("cnae_code").str.len_chars()
-    most_specific = matching.filter(prefix_len == prefix_len.max())
-    return set(most_specific.filter(active=True)["wallet_id"])
+    longest = max(len(r["cnae_code"]) for r in matching)
+    return {r["wallet_id"] for r in matching if len(r["cnae_code"]) == longest and r["active"]}
 
 
 def route_wallet(
     transaction: dict[str, Any],
     cards_df: pl.DataFrame,
     establishments_df: pl.DataFrame,
-    card_wallets_df: pl.DataFrame,
+    card_wallets_df: pl.DataFrame | Table,
     wallets_df: pl.DataFrame,
     cnae_wallets_df: pl.DataFrame,
     mcc_wallets_df: pl.DataFrame,
@@ -105,15 +107,12 @@ def route_wallet(
     else:
         priority = rule["wallet_priority"]
 
-    held = {
-        row["wallet_id"]: row
-        for row in card_wallets_df.filter(card_id=card["id"]).iter_rows(named=True)
-    }
+    held = {row["wallet_id"]: row for row in find_all(card_wallets_df, card_id=card["id"])}
     candidates = [held[wallet] for wallet in priority if wallet in held]
     if not candidates:
         return fail(rule["error_code"], "wallet_not_on_card")
 
-    enabled = set(wallets_df.filter(active=True)["id"])
+    enabled = {row["id"] for row in find_all(wallets_df, active=True)}
     candidates = [c for c in candidates if c["status"] == "active" and c["wallet_id"] in enabled]
     if not candidates:
         return fail(rule["error_code"], "card_wallet_inactive")
@@ -122,7 +121,9 @@ def route_wallet(
         accepted = _accepted_by_cnae(establishment["main_cnae"], cnae_wallets_df)
         reason = "wallet_not_accepted_at_cnae"
     else:
-        accepted = set(mcc_wallets_df.filter(mcc_code=establishment["mcc_code"])["wallet_id"])
+        accepted = {
+            row["wallet_id"] for row in find_all(mcc_wallets_df, mcc_code=establishment["mcc_code"])
+        }
         accepted.add(OPEN_WALLET)
         reason = "no_wallet_for_mcc"
     candidates = [c for c in candidates if c["wallet_id"] in accepted]
