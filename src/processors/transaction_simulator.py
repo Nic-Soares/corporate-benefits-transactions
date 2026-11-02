@@ -254,9 +254,12 @@ class TransactionSimulator:
                     seq += 1
                     heapq.heappush(events, (when, seq, "reversal", tx))
 
-        history = pl.DataFrame(self.history, schema=HISTORY_SCHEMA)
+        # In the order they happened: the sequence breaks ties of the same second
+        history = pl.DataFrame(self.history, schema=HISTORY_SCHEMA).with_columns(
+            sequence_number=pl.int_range(1, pl.len() + 1, dtype=pl.Int64)
+        )
         return SimulationResult(
             transactions=mark_disputes(pl.DataFrame(answered, infer_schema_length=None)),
-            balance_history=history.sort("operation_date"),
+            balance_history=history,
             card_wallets=self.card_wallets.to_frame(),
         )

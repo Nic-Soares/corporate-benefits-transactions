@@ -470,6 +470,12 @@ Second pass against how benefits cards are used in the market. The model held; t
 - [x] Spenders try 100–150% of the credit; 30% give up after a balance decline
 - [x] Result (three seeds): approval 86–87%, lack of balance over half the declines, PREMIUM about 80% approved
 
+### ST-08.8 — Audit fixes (2026-11-01)
+
+- [x] The routing skips wallets not activated yet; attempts start at the wallet's activation (11 thousand approvals came before it)
+- [x] Off-pattern attempts of proprietary-network cards never go to a cash machine (they can't withdraw)
+- [x] `balance_history.sequence_number` / `fact_balance_movements.sequence_number`: the order of the movements, so two at the same second chain correctly; the ledger checks use it
+
 ---
 
 ## EP-09 — OLAP: Postgres → DuckDB

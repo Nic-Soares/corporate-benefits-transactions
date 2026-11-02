@@ -44,7 +44,8 @@ CREATE TABLE IF NOT EXISTS fact_balance_movements (
   operation_amount DECIMAL(15, 2) NOT NULL,
   previous_balance DECIMAL(15, 2) NOT NULL,
   posterior_balance DECIMAL(15, 2) NOT NULL,
-  operation_date TIMESTAMP NOT NULL
+  operation_date TIMESTAMP NOT NULL,
+  sequence_number BIGINT NOT NULL
 );
 
 -- ============================================================================
