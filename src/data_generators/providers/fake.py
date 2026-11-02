@@ -72,15 +72,15 @@ def status(entity: str) -> str:
 
 
 class Municipalities:
-    """Municipalities to draw from: by population when `municipios_df` has a
-    `population` column (IBGE estimates), uniformly otherwise."""
+    """Municipalities to draw from, weighted by the `weight` column when
+    `municipios_df` has it (IBGE `population` or `gdp`), uniformly otherwise."""
 
-    def __init__(self, municipios_df: pl.DataFrame) -> None:
+    def __init__(self, municipios_df: pl.DataFrame, weight: str = "population") -> None:
         df = municipios_df.unique(["municipio_nome", "uf_sigla"], maintain_order=True)
         self.rows: list[dict[str, str]] = df.select("municipio_nome", "uf_sigla").to_dicts()
         self.cum_weights: list[int] | None = None
-        if "population" in df.columns:
-            self.cum_weights = list(accumulate(df["population"].fill_null(1).to_list()))
+        if weight in df.columns:
+            self.cum_weights = list(accumulate(df[weight].fill_null(1).to_list()))
 
     def draw(self) -> dict[str, str]:
         """`{municipio_nome, uf_sigla}`"""

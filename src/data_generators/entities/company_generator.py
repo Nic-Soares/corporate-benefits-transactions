@@ -49,9 +49,9 @@ class CompanyGenerator:
     """Generates companies located in real IBGE municipalities."""
 
     def __init__(self, municipios_df: pl.DataFrame) -> None:
-        """`municipios_df` needs `municipio_nome` and `uf_sigla`; with `population`,
-        companies follow where people live."""
-        self.municipios = fake.Municipalities(municipios_df)
+        """`municipios_df` needs `municipio_nome` and `uf_sigla`; with `gdp`,
+        companies follow the economy: big employers sit where the GDP is."""
+        self.municipios = fake.Municipalities(municipios_df, weight="gdp")
 
     def generate_company(self, parent_id: str | None = None, segment: str | None = None) -> Company:
         """A branch keeps its holding's segment; a holding draws one by weight."""
