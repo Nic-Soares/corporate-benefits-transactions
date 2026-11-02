@@ -435,3 +435,28 @@ def test_codes_are_documented():
     used = {code for section in sections for code in codes(rules[section])}
     described = set(load_pre_populated_data()["response_codes"])
     assert used <= described, used - described
+
+
+def test_route_skips_wallets_not_activated(tx, route, data):
+    """A wallet activated after the attempt isn't charged: the card holds no usable one."""
+    later = data["card_wallets"].with_columns(activation_date=pl.lit(date(2026, 7, 1)))
+    result = route_wallet(
+        tx,
+        data["cards"],
+        data["establishments"],
+        later,
+        data["wallets"],
+        data["cnae_wallets"],
+        data["mcc_wallets"],
+    )
+    assert result == declined("57", "card_wallet_inactive")
+    earlier = later.with_columns(activation_date=pl.lit(date(2026, 1, 1)))
+    assert route_wallet(
+        tx,
+        data["cards"],
+        data["establishments"],
+        earlier,
+        data["wallets"],
+        data["cnae_wallets"],
+        data["mcc_wallets"],
+    ) == PASS | {"card_wallet_id": "cw_1"}

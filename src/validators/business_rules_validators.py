@@ -21,6 +21,7 @@ from src.validators._common import (
     find_all,
     find_one,
     not_found,
+    transaction_date,
 )
 
 BUSINESS_RULES = RULES["business_rules_validations"]
@@ -87,7 +88,7 @@ def route_wallet(
     The candidates, in order: proprietary network — the wallets of the option
     picked on the terminal (`wallet_option`); brand — `wallet_priority`; cash
     withdrawal — `withdrawal_wallets`, brand cards only. Each must be held by
-    the card, active (card wallet and wallet), accepted here (CNAE on the
+    the card, active (card wallet, already activated, and wallet), accepted here (CNAE on the
     proprietary network, MCC on a brand; GIFT takes any MCC) and have the
     balance; the first that passes wins. The first step no candidate passes
     gives the reason (57), and balance is last (51), with the first candidate.
@@ -113,7 +114,14 @@ def route_wallet(
         return fail(rule["error_code"], "wallet_not_on_card")
 
     enabled = {row["id"] for row in find_all(wallets_df, active=True)}
-    candidates = [c for c in candidates if c["status"] == "active" and c["wallet_id"] in enabled]
+    today = transaction_date(transaction)
+    candidates = [
+        c
+        for c in candidates
+        if c["status"] == "active"
+        and c["wallet_id"] in enabled
+        and c.get("activation_date", today) <= today
+    ]
     if not candidates:
         return fail(rule["error_code"], "card_wallet_inactive")
 

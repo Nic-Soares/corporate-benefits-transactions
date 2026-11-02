@@ -241,6 +241,7 @@ CREATE TABLE IF NOT EXISTS balance_history (
   previous_balance DECIMAL(15,2) NOT NULL,
   posterior_balance DECIMAL(15,2) NOT NULL,
   operation_date TIMESTAMP NOT NULL,
+  sequence_number BIGINT NOT NULL,
   created_at TIMESTAMP DEFAULT now(),
   FOREIGN KEY (card_wallet_id) REFERENCES card_wallets(id),
   FOREIGN KEY (transaction_id) REFERENCES transactions(id)

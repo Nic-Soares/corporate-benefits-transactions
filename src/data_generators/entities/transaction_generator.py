@@ -203,21 +203,19 @@ class TransactionGenerator:
                     self.open.add(key)
 
         # Who buys: one slot per active wallet of a card, weighted by the
-        # attempts a month it makes, the days the card existed in the window,
-        # and whether card and cardholder are active
-        credit = {
-            (card_id, wallet_id): amount
-            for card_id, wallet_id, amount, status in card_wallets_df.select(
-                "card_id", "wallet_id", "monthly_credit", "status"
-            ).iter_rows()
-            if status == "active"
-        }
+        # attempts a month it makes, the days the wallet was activated in the
+        # window, and whether card and cardholder are active
+        credit = {}
+        self.activation: dict[tuple[str, str], date] = {}
+        for card_id, wallet_id, amount, status, activated in card_wallets_df.select(
+            "card_id", "wallet_id", "monthly_credit", "status", "activation_date"
+        ).iter_rows():
+            self.activation[card_id, wallet_id] = activated
+            if status == "active":
+                credit[card_id, wallet_id] = amount
         self.slots: list[tuple[dict, str]] = []
         weights = []
         for card in self.cards:
-            alive = sum(day.date() >= card["issue_date"] for day in self.days) / days_back
-            if not alive:
-                continue
             in_use = card["status"] == "active" and holder_active[card["cardholder_id"]]
             factor = 1.0 if in_use else USAGE["inactive_usage_factor"]
             ratio = spending_ratio()
@@ -225,12 +223,21 @@ class TransactionGenerator:
             for wallet in sorted(self.wallets_by_card.get(card["id"], ())):
                 if (card["id"], wallet) not in credit or not self._places(wallet, network):
                     continue
+                start = self._usable_from(card, wallet)
+                alive = sum(day.date() >= start for day in self.days) / days_back
+                if not alive:
+                    continue
                 monthly = credit[card["id"], wallet] * ratio / wallet_mean_ticket(wallet, network)
                 self.slots.append((card, wallet))
                 weights.append(monthly * alive * factor)
         self.slot_cum_weights = list(accumulate(weights))
         self.monthly_attempts = sum(weights)
         self.days_back = days_back
+
+    def _usable_from(self, card: dict, wallet: str | None) -> date:
+        """The card's issue, or the wallet's activation when later."""
+        activated = self.activation.get((card["id"], wallet))
+        return max(card["issue_date"], activated) if activated else card["issue_date"]
 
     def expected_attempts(self) -> float:
         """Attempts the window should hold: the slots' monthly attempts over its days."""
@@ -266,9 +273,15 @@ class TransactionGenerator:
     def _category(self, card: dict, wallet: str) -> str:
         """A kind of place the wallet is spent at; now and then any place
         (`off_pattern_ratio`)."""
-        available = self._places(wallet, self._network(card))
+        network = self._network(card)
+        available = self._places(wallet, network)
         if random.random() < USAGE["off_pattern_ratio"]:
-            available = [c for c in CATEGORIES if c in self.terminals]
+            # anywhere, but a proprietary-network card doesn't go to a cash machine
+            available = [
+                c
+                for c in CATEGORIES
+                if c in self.terminals and (network == "brand" or not CATEGORIES[c].get("atm"))
+            ]
         return random.choices(available, weights=[CATEGORIES[c]["weight"] for c in available])[0]
 
     def _option(self, category: str, card: dict, wallet: str | None = None) -> str | None:
@@ -351,8 +364,10 @@ class TransactionGenerator:
             card,
             category,
             terminal,
-            # Not before the card exists or the terminal is installed
-            self._moment(category, max(card["issue_date"], terminal["installation_date"])),
+            # Not before the wallet is usable or the terminal is installed
+            self._moment(
+                category, max(self._usable_from(card, wallet), terminal["installation_date"])
+            ),
             self._capture(terminal["type"], card["card_type"]),
             wallet=wallet,
         )

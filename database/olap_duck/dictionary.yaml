@@ -45,6 +45,7 @@ fact_balance_movements:
     previous_balance: "Balance before the movement"
     posterior_balance: "Balance after the movement"
     operation_date: "Date and time of the movement"
+    sequence_number: "Order of the movements, 1 = first; breaks ties of movements at the same second"
 
 dim_card_wallets:
   description: "Each wallet a card holds, with its monthly credit and limits. The employer picks, per program, which of the program's wallets (ref_program_wallets) its employees get."
