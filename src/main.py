@@ -108,7 +108,7 @@ def _common_options(parser: argparse.ArgumentParser) -> None:
 
 
 def main(argv: list[str] | None = None) -> int:
-    parser = argparse.ArgumentParser(prog="python -m src.main")
+    parser = argparse.ArgumentParser(prog="benefits")
     parser.add_argument(
         "--config", type=Path, help="config folder (default: config/); a variant of the rules"
     )
